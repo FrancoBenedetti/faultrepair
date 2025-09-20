@@ -1,0 +1,10 @@
+<IfModule mod_php.c>
+    # This line must be changedfor deployment. Use the doc root with '/backend' appended
+    php_value include_path ".:/home/franco/Projects/fault-reporter/backend"
+</IfModule>
+
+# Ensure PHP files are processed
+<FilesMatch \.php$>
+    SetHandler application/x-httpd-php
+</FilesMatch>
+

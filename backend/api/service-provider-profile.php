@@ -172,7 +172,14 @@ function updateServiceProviderProfile($provider_id) {
 
             foreach ($data['services'] as $service) {
                 if (isset($service['id'])) {
-                    $isPrimary = isset($service['is_primary']) ? $service['is_primary'] : false;
+                    $isPrimary = 0; // Default to false
+                    if (isset($service['is_primary'])) {
+                        $primaryValue = $service['is_primary'];
+                        // Handle different possible formats: boolean, string, integer
+                        if ($primaryValue === true || $primaryValue === 1 || $primaryValue === "1" || $primaryValue === "true") {
+                            $isPrimary = 1;
+                        }
+                    }
                     $stmt->execute([$provider_id, $service['id'], $isPrimary]);
                 }
             }

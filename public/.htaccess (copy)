@@ -1,0 +1,27 @@
+RewriteEngine On
+
+# Handle PHP files in backend directory
+RewriteRule ^backend/(.*\.php)$ backend/$1 [L]
+
+# Handle API routes
+RewriteRule ^api/(.*)$ backend/api/$1 [L]
+
+# Handle all other routes - serve index.html for Vue SPA
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Enable PHP processing for backend
+<FilesMatch \.php$>
+    SetHandler application/x-httpd-php
+</FilesMatch>
+
+# Directory index
+DirectoryIndex index.html

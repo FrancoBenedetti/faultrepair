@@ -3,4 +3,13 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   plugins: [vue()],
+  server: {
+    proxy: {
+      '/backend': {
+        target: 'http://fault-reporter.local',
+        changeOrigin: true,
+        secure: false
+      }
+    }
+  }
 })

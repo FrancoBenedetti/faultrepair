@@ -33,8 +33,14 @@ frontend/
 │   │   ├── Home.vue            # Landing page with navigation
 │   │   ├── ClientRegistration.vue     # Client registration form
 │   │   ├── ClientSignin.vue           # Client sign-in form
+│   │   ├── ClientDashboard.vue        # Client dashboard with job management
 │   │   ├── ServiceProviderRegistration.vue # Service provider registration
-│   │   └── ServiceProviderSignin.vue      # Service provider sign-in
+│   │   ├── ServiceProviderSignin.vue      # Service provider sign-in
+│   │   ├── ServiceProviderDashboard.vue   # Service provider dashboard
+│   │   ├── ServiceProviderClientJobs.vue  # View jobs for specific client
+│   │   ├── ServiceProviderTechnicianJobs.vue # View jobs for specific technician
+│   │   ├── TechnicianDashboard.vue       # Technician dashboard
+│   │   └── ClientServiceProviderBrowser.vue # Browse approved providers
 │   ├── router/
 │   │   └── index.js             # Vue Router configuration
 │   ├── App.vue                  # Root component
@@ -92,6 +98,61 @@ frontend/
   - Integration with same authentication API
 - **Routes**: `/service-provider-signin`
 
+#### `ServiceProviderDashboard.vue`
+- **Purpose**: Main dashboard for service provider administrators and technicians
+- **Features**:
+  - **Admin View**: Services management, regions management, technician management, client overview
+  - **Technician View**: Restricted view with only client jobs and profile access
+  - Role-based UI restrictions using JWT token parsing
+  - Technician cards with "View Jobs" functionality
+  - Modal-based forms for adding/editing technicians
+- **Routes**: `/service-provider-dashboard`
+
+#### `ServiceProviderClientJobs.vue`
+- **Purpose**: View and manage jobs for a specific client
+- **Features**:
+  - Job listing with status badges and filtering
+  - Job details modal with status history
+  - Status update functionality
+  - Client information display
+- **Routes**: `/service-provider/client/:clientId/jobs`
+
+#### `ServiceProviderTechnicianJobs.vue`
+- **Purpose**: View jobs assigned to a specific technician (admin view)
+- **Features**:
+  - Technician information header
+  - Job listing with status tracking
+  - Job details and status update modals
+  - Statistics display (total, active, completed jobs)
+- **Routes**: `/service-provider/technician/:technicianId/jobs`
+
+#### `TechnicianDashboard.vue`
+- **Purpose**: Dedicated dashboard for technicians
+- **Features**:
+  - Personal job statistics overview
+  - Assigned jobs listing with status management
+  - Job details modal with technician notes
+  - Status update functionality
+  - Clean, focused interface for field technicians
+- **Routes**: `/technician-dashboard`
+
+#### `ClientDashboard.vue`
+- **Purpose**: Main dashboard for client users
+- **Features**:
+  - Job creation and management
+  - Service provider browsing
+  - Job status tracking
+  - Role-based access (Reporting Employee vs Budget Controller)
+- **Routes**: `/client-dashboard`
+
+#### `ClientServiceProviderBrowser.vue`
+- **Purpose**: Browse and view approved service providers
+- **Features**:
+  - List of approved service providers
+  - Provider details and contact information
+  - Service offerings display
+- **Routes**: `/browse-providers`
+
 ### Core Components
 
 #### `App.vue`
@@ -119,6 +180,7 @@ const routes = [
     name: 'Home',
     component: Home
   },
+  // Client routes
   {
     path: '/client-registration',
     name: 'ClientRegistration',
@@ -130,6 +192,19 @@ const routes = [
     component: ClientSignin
   },
   {
+    path: '/client-dashboard',
+    name: 'ClientDashboard',
+    component: ClientDashboard,
+    meta: { requiresAuth: true, userType: 'client' }
+  },
+  {
+    path: '/browse-providers',
+    name: 'ClientServiceProviderBrowser',
+    component: ClientServiceProviderBrowser,
+    meta: { requiresAuth: true, userType: 'client' }
+  },
+  // Service Provider routes
+  {
     path: '/service-provider-registration',
     name: 'ServiceProviderRegistration',
     component: ServiceProviderRegistration
@@ -138,9 +213,70 @@ const routes = [
     path: '/service-provider-signin',
     name: 'ServiceProviderSignin',
     component: ServiceProviderSignin
+  },
+  {
+    path: '/service-provider-dashboard',
+    name: 'ServiceProviderDashboard',
+    component: ServiceProviderDashboard,
+    meta: { requiresAuth: true, userType: 'service_provider' }
+  },
+  {
+    path: '/service-provider/client/:clientId/jobs',
+    name: 'ServiceProviderClientJobs',
+    component: ServiceProviderClientJobs,
+    meta: { requiresAuth: true, userType: 'service_provider' },
+    props: true
+  },
+  {
+    path: '/service-provider/technician/:technicianId/jobs',
+    name: 'ServiceProviderTechnicianJobs',
+    component: ServiceProviderTechnicianJobs,
+    meta: { requiresAuth: true, userType: 'service_provider' },
+    props: true
+  },
+  // Technician routes
+  {
+    path: '/technician-dashboard',
+    name: 'TechnicianDashboard',
+    component: TechnicianDashboard,
+    meta: { requiresAuth: true, userType: 'service_provider' }
   }
 ]
 ```
+
+### Route Guards
+
+The application implements authentication and authorization guards:
+
+- **Authentication Guard**: Redirects unauthenticated users to appropriate sign-in pages
+- **Authorization Guard**: Ensures users can only access routes appropriate to their entity type
+- **Role-Based Access**: Service provider routes check for technician vs admin permissions
+
+## Technician Functionality
+
+The application includes comprehensive technician management with role-based access control:
+
+### User Roles
+- **Service Provider Admin (Role 3)**: Full access to manage technicians, services, regions, and profiles
+- **Technician (Role 4)**: Limited access to view assigned jobs and basic profile information
+
+### Technician Management Features
+- **Technician CRUD Operations**: Admins can create, read, update, and delete technicians
+- **Job Assignment**: Admins can view jobs assigned to specific technicians
+- **Role-Based UI**: Different dashboard views based on user role
+- **Technician Dashboard**: Dedicated interface for technicians to manage their jobs
+
+### Key Components
+- **ServiceProviderDashboard.vue**: Main dashboard with conditional rendering based on user role
+- **TechnicianDashboard.vue**: Dedicated technician interface
+- **ServiceProviderTechnicianJobs.vue**: Admin view of technician jobs
+- **Role-based restrictions**: UI elements hidden/shown based on JWT token role
+
+### Security Features
+- **JWT Role Validation**: Frontend parses JWT tokens to determine user permissions
+- **Conditional Rendering**: `v-if="userRole === 3"` for admin-only features
+- **Route Protection**: Authentication guards prevent unauthorized access
+- **API Integration**: Backend validates role permissions for all operations
 
 ## User Flow
 

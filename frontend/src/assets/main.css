@@ -1,0 +1,246 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Material 3 Base Styles */
+@layer base {
+  html {
+    font-family: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  body {
+    @apply bg-white text-gray-900;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  * {
+    @apply border-gray-200;
+  }
+
+  body {
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}
+
+/* Material 3 Component Classes */
+@layer components {
+  /* Button Variants */
+  .btn-filled {
+    @apply bg-blue-600 text-white font-medium px-6 py-2.5 rounded-full shadow-lg;
+    @apply hover:bg-blue-700 hover:shadow-xl;
+    @apply active:bg-blue-800 active:shadow-lg;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2;
+    @apply transition-all duration-200 ease-out;
+  }
+
+  .btn-filled:disabled {
+    @apply bg-gray-400 text-gray-600 cursor-not-allowed shadow-none;
+  }
+
+  .btn-outlined {
+    @apply bg-transparent text-blue-600 border-2 border-blue-600 font-medium px-3 py-3 rounded-full w-10 h-10 flex items-center justify-center;
+    @apply hover:bg-blue-50 hover:shadow-lg;
+    @apply active:bg-blue-100;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2;
+    @apply transition-all duration-200 ease-out;
+  }
+
+  .btn-outlined:disabled {
+    @apply text-gray-400 border-gray-400 cursor-not-allowed;
+  }
+
+  /* Round Action Buttons (for technician cards) */
+  .btn-round {
+    @apply bg-transparent text-blue-600 border-2 border-blue-600 font-medium px-3 py-3 rounded-full w-10 h-10 flex items-center justify-center;
+    @apply hover:bg-blue-50 hover:shadow-lg;
+    @apply active:bg-blue-100;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2;
+    @apply transition-all duration-200 ease-out;
+  }
+
+  .btn-round:disabled {
+    @apply text-gray-400 border-gray-400 cursor-not-allowed;
+  }
+
+  .btn-round-filled {
+    @apply bg-red-600 text-white font-medium px-3 py-3 rounded-full w-10 h-10 flex items-center justify-center shadow-lg;
+    @apply hover:bg-red-700 hover:shadow-xl;
+    @apply active:bg-red-800 active:shadow-lg;
+    @apply focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2;
+    @apply transition-all duration-200 ease-out;
+  }
+
+  .btn-round-filled:disabled {
+    @apply bg-gray-400 text-gray-600 cursor-not-allowed shadow-none;
+  }
+
+  .btn-text {
+    @apply bg-transparent text-blue-600 font-medium px-6 py-2.5 rounded-full;
+    @apply hover:bg-blue-50;
+    @apply active:bg-blue-100;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2;
+    @apply transition-all duration-200 ease-out;
+  }
+
+  .btn-text:disabled {
+    @apply text-gray-400 cursor-not-allowed;
+  }
+
+  .btn-tonal {
+    @apply bg-pink-100 text-pink-800 font-medium px-6 py-2.5 rounded-full;
+    @apply hover:bg-pink-200 hover:shadow-lg;
+    @apply active:bg-pink-300;
+    @apply focus:outline-none focus:ring-2 focus:ring-pink-300 focus:ring-offset-2;
+    @apply transition-all duration-200 ease-out;
+  }
+
+  .btn-tonal:disabled {
+    @apply bg-gray-200 text-gray-400 cursor-not-allowed shadow-none;
+  }
+
+  /* Card Component */
+  .card {
+    @apply bg-white rounded-xl shadow-lg border border-gray-200;
+    @apply transition-shadow duration-200 ease-out;
+  }
+
+  .card:hover {
+    @apply shadow-xl;
+  }
+
+  .card-header {
+    @apply px-6 py-4 border-b border-gray-200;
+  }
+
+  .card-content {
+    @apply px-6 py-4;
+  }
+
+  .card-footer {
+    @apply px-6 py-4 border-t border-gray-200 bg-gray-50;
+  }
+
+  /* Form Components */
+  .form-input {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900;
+    @apply placeholder-gray-500;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+    @apply transition-colors duration-200 ease-out;
+  }
+
+  .form-input:disabled {
+    @apply bg-gray-100 text-gray-500 cursor-not-allowed;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-gray-900 mb-2;
+  }
+
+  .form-error {
+    @apply text-red-600 text-sm mt-1;
+  }
+
+  .form-help {
+    @apply text-gray-600 text-sm mt-1;
+  }
+
+  /* Status Badges */
+  .status-badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  .status-reported {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .status-assigned {
+    @apply bg-pink-100 text-pink-800;
+  }
+
+  .status-in-progress {
+    @apply bg-purple-100 text-purple-800;
+  }
+
+  .status-completed {
+    @apply bg-gray-100 text-gray-800;
+  }
+
+  .status-error {
+    @apply bg-red-100 text-red-800;
+  }
+
+  /* Modal Styles */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50;
+  }
+
+  .modal-content {
+    @apply bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto;
+  }
+
+  .modal-header {
+    @apply px-6 py-4 border-b border-gray-200 flex justify-between items-center;
+  }
+
+  .modal-body {
+    @apply px-6 py-4;
+  }
+
+  .modal-footer {
+    @apply px-6 py-4 border-t border-gray-200 flex justify-end gap-3;
+  }
+
+  /* Utility Classes */
+  .text-on-surface {
+    @apply text-neutral-900;
+  }
+
+  .text-on-surface-variant {
+    @apply text-neutral-700;
+  }
+
+  .surface-container {
+    @apply bg-neutral-50;
+  }
+
+  .surface-container-high {
+    @apply bg-neutral-100;
+  }
+
+  .surface-container-highest {
+    @apply bg-neutral-200;
+  }
+
+  /* Icon Styles */
+  .material-icon {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .material-icon-sm {
+    @apply material-icon text-lg;
+  }
+
+  .material-icon-lg {
+    @apply material-icon text-3xl;
+  }
+
+  .material-icon-xl {
+    @apply material-icon text-4xl;
+  }
+}

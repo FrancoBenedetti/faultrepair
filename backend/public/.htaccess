@@ -1,0 +1,10 @@
+RewriteEngine On
+
+# Handle the directory root (/backend/api) → /backend/api/index.php
+RewriteRule ^$ index.php [L]
+
+# Handle all other requests: Capture first path segment as script name, append rest as path info
+# Skip if it's an existing file or directory
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([^/]+)/?(.*)$ $1.php/$2 [L,QSA]

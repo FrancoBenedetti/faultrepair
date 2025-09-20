@@ -38,8 +38,8 @@ if ($auth_header && preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-$service_ids = isset($_GET['services']) ? explode(',', $_GET['services']) : [];
-$region_ids = isset($_GET['regions']) ? explode(',', $_GET['regions']) : [];
+$service_ids = isset($_GET['services']) && !empty(trim($_GET['services'])) ? explode(',', trim($_GET['services'])) : [];
+$region_ids = isset($_GET['regions']) && !empty(trim($_GET['regions'])) ? explode(',', trim($_GET['regions'])) : [];
 $sort_by = isset($_GET['sort']) ? $_GET['sort'] : 'name';
 $sort_order = isset($_GET['order']) && strtoupper($_GET['order']) === 'DESC' ? 'DESC' : 'ASC';
 

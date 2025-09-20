@@ -31,7 +31,8 @@ The backend follows a simple PHP REST API architecture with:
 #### `users`
 - Stores user authentication and profile data
 - Links users to either clients or service providers via `entity_type` and `entity_id`
-- Fields: `id`, `username`, `password_hash`, `email`, `role_id`, `entity_type`, `entity_id`, `created_at`
+- Supports role-based access control with technicians (role 4) and admins (role 3)
+- Fields: `id`, `username`, `password_hash`, `email`, `first_name`, `last_name`, `phone`, `role_id`, `entity_type`, `entity_id`, `is_active`, `created_at`
 
 #### `locations`
 - Stores client locations where faults can occur
@@ -117,6 +118,140 @@ Registers a new service provider company and creates an admin user.
 }
 ```
 
+### Technician Management
+
+#### `GET /backend/api/technicians.php`
+Retrieves all technicians for the authenticated service provider admin.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "technicians": [
+    {
+      "id": 1,
+      "username": "tech1",
+      "email": "tech1@company.com",
+      "full_name": "John Doe",
+      "first_name": "John",
+      "last_name": "Doe",
+      "phone": "123-456-7890",
+      "is_active": true,
+      "created_at": "2025-01-15 10:30:00"
+    }
+  ]
+}
+```
+
+#### `POST /backend/api/technicians.php`
+Creates a new technician for the authenticated service provider.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "username": "tech1",
+  "password": "password123",
+  "email": "tech1@company.com",
+  "first_name": "John",
+  "last_name": "Doe",
+  "phone": "123-456-7890"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Technician created successfully",
+  "technician_id": 1
+}
+```
+
+#### `PUT /backend/api/technicians.php`
+Updates an existing technician.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "technician_id": 1,
+  "first_name": "John",
+  "last_name": "Smith",
+  "phone": "123-456-7890",
+  "is_active": false
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Technician updated successfully"
+}
+```
+
+#### `DELETE /backend/api/technicians.php?id=1`
+Deletes a technician (only if they have no assigned jobs).
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "message": "Technician deleted successfully"
+}
+```
+
+### Technician Jobs
+
+#### `GET /backend/api/technician-jobs.php`
+Retrieves all jobs assigned to the authenticated technician.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "jobs": [
+    {
+      "id": 1,
+      "item_identifier": "EQ-001",
+      "fault_description": "Equipment malfunction",
+      "technician_notes": "Replaced faulty component",
+      "job_status": "Completed",
+      "client_name": "ABC Corp",
+      "location_name": "Main Office",
+      "created_at": "2025-01-15 09:00:00",
+      "updated_at": "2025-01-16 14:30:00"
+    }
+  ],
+  "statistics": {
+    "total_jobs": 5,
+    "active_jobs": 2,
+    "completed_jobs": 3
+  }
+}
+```
+
 ## Security Features
 
 - **Password Hashing**: Uses PHP's `password_hash()` with default algorithm
@@ -132,7 +267,14 @@ backend/
 ├── api/
 │   ├── auth.php                 # User authentication endpoint
 │   ├── register-client.php      # Client registration endpoint
-│   └── register-service-provider.php # Service provider registration endpoint
+│   ├── register-service-provider.php # Service provider registration endpoint
+│   ├── technicians.php          # Technician management API
+│   ├── technician-jobs.php      # Technician jobs API
+│   ├── service-providers.php    # Service provider management
+│   ├── service-provider-profile.php # Profile management
+│   ├── service-provider-approved-clients.php # Client approvals
+│   ├── service-provider-client-jobs.php # Client job management
+│   └── client-users.php         # Client user management
 ├── config/
 │   └── database.php             # Database connection configuration
 └── includes/
@@ -206,3 +348,17 @@ curl -X POST http://localhost/backend/api/auth.php \
 curl -X POST http://localhost/backend/api/register-client.php \
   -H "Content-Type: application/json" \
   -d '{"clientName":"Test Company","address":"123 Test St","username":"admin","email":"admin@test.com","password":"password123"}'
+
+# Test technician management (requires JWT token)
+curl -X GET http://localhost/backend/api/technicians.php \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Test technician creation
+curl -X POST http://localhost/backend/api/technicians.php \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"tech1","password":"password123","email":"tech1@company.com","first_name":"John","last_name":"Doe","phone":"123-456-7890"}'
+
+# Test technician jobs
+curl -X GET http://localhost/backend/api/technician-jobs.php \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"

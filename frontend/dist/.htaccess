@@ -1,0 +1,5 @@
+RewriteEngine On 
+RewriteRule ^nano/(.*)$ nano.php/$1
+# RewriteLog "/all-logs/rewriteLog"
+# RewriteLogLevel 9
+

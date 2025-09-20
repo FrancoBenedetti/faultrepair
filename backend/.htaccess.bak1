@@ -1,0 +1,14 @@
+<IfModule mod_php.c>
+    php_value include_path ".:/home/franco/Projects/fault-reporter/backend"
+</IfModule>
+
+# Ensure PHP files are processed
+<FilesMatch \.php$>
+    SetHandler application/x-httpd-php
+</FilesMatch>
+
+# Deny access to config and includes directories
+<DirectoryMatch "^(.*/)?config/|includes/">
+    Order Deny,Allow
+    Deny from all
+</DirectoryMatch>

@@ -1,167 +1,236 @@
 <template>
-  <div class="browser">
-    <div class="browser-header">
-      <h1>Find Service Providers</h1>
-      <p>Discover and connect with qualified service providers in your area</p>
-    </div>
-
-    <!-- Filters Section -->
-    <div class="filters-section">
-      <div class="filters-container">
-        <div class="search-filter">
-          <input type="text"
-                 v-model="filters.search"
-                 placeholder="Search by name, description, or location..."
-                 @input="debouncedSearch"
-                 class="search-input">
+  <div class="min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="text-center mb-12">
+        <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-blue-100 mb-6">
+          <span class="material-icon text-blue-600">search</span>
         </div>
-
-        <div class="filter-row">
-          <div class="filter-group">
-            <label>Services</label>
-            <select v-model="filters.selectedService" @change="applyFilters" class="filter-select">
-              <option value="">All Services</option>
-              <option v-for="service in availableServices" :key="service.id" :value="service.id">
-                {{ service.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <label>Regions</label>
-            <select v-model="filters.selectedRegion" @change="applyFilters" class="filter-select">
-              <option value="">All Regions</option>
-              <option v-for="region in availableRegions" :key="region.id" :value="region.id">
-                {{ region.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <label>Sort By</label>
-            <select v-model="filters.sortBy" @change="applyFilters" class="filter-select">
-              <option value="name">Name</option>
-              <option value="created_at">Newest</option>
-              <option value="updated_at">Recently Updated</option>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <label>Order</label>
-            <select v-model="filters.sortOrder" @change="applyFilters" class="filter-select">
-              <option value="ASC">Ascending</option>
-              <option value="DESC">Descending</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="active-filters" v-if="hasActiveFilters">
-          <span class="filters-label">Active Filters:</span>
-          <div class="filter-tags">
-            <span v-if="filters.search" class="filter-tag">
-              Search: "{{ filters.search }}"
-              <button @click="clearSearch" class="remove-filter">&times;</button>
-            </span>
-            <span v-if="filters.selectedService" class="filter-tag">
-              Service: {{ getServiceName(filters.selectedService) }}
-              <button @click="clearServiceFilter" class="remove-filter">&times;</button>
-            </span>
-            <span v-if="filters.selectedRegion" class="filter-tag">
-              Region: {{ getRegionName(filters.selectedRegion) }}
-              <button @click="clearRegionFilter" class="remove-filter">&times;</button>
-            </span>
-            <button @click="clearAllFilters" class="clear-all-btn">Clear All</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Results Section -->
-    <div class="results-section">
-      <div class="results-header">
-        <div class="results-count">
-          <span v-if="loading">Loading...</span>
-          <span v-else>{{ totalCount }} service providers found</span>
-        </div>
-        <div class="view-toggle">
-          <button @click="viewMode = 'grid'" :class="['view-btn', { active: viewMode === 'grid' }]">
-            <i class="icon-grid"></i> Grid
-          </button>
-          <button @click="viewMode = 'list'" :class="['view-btn', { active: viewMode === 'list' }]">
-            <i class="icon-list"></i> List
-          </button>
-        </div>
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">Find Service Providers</h1>
+        <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+          Discover and connect with qualified service providers in your area
+        </p>
       </div>
 
-      <!-- Loading State -->
-      <div v-if="loading" class="loading-state">
-        <div class="loading-spinner"></div>
-        <p>Loading service providers...</p>
-      </div>
-
-      <!-- No Results -->
-      <div v-else-if="providers.length === 0" class="no-results">
-        <div class="no-results-icon">🔍</div>
-        <h3>No service providers found</h3>
-        <p>Try adjusting your search criteria or filters</p>
-        <button @click="clearAllFilters" class="retry-btn">Clear Filters</button>
-      </div>
-
-      <!-- Results Grid -->
-      <div v-else-if="viewMode === 'grid'" class="providers-grid">
-        <div v-for="provider in providers" :key="provider.id" class="provider-card">
-          <div class="provider-header">
-            <div class="provider-logo">
-              <div class="logo-placeholder">{{ provider.name.charAt(0) }}</div>
+      <!-- Filters Section -->
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <div class="space-y-6">
+          <!-- Search Input -->
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <span class="material-icon-sm text-gray-400">search</span>
             </div>
-            <div class="provider-actions">
-              <button v-if="!provider.is_approved"
-                      @click="addToApproved(provider.id)"
-                      class="approve-btn"
-                      :disabled="approvingProvider === provider.id">
-                {{ approvingProvider === provider.id ? 'Adding...' : '+ Add' }}
-              </button>
-              <button v-else
-                      @click="removeFromApproved(provider.id)"
-                      class="remove-btn"
-                      :disabled="removingProvider === provider.id">
-                {{ removingProvider === provider.id ? 'Removing...' : '✓ Added' }}
+            <input
+              type="text"
+              v-model="filters.search"
+              placeholder="Search by name, description, or location..."
+              @input="debouncedSearch"
+              class="form-input pl-10 w-full"
+            >
+          </div>
+
+          <!-- Filter Controls -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label class="form-label flex items-center gap-2 mb-2">
+                <span class="material-icon-sm text-gray-500">build</span>
+                Services
+              </label>
+              <select v-model="filters.selectedService" @change="applyFilters" class="form-input">
+                <option value="">All Services</option>
+                <option v-for="service in availableServices" :key="service.id" :value="service.id">
+                  {{ service.name }}
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label flex items-center gap-2 mb-2">
+                <span class="material-icon-sm text-gray-500">location_on</span>
+                Regions
+              </label>
+              <select v-model="filters.selectedRegion" @change="applyFilters" class="form-input">
+                <option value="">All Regions</option>
+                <option v-for="region in availableRegions" :key="region.id" :value="region.id">
+                  {{ region.name }}
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label flex items-center gap-2 mb-2">
+                <span class="material-icon-sm text-gray-500">sort</span>
+                Sort By
+              </label>
+              <select v-model="filters.sortBy" @change="applyFilters" class="form-input">
+                <option value="name">Name</option>
+                <option value="created_at">Newest</option>
+                <option value="updated_at">Recently Updated</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label flex items-center gap-2 mb-2">
+                <span class="material-icon-sm text-gray-500">arrow_upward</span>
+                Order
+              </label>
+              <select v-model="filters.sortOrder" @change="applyFilters" class="form-input">
+                <option value="ASC">Ascending</option>
+                <option value="DESC">Descending</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Active Filters -->
+          <div v-if="hasActiveFilters" class="pt-4 border-t border-gray-200">
+            <span class="text-sm font-medium text-gray-700 mr-3">Active Filters:</span>
+            <div class="flex flex-wrap gap-2 mt-2">
+              <span v-if="filters.search" class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
+                <span class="material-icon-sm mr-1">search</span>
+                "{{ filters.search }}"
+                <button @click="clearSearch" class="ml-2 text-blue-600 hover:text-blue-800">
+                  <span class="material-icon-sm">close</span>
+                </button>
+              </span>
+              <span v-if="filters.selectedService" class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                <span class="material-icon-sm mr-1">build</span>
+                {{ getServiceName(filters.selectedService) }}
+                <button @click="clearServiceFilter" class="ml-2 text-green-600 hover:text-green-800">
+                  <span class="material-icon-sm">close</span>
+                </button>
+              </span>
+              <span v-if="filters.selectedRegion" class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
+                <span class="material-icon-sm mr-1">location_on</span>
+                {{ getRegionName(filters.selectedRegion) }}
+                <button @click="clearRegionFilter" class="ml-2 text-purple-600 hover:text-purple-800">
+                  <span class="material-icon-sm">close</span>
+                </button>
+              </span>
+              <button @click="clearAllFilters" class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-100 text-red-800 hover:bg-red-200 transition-colors">
+                <span class="material-icon-sm mr-1">clear_all</span>
+                Clear All
               </button>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div class="provider-content">
-            <h3 class="provider-name">{{ provider.name }}</h3>
-            <p class="provider-address">{{ provider.address }}</p>
-            <p v-if="provider.description" class="provider-description">
-              {{ truncateText(provider.description, 100) }}
-            </p>
-
-            <div class="provider-meta">
-              <div class="services-count">
-                <span class="meta-icon">🔧</span>
-                {{ provider.services_count }} services
-              </div>
-              <div class="regions-count">
-                <span class="meta-icon">📍</span>
-                {{ provider.regions_count }} regions
-              </div>
-            </div>
+      <!-- Results Section -->
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-gray-200">
+          <div class="text-sm text-gray-600">
+            <span v-if="loading" class="flex items-center gap-2">
+              <div class="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+              Loading...
+            </span>
+            <span v-else>{{ totalCount }} service providers found</span>
           </div>
-
-          <div class="provider-footer">
-            <button @click="showProviderDetails(provider)" class="details-btn">
-              View Details
+          <div class="flex gap-2">
+            <button
+              @click="viewMode = 'grid'"
+              :class="[
+                'px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                viewMode === 'grid'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+            >
+              <span class="material-icon-sm">grid_view</span>
+              Grid
             </button>
-            <div class="provider-date">
-              Updated {{ formatDate(provider.updated_at) }}
+            <button
+              @click="viewMode = 'list'"
+              :class="[
+                'px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                viewMode === 'list'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+            >
+              <span class="material-icon-sm">list</span>
+              List
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="loading" class="text-center py-16">
+          <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+          <p class="text-gray-600">Loading service providers...</p>
+        </div>
+
+        <!-- No Results -->
+        <div v-else-if="providers.length === 0" class="text-center py-16">
+          <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-6">
+            <span class="material-icon text-gray-400">search_off</span>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">No service providers found</h3>
+          <p class="text-gray-600 mb-6">Try adjusting your search criteria or filters</p>
+          <button @click="clearAllFilters" class="btn-filled flex items-center gap-2 mx-auto">
+            <span class="material-icon-sm">refresh</span>
+            Clear Filters
+          </button>
+        </div>
+
+        <!-- Results Grid -->
+        <div v-else-if="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div v-for="provider in providers" :key="provider.id" class="card hover:shadow-lg transition-shadow">
+            <div class="card-header flex justify-between items-center">
+              <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                <span class="material-icon text-white">{{ provider.name.charAt(0) }}</span>
+              </div>
+              <div class="flex gap-2">
+                <button v-if="!provider.is_approved"
+                        @click="addToApproved(provider.id)"
+                        class="btn-filled btn-small flex items-center gap-1"
+                        :disabled="approvingProvider === provider.id">
+                  <span v-if="approvingProvider === provider.id" class="material-icon-sm animate-spin">refresh</span>
+                  <span v-else class="material-icon-sm">add</span>
+                  {{ approvingProvider === provider.id ? 'Adding...' : 'Add' }}
+                </button>
+                <button v-else
+                        @click="removeFromApproved(provider.id)"
+                        class="btn-outlined btn-small flex items-center gap-1"
+                        :disabled="removingProvider === provider.id">
+                  <span v-if="removingProvider === provider.id" class="material-icon-sm animate-spin">refresh</span>
+                  <span v-else class="material-icon-sm">check</span>
+                  {{ removingProvider === provider.id ? 'Removing...' : 'Added' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="card-content">
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ provider.name }}</h3>
+              <p class="text-gray-600 text-sm mb-3">{{ provider.address }}</p>
+              <p v-if="provider.description" class="text-gray-700 text-sm mb-4 line-clamp-2">
+                {{ truncateText(provider.description, 100) }}
+              </p>
+
+              <div class="flex gap-4 text-sm text-gray-500 mb-4">
+                <div class="flex items-center gap-1">
+                  <span class="material-icon-sm">build</span>
+                  {{ provider.services_count }} services
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="material-icon-sm">location_on</span>
+                  {{ provider.regions_count }} regions
+                </div>
+              </div>
+            </div>
+
+            <div class="card-footer flex justify-between items-center">
+              <button @click="showProviderDetails(provider)" class="btn-text btn-small flex items-center gap-1">
+                <span class="material-icon-sm">visibility</span>
+                View Details
+              </button>
+              <div class="text-xs text-gray-500">
+                Updated {{ formatDate(provider.updated_at) }}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Results List -->
-      <div v-else class="providers-list">
+        <!-- Results List -->
+        <div v-else class="providers-list">
         <div v-for="provider in providers" :key="provider.id" class="provider-list-item">
           <div class="provider-list-content">
             <div class="provider-list-header">
@@ -283,6 +352,7 @@
         </div>
       </div>
     </div>
+  </div>
   </div>
 </template>
 

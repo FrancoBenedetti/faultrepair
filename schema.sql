@@ -39,9 +39,13 @@ CREATE TABLE users (
     username VARCHAR(50) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    phone VARCHAR(20),
     role_id INT NOT NULL,
     entity_type ENUM('client', 'service_provider') NOT NULL,
     entity_id INT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id) REFERENCES roles(id)
 );
