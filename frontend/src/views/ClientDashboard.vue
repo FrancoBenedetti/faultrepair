@@ -26,67 +26,294 @@
     <div class="dashboard-content grid gap-8">
       <!-- User Management Section - Hidden for reporting employees -->
       <div v-if="userRole === 2" class="users-section card p-6">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
-          <h2 class="text-title-large text-on-surface mb-0">User Management</h2>
-          <button v-if="isAdmin" @click="showAddUserModal = true" class="btn-filled">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('users')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.users }">
+              <span class="material-icon-sm">expand_more</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0">User Management</h2>
+          </div>
+          <button v-if="isAdmin" @click.stop="showAddUserModal = true" class="btn-filled">
             <span class="material-icon-sm mr-2">person_add</span>
             Add New User
           </button>
         </div>
 
-        <div class="users-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div v-show="sectionsExpanded.users" class="section-content transition-all duration-300 ease-in-out">
+          <div class="users-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Loading state -->
+            <div v-if="users === null" class="loading-state col-span-full text-center py-16">
+              <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
+              <p class="text-body-large text-on-surface-variant">Loading users...</p>
+            </div>
+
+            <!-- User cards -->
+            <div v-else-if="users && users.length > 0" v-for="user in users" :key="user.id" class="user-card card overflow-hidden transition-all duration-200 hover:shadow-elevation-3">
+              <div class="user-header card-header flex justify-between items-center">
+                <div class="user-avatar w-12 h-12 bg-primary-600 rounded-full flex items-center justify-center">
+                  <span class="material-icon text-on-primary">{{ user.username.charAt(0).toUpperCase() }}</span>
+                </div>
+                <div class="user-actions flex gap-2" v-if="isAdmin">
+                  <button @click="editUser(user)" class="btn-outlined btn-small">
+                    <span class="material-icon-sm">edit</span>
+                  </button>
+                  <button v-if="canDeleteUser(user)" @click="deleteUser(user)" class="btn-outlined btn-small text-error-600 border-error-600 hover:bg-error-50">
+                    <span class="material-icon-sm">delete</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="user-content card-content">
+                <h3 class="user-name text-title-medium text-on-surface mb-2">{{ user.username }}</h3>
+                <p class="user-email text-body-medium text-on-surface-variant mb-3">{{ user.email }}</p>
+                <div class="user-role">
+                  <span class="role-badge status-badge" :class="getRoleClass(user.role_name)">
+                    {{ user.role_name }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="user-footer card-footer">
+                <div class="user-date text-label-medium text-on-surface-variant">
+                  Added {{ formatDate(user.created_at) }}
+                </div>
+              </div>
+            </div>
+
+            <!-- No users state -->
+            <div v-else-if="users && users.length === 0" class="no-users col-span-full text-center py-16">
+              <div class="no-users-icon material-icon-xl text-neutral-400 mb-4">group</div>
+              <h3 class="text-title-large text-on-surface mb-2">No users found</h3>
+              <p class="text-body-large text-on-surface-variant">Get started by adding your first user.</p>
+            </div>
+
+            <!-- Error state -->
+            <div v-else class="error-state col-span-full text-center py-16">
+              <div class="error-icon material-icon-xl text-error-400 mb-4">error</div>
+              <h3 class="text-title-large text-on-surface mb-2">Failed to load users</h3>
+              <p class="text-body-large text-on-surface-variant">Please try refreshing the page.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Locations Section - Hidden for reporting employees -->
+      <div v-if="userRole === 2" class="locations-section card p-6">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('locations')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.locations }">
+              <span class="material-icon-sm">expand_more</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0">Locations</h2>
+          </div>
+          <div class="header-right flex items-center gap-4">
+            <!-- View Mode Toggle -->
+            <div class="view-mode-toggle flex border border-gray-300 rounded-lg overflow-hidden">
+              <button @click.stop="locationsViewMode = 'cards'" :class="{ 'bg-blue-600 text-white': locationsViewMode === 'cards', 'bg-white text-gray-700 hover:bg-gray-50': locationsViewMode !== 'cards' }" class="px-4 py-2 text-sm font-medium transition-colors">
+                <span class="material-icon-sm mr-1">grid_view</span>
+                Cards
+              </button>
+              <button @click.stop="locationsViewMode = 'table'" :class="{ 'bg-blue-600 text-white': locationsViewMode === 'table', 'bg-white text-gray-700 hover:bg-gray-50': locationsViewMode !== 'table' }" class="px-4 py-2 text-sm font-medium transition-colors">
+                <span class="material-icon-sm mr-1">table_chart</span>
+                Table
+              </button>
+            </div>
+            <button v-if="isAdmin" @click.stop="showAddLocationModal = true" class="btn-filled">
+              <span class="material-icon-sm mr-2">add</span>
+              Add Location
+            </button>
+          </div>
+        </div>
+
+        <div v-show="sectionsExpanded.locations" class="section-content transition-all duration-300 ease-in-out">
+
+        <!-- Cards View -->
+        <div v-if="locationsViewMode === 'cards'" class="locations-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <!-- Loading state -->
-          <div v-if="users === null" class="loading-state col-span-full text-center py-16">
+          <div v-if="locations === null" class="loading-state col-span-full text-center py-16">
             <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p class="text-body-large text-on-surface-variant">Loading users...</p>
+            <p class="text-body-large text-on-surface-variant">Loading locations...</p>
           </div>
 
-          <!-- User cards -->
-          <div v-else-if="users && users.length > 0" v-for="user in users" :key="user.id" class="user-card card overflow-hidden transition-all duration-200 hover:shadow-elevation-3">
-            <div class="user-header card-header flex justify-between items-center">
-              <div class="user-avatar w-12 h-12 bg-primary-600 rounded-full flex items-center justify-center">
-                <span class="material-icon text-on-primary">{{ user.username.charAt(0).toUpperCase() }}</span>
+          <!-- Default location state -->
+          <div v-else-if="locations && locations.length === 0" class="default-location col-span-full text-center py-16">
+            <div class="material-icon-xl text-neutral-400 mb-4">business</div>
+            <h3 class="text-title-large text-on-surface mb-2">Default Location</h3>
+            <p class="text-body-large text-on-surface-variant">Using client name as default location. Add specific locations if needed.</p>
+          </div>
+
+          <!-- Location cards -->
+          <div v-else-if="locations && locations.length > 0" v-for="location in locations" :key="location.id" class="location-card card overflow-hidden transition-all duration-200 hover:shadow-elevation-3 cursor-pointer" @click="filterJobsByLocation(location)">
+            <div class="location-header card-header flex justify-between items-center">
+              <div class="location-icon w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                <span class="material-icon text-white">location_on</span>
               </div>
-              <div class="user-actions flex gap-2" v-if="isAdmin">
-                <button @click="editUser(user)" class="btn-outlined btn-small">
+              <div class="location-actions flex gap-2" v-if="isAdmin">
+                <button @click.stop="editLocation(location)" class="btn-outlined btn-small">
                   <span class="material-icon-sm">edit</span>
                 </button>
-                <button v-if="canDeleteUser(user)" @click="deleteUser(user)" class="btn-outlined btn-small text-error-600 border-error-600 hover:bg-error-50">
+                <button v-if="location.job_count === 0" @click.stop="deleteLocation(location)" class="btn-outlined btn-small text-error-600 border-error-600 hover:bg-error-50">
                   <span class="material-icon-sm">delete</span>
                 </button>
               </div>
             </div>
 
-            <div class="user-content card-content">
-              <h3 class="user-name text-title-medium text-on-surface mb-2">{{ user.username }}</h3>
-              <p class="user-email text-body-medium text-on-surface-variant mb-3">{{ user.email }}</p>
-              <div class="user-role">
-                <span class="role-badge status-badge" :class="getRoleClass(user.role_name)">
-                  {{ user.role_name }}
-                </span>
+            <div class="location-content card-content">
+              <h3 class="location-name text-title-medium text-on-surface mb-2">{{ location.name }}</h3>
+              <p class="location-address text-body-medium text-on-surface-variant mb-4">{{ location.address || 'No address specified' }}</p>
+
+              <div class="location-stats">
+                <div class="stat-item">
+                  <span class="stat-number text-2xl font-bold text-on-surface">{{ location.job_count }}</span>
+                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Fault Reports</span>
+                </div>
               </div>
             </div>
 
-            <div class="user-footer card-footer">
-              <div class="user-date text-label-medium text-on-surface-variant">
-                Added {{ formatDate(user.created_at) }}
+            <div class="location-footer card-footer">
+              <div class="location-click-hint text-label-medium text-on-surface-variant">
+                <span class="material-icon-sm mr-1">filter_list</span>
+                Click to filter jobs
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table View -->
+        <div v-else-if="locationsViewMode === 'table'" class="locations-table-container">
+          <!-- Loading state -->
+          <div v-if="locations === null" class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Loading locations...</p>
+          </div>
+
+          <!-- Default location state -->
+          <div v-else-if="locations && locations.length === 0" class="default-location">
+            <div class="default-location-icon">🏢</div>
+            <h3>Default Location</h3>
+            <p>Using client name as default location. Add specific locations if needed.</p>
+          </div>
+
+          <!-- Locations table -->
+          <div v-else-if="locations && locations.length > 0" class="locations-table-wrapper">
+            <table class="locations-table">
+              <thead>
+                <tr>
+                  <th class="col-name">Location Name</th>
+                  <th class="col-address">Address</th>
+                  <th class="col-jobs">Fault Reports</th>
+                  <th class="col-actions" v-if="isAdmin">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="location in locations" :key="location.id" class="location-row" @click="filterJobsByLocation(location)">
+                  <td class="col-name">
+                    <div class="location-name-cell">
+                      <span class="location-icon">📍</span>
+                      <span class="location-name-text">{{ location.name }}</span>
+                    </div>
+                  </td>
+                  <td class="col-address">{{ location.address || 'No address specified' }}</td>
+                  <td class="col-jobs">
+                    <span class="job-count-badge">{{ location.job_count }}</span>
+                  </td>
+                  <td class="col-actions" v-if="isAdmin">
+                    <div class="table-actions">
+                      <button @click.stop="editLocation(location)" class="btn-secondary btn-small">
+                        Edit
+                      </button>
+                      <button v-if="location.job_count === 0" @click.stop="deleteLocation(location)" class="btn-danger btn-small">
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <!-- Approved Providers Section - Hidden for reporting employees -->
+      <div v-if="userRole === 2" class="providers-section card p-6">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('providers')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.providers }">
+              <span class="material-icon-sm">expand_more</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0">Approved Service Providers</h2>
+          </div>
+          <router-link v-if="isAdmin" to="/browse-providers" class="btn-outlined" @click.stop>
+            <span class="material-icon-sm mr-2">search</span>
+            Browse Providers
+          </router-link>
+        </div>
+
+        <div v-show="sectionsExpanded.providers" class="section-content transition-all duration-300 ease-in-out">
+
+        <div class="providers-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Loading state -->
+          <div v-if="approvedProviders === null" class="loading-state col-span-full text-center py-16">
+            <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-body-large text-on-surface-variant">Loading providers...</p>
+          </div>
+
+          <!-- Provider cards -->
+          <div v-else-if="approvedProviders && approvedProviders.length > 0" v-for="provider in approvedProviders" :key="provider.id" class="provider-card card overflow-hidden transition-all duration-200 hover:shadow-elevation-3">
+            <div class="provider-header card-header flex justify-between items-center">
+              <div class="provider-logo w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                <span class="material-icon text-on-primary">{{ provider.name.charAt(0).toUpperCase() }}</span>
+              </div>
+              <div class="provider-actions flex gap-2">
+                <button @click="viewProviderJobs(provider)" class="btn-outlined btn-small">
+                  <span class="material-icon-sm">visibility</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="provider-content card-content">
+              <h3 class="provider-name text-title-medium text-on-surface mb-2">{{ provider.name }}</h3>
+              <p class="provider-address text-body-medium text-on-surface-variant mb-4">{{ provider.address }}</p>
+
+              <div class="provider-stats grid grid-cols-3 gap-3">
+                <div class="stat-item text-center">
+                  <span class="stat-number text-xl font-bold text-on-surface">{{ provider.total_jobs }}</span>
+                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Total</span>
+                </div>
+                <div class="stat-item text-center">
+                  <span class="stat-number text-xl font-bold text-on-surface">{{ provider.active_jobs }}</span>
+                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Active</span>
+                </div>
+                <div class="stat-item text-center">
+                  <span class="stat-number text-xl font-bold text-on-surface">{{ provider.completed_jobs }}</span>
+                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Completed</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="provider-footer card-footer">
+              <div class="approval-date text-label-medium text-on-surface-variant">
+                <span class="material-icon-sm mr-1">check_circle</span>
+                Approved {{ formatDate(provider.approved_at) }}
               </div>
             </div>
           </div>
 
-          <!-- No users state -->
-          <div v-else-if="users && users.length === 0" class="no-users col-span-full text-center py-16">
-            <div class="no-users-icon material-icon-xl text-neutral-400 mb-4">group</div>
-            <h3 class="text-title-large text-on-surface mb-2">No users found</h3>
-            <p class="text-body-large text-on-surface-variant">Get started by adding your first user.</p>
+          <!-- No providers state -->
+          <div v-else-if="approvedProviders && approvedProviders.length === 0" class="no-providers col-span-full text-center py-16">
+            <div class="material-icon-xl text-neutral-400 mb-4">handshake</div>
+            <h3 class="text-title-large text-on-surface mb-2">No approved providers</h3>
+            <p class="text-body-large text-on-surface-variant">Browse and approve service providers to get started.</p>
           </div>
 
           <!-- Error state -->
           <div v-else class="error-state col-span-full text-center py-16">
             <div class="error-icon material-icon-xl text-error-400 mb-4">error</div>
-            <h3 class="text-title-large text-on-surface mb-2">Failed to load users</h3>
+            <h3 class="text-title-large text-on-surface mb-2">Failed to load providers</h3>
             <p class="text-body-large text-on-surface-variant">Please try refreshing the page.</p>
           </div>
+        </div>
         </div>
       </div>
 
@@ -213,210 +440,6 @@
           <div v-else class="error-state col-span-full text-center py-16">
             <div class="error-icon material-icon-xl text-error-400 mb-4">error</div>
             <h3 class="text-title-large text-on-surface mb-2">Failed to load jobs</h3>
-            <p class="text-body-large text-on-surface-variant">Please try refreshing the page.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Locations Section - Hidden for reporting employees -->
-      <div v-if="userRole === 2" class="locations-section card p-6">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
-          <h2 class="text-title-large text-on-surface mb-0">Locations</h2>
-          <div class="header-right flex items-center gap-4">
-            <!-- View Mode Toggle -->
-            <div class="view-mode-toggle flex border border-gray-300 rounded-lg overflow-hidden">
-              <button @click="locationsViewMode = 'cards'" :class="{ 'bg-blue-600 text-white': locationsViewMode === 'cards', 'bg-white text-gray-700 hover:bg-gray-50': locationsViewMode !== 'cards' }" class="px-4 py-2 text-sm font-medium transition-colors">
-                <span class="material-icon-sm mr-1">grid_view</span>
-                Cards
-              </button>
-              <button @click="locationsViewMode = 'table'" :class="{ 'bg-blue-600 text-white': locationsViewMode === 'table', 'bg-white text-gray-700 hover:bg-gray-50': locationsViewMode !== 'table' }" class="px-4 py-2 text-sm font-medium transition-colors">
-                <span class="material-icon-sm mr-1">table_chart</span>
-                Table
-              </button>
-            </div>
-            <button v-if="isAdmin" @click="showAddLocationModal = true" class="btn-filled">
-              <span class="material-icon-sm mr-2">add</span>
-              Add Location
-            </button>
-          </div>
-        </div>
-
-        <!-- Cards View -->
-        <div v-if="locationsViewMode === 'cards'" class="locations-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <!-- Loading state -->
-          <div v-if="locations === null" class="loading-state col-span-full text-center py-16">
-            <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p class="text-body-large text-on-surface-variant">Loading locations...</p>
-          </div>
-
-          <!-- Default location state -->
-          <div v-else-if="locations && locations.length === 0" class="default-location col-span-full text-center py-16">
-            <div class="material-icon-xl text-neutral-400 mb-4">business</div>
-            <h3 class="text-title-large text-on-surface mb-2">Default Location</h3>
-            <p class="text-body-large text-on-surface-variant">Using client name as default location. Add specific locations if needed.</p>
-          </div>
-
-          <!-- Location cards -->
-          <div v-else-if="locations && locations.length > 0" v-for="location in locations" :key="location.id" class="location-card card overflow-hidden transition-all duration-200 hover:shadow-elevation-3 cursor-pointer" @click="filterJobsByLocation(location)">
-            <div class="location-header card-header flex justify-between items-center">
-              <div class="location-icon w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                <span class="material-icon text-white">location_on</span>
-              </div>
-              <div class="location-actions flex gap-2" v-if="isAdmin">
-                <button @click.stop="editLocation(location)" class="btn-outlined btn-small">
-                  <span class="material-icon-sm">edit</span>
-                </button>
-                <button v-if="location.job_count === 0" @click.stop="deleteLocation(location)" class="btn-outlined btn-small text-error-600 border-error-600 hover:bg-error-50">
-                  <span class="material-icon-sm">delete</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="location-content card-content">
-              <h3 class="location-name text-title-medium text-on-surface mb-2">{{ location.name }}</h3>
-              <p class="location-address text-body-medium text-on-surface-variant mb-4">{{ location.address || 'No address specified' }}</p>
-
-              <div class="location-stats">
-                <div class="stat-item">
-                  <span class="stat-number text-2xl font-bold text-on-surface">{{ location.job_count }}</span>
-                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Fault Reports</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="location-footer card-footer">
-              <div class="location-click-hint text-label-medium text-on-surface-variant">
-                <span class="material-icon-sm mr-1">filter_list</span>
-                Click to filter jobs
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Table View -->
-        <div v-else-if="locationsViewMode === 'table'" class="locations-table-container">
-          <!-- Loading state -->
-          <div v-if="locations === null" class="loading-state">
-            <div class="loading-spinner"></div>
-            <p>Loading locations...</p>
-          </div>
-
-          <!-- Default location state -->
-          <div v-else-if="locations && locations.length === 0" class="default-location">
-            <div class="default-location-icon">🏢</div>
-            <h3>Default Location</h3>
-            <p>Using client name as default location. Add specific locations if needed.</p>
-          </div>
-
-          <!-- Locations table -->
-          <div v-else-if="locations && locations.length > 0" class="locations-table-wrapper">
-            <table class="locations-table">
-              <thead>
-                <tr>
-                  <th class="col-name">Location Name</th>
-                  <th class="col-address">Address</th>
-                  <th class="col-jobs">Fault Reports</th>
-                  <th class="col-actions" v-if="isAdmin">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="location in locations" :key="location.id" class="location-row" @click="filterJobsByLocation(location)">
-                  <td class="col-name">
-                    <div class="location-name-cell">
-                      <span class="location-icon">📍</span>
-                      <span class="location-name-text">{{ location.name }}</span>
-                    </div>
-                  </td>
-                  <td class="col-address">{{ location.address || 'No address specified' }}</td>
-                  <td class="col-jobs">
-                    <span class="job-count-badge">{{ location.job_count }}</span>
-                  </td>
-                  <td class="col-actions" v-if="isAdmin">
-                    <div class="table-actions">
-                      <button @click.stop="editLocation(location)" class="btn-secondary btn-small">
-                        Edit
-                      </button>
-                      <button v-if="location.job_count === 0" @click.stop="deleteLocation(location)" class="btn-danger btn-small">
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Approved Providers Section - Hidden for reporting employees -->
-      <div v-if="userRole === 2" class="providers-section card p-6">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
-          <h2 class="text-title-large text-on-surface mb-0">Approved Service Providers</h2>
-          <router-link v-if="isAdmin" to="/browse-providers" class="btn-outlined">
-            <span class="material-icon-sm mr-2">search</span>
-            Browse Providers
-          </router-link>
-        </div>
-
-        <div class="providers-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <!-- Loading state -->
-          <div v-if="approvedProviders === null" class="loading-state col-span-full text-center py-16">
-            <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p class="text-body-large text-on-surface-variant">Loading providers...</p>
-          </div>
-
-          <!-- Provider cards -->
-          <div v-else-if="approvedProviders && approvedProviders.length > 0" v-for="provider in approvedProviders" :key="provider.id" class="provider-card card overflow-hidden transition-all duration-200 hover:shadow-elevation-3">
-            <div class="provider-header card-header flex justify-between items-center">
-              <div class="provider-logo w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                <span class="material-icon text-on-primary">{{ provider.name.charAt(0).toUpperCase() }}</span>
-              </div>
-              <div class="provider-actions flex gap-2">
-                <button @click="viewProviderJobs(provider)" class="btn-outlined btn-small">
-                  <span class="material-icon-sm">visibility</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="provider-content card-content">
-              <h3 class="provider-name text-title-medium text-on-surface mb-2">{{ provider.name }}</h3>
-              <p class="provider-address text-body-medium text-on-surface-variant mb-4">{{ provider.address }}</p>
-
-              <div class="provider-stats grid grid-cols-3 gap-3">
-                <div class="stat-item text-center">
-                  <span class="stat-number text-xl font-bold text-on-surface">{{ provider.total_jobs }}</span>
-                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Total</span>
-                </div>
-                <div class="stat-item text-center">
-                  <span class="stat-number text-xl font-bold text-on-surface">{{ provider.active_jobs }}</span>
-                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Active</span>
-                </div>
-                <div class="stat-item text-center">
-                  <span class="stat-number text-xl font-bold text-on-surface">{{ provider.completed_jobs }}</span>
-                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Completed</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="provider-footer card-footer">
-              <div class="approval-date text-label-medium text-on-surface-variant">
-                <span class="material-icon-sm mr-1">check_circle</span>
-                Approved {{ formatDate(provider.approved_at) }}
-              </div>
-            </div>
-          </div>
-
-          <!-- No providers state -->
-          <div v-else-if="approvedProviders && approvedProviders.length === 0" class="no-providers col-span-full text-center py-16">
-            <div class="material-icon-xl text-neutral-400 mb-4">handshake</div>
-            <h3 class="text-title-large text-on-surface mb-2">No approved providers</h3>
-            <p class="text-body-large text-on-surface-variant">Browse and approve service providers to get started.</p>
-          </div>
-
-          <!-- Error state -->
-          <div v-else class="error-state col-span-full text-center py-16">
-            <div class="error-icon material-icon-xl text-error-400 mb-4">error</div>
-            <h3 class="text-title-large text-on-surface mb-2">Failed to load providers</h3>
             <p class="text-body-large text-on-surface-variant">Please try refreshing the page.</p>
           </div>
         </div>
@@ -944,7 +967,14 @@ export default {
       editingJob: null,
       originalJobStatus: null,
       originalProviderId: null,
-      editingImages: [] // Array to store additional images for editing
+      editingImages: [], // Array to store additional images for editing
+      // Section collapse/expand state
+      sectionsExpanded: {
+        users: false,
+        locations: false,
+        providers: false,
+        jobs: true // Jobs section expanded by default
+      }
     }
   },
   mounted() {
@@ -1173,9 +1203,15 @@ export default {
     },
 
     viewProviderJobs(provider) {
-      // Navigate to a jobs view for this provider
-      // This would need a new route/component
-      alert(`View jobs for ${provider.name} - Feature coming soon!`)
+      // Filter jobs to show only those for the selected provider
+      this.jobFilters.provider_id = provider.service_provider_id
+      this.loadJobs()
+
+      // Scroll to jobs section for better UX
+      const jobsSection = this.$el.querySelector('.jobs-section')
+      if (jobsSection) {
+        jobsSection.scrollIntoView({ behavior: 'smooth' })
+      }
     },
 
     resetNewUserForm() {
@@ -1809,6 +1845,11 @@ export default {
         console.error('Failed to get client ID from token:', error)
       }
       return null
+    },
+
+    // Section collapse/expand functionality
+    toggleSection(sectionName) {
+      this.sectionsExpanded[sectionName] = !this.sectionsExpanded[sectionName]
     }
 
 
@@ -1882,11 +1923,46 @@ export default {
   margin-bottom: 25px;
   padding-bottom: 15px;
   border-bottom: 1px solid #e0e0e0;
+  cursor: pointer;
 }
 
 .section-header h2 {
   margin: 0;
   color: #333;
+}
+
+/* Expand Button */
+.expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: transform 0.3s ease, background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.expand-btn:hover {
+  background-color: #f0f0f0;
+}
+
+.expand-btn.expanded {
+  transform: rotate(180deg);
+}
+
+.expand-btn .material-icon-sm {
+  font-size: 20px;
+  color: #666;
+}
+
+/* Section Content */
+.section-content {
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
 }
 
 /* Users Section */
@@ -2556,6 +2632,7 @@ export default {
 /* Large Modal for Job Details */
 .large-modal .modal-content {
   max-width: 900px;
+  padding: 5px 10px;
 }
 
 .job-details-content {

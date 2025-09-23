@@ -30,7 +30,7 @@
     <p>Use these QR codes to test the fault reporting system:</p>
 
     <div class="test-data">
-        <h3>Test QR Code 1 (Valid for client ID 1):</h3>
+        <h3>Test QR Code 1 (Valid for client ID 1 - Basic format):</h3>
         <p><strong>Data:</strong> CLIENT:1|ITEM:COMPUTER-001|LOCATION:Main Office</p>
         <div class="qr-code">
             <!-- This would be a real QR code image in production -->
@@ -39,16 +39,27 @@
     </div>
 
     <div class="test-data">
-        <h3>Test QR Code 2 (Valid for client ID 1):</h3>
-        <p><strong>Data:</strong> CLIENT:1|ITEM:PRINTER-ABC|LOCATION:Warehouse</p>
+        <h3>Test QR Code 2 (Valid for client ID 1 - With URL):</h3>
+        <p><strong>Data:</strong> CLIENT:1|ITEM:PRINTER-ABC|LOCATION:Warehouse|URL:https://example.com</p>
         <div class="qr-code">
             <!-- This would be a real QR code image in production -->
-            [QR Code Image Here - CLIENT:1|ITEM:PRINTER-ABC|LOCATION:Warehouse]
+            [QR Code Image Here - CLIENT:1|ITEM:PRINTER-ABC|LOCATION:Warehouse|URL:https://example.com]
         </div>
+        <p><em>URL field is optional and stored for future use</em></p>
     </div>
 
     <div class="test-data">
-        <h3>Test QR Code 3 (Invalid - wrong client):</h3>
+        <h3>Test QR Code 3 (Valid for client ID 1 - No URL):</h3>
+        <p><strong>Data:</strong> CLIENT:1|ITEM:LAPTOP-XYZ|LOCATION:Branch Office</p>
+        <div class="qr-code">
+            <!-- This would be a real QR code image in production -->
+            [QR Code Image Here - CLIENT:1|ITEM:LAPTOP-XYZ|LOCATION:Branch Office]
+        </div>
+        <p><em>Works without URL field - backward compatible</em></p>
+    </div>
+
+    <div class="test-data">
+        <h3>Test QR Code 4 (Invalid - wrong client):</h3>
         <p><strong>Data:</strong> CLIENT:2|ITEM:LAPTOP-123|LOCATION:Branch Office</p>
         <div class="qr-code">
             <!-- This would be a real QR code image in production -->
@@ -68,7 +79,9 @@
     </ol>
 
     <h2>QR Code Format:</h2>
-    <p><code>CLIENT:{client_id}|ITEM:{item_identifier}|LOCATION:{location_name}</code></p>
+    <p><strong>Basic format (3 parts):</strong> <code>CLIENT:{client_id}|ITEM:{item_identifier}|LOCATION:{location_name}</code></p>
+    <p><strong>Extended format (4 parts):</strong> <code>CLIENT:{client_id}|ITEM:{item_identifier}|LOCATION:{location_name}|URL:{siteurl}</code></p>
+    <p><em>The URL field is optional and will be stored for future use. QR codes work with or without this field.</em></p>
 
     <p><strong>Note:</strong> To generate actual QR codes for testing, you can use online QR code generators with the data strings above.</p>
 </body>

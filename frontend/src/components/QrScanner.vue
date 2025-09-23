@@ -205,7 +205,7 @@ export default {
 
           this.$emit('qr-detected', parsedData)
         } else {
-          alert('Invalid QR code format. Expected format: CLIENT:{id}|ITEM:{identifier}|LOCATION:{name}')
+          alert('Invalid QR code format. Expected format: CLIENT:{id}|ITEM:{identifier}|LOCATION:{name} or CLIENT:{id}|ITEM:{identifier}|LOCATION:{name}|URL:{siteurl}')
         }
       } catch (error) {
         console.error('Error parsing QR data:', error)
@@ -214,10 +214,13 @@ export default {
     },
 
     parseQrData(qrData) {
-      // Expected format: CLIENT:{client_id}|ITEM:{item_identifier}|LOCATION:{location_name}
+      // Expected formats:
+      // CLIENT:{client_id}|ITEM:{item_identifier}|LOCATION:{location_name}
+      // or
+      // CLIENT:{client_id}|ITEM:{item_identifier}|LOCATION:{location_name}|URL:{siteurl}
       const parts = qrData.split('|')
 
-      if (parts.length !== 3) {
+      if (parts.length < 3 || parts.length > 4) {
         return null
       }
 
@@ -239,10 +242,23 @@ export default {
         return null
       }
 
+      // Check for optional URL field
+      let siteUrl = null
+      if (parts.length === 4) {
+        const urlPart = parts[3].trim()
+        if (urlPart.startsWith('URL:')) {
+          siteUrl = urlPart.substring(4).trim() // Remove 'URL:'
+        } else {
+          // If there's a 4th part but it's not a URL, invalid format
+          return null
+        }
+      }
+
       return {
         clientId: clientId,
         itemIdentifier: itemIdentifier.trim(),
-        locationName: locationName.trim()
+        locationName: locationName.trim(),
+        siteUrl: siteUrl // Optional field, may be null
       }
     }
   }
