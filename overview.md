@@ -21,11 +21,18 @@ The system must support the following user roles with clearly defined permission
 * **Client Side:**
     * **Reporting Employee:**
         * Can create and submit a new fault report.
-        * Can view all unarchived jobs for their 'location' (their business/site).
+        * ~~Can view all unarchived jobs for their 'location' (their business/site).~~
         * Cannot select a service provider for assignment.
         * Can view which service provider a job has been assigned to.
         * Can view their own submitted reports in detail.
         * Can edit a report only up until it is assigned to a service provider.
+        * *Hidden from view and not accessible*:
+            * Progress bar 
+            * User management section
+            * Job management header
+            * Jobs recorded by other reporting employees
+            * Locations section
+            * Approved service providers*
     * **Site Budget Controller:**
         * Has all the permissions of a Reporting Employee.
         * **Acts as the initial user for a new business.**
@@ -57,10 +64,11 @@ The application must manage the state of a job through the following workflow. T
     * `Quote Accepted`
     * `Completion Confirmed`
 * **Service Provider-side Status Changes (set by service provider):**
-    * `In Progress`
-    * `Quote Provided`
-    * `Repaired`
-    * `Payment Requested`
+    * 'Declined' - This is enabled when the status of the job is 'Assigned' and is only settable by the service provider administrator. 
+    * `In Progress` - This setting is enabled when the status of the task is 'assigned' and is automatically applied when a technician is assigned to the job. This is used to inform the client that the job has been accepted. This is only settable by the administrator
+    * `Quote Provided' - This is applied only when a quotation was requested by the client and has been submitted by the service provider via another channel, e.g. via email
+    * `Repaired` - This is enabled only when the status is 'In Progress' and is settable by either the administrator or the technician
+    * `Payment Requested` - This is only settable when the status is 'Repaired'. This can only be set by the administrator.
 * **Final Archiving Flags:**
     * `Archived by Service Provider` (hides the job from the service provider's active job list)
     * `Archived by Client` (hides the job from the client's active job list)

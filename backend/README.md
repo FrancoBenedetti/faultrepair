@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Fault Reporter backend is a PHP-based REST API that provides authentication and registration services for a fault reporting system. It supports two types of users: clients (who report faults) and service providers (who fix faults).
+The Fault Reporter backend is a comprehensive PHP-based REST API that provides authentication, registration, and fault management services for a complete fault reporting system. It supports two types of users: clients (who report faults) and service providers (who fix faults), with full job lifecycle management including QR code integration for streamlined fault reporting.
 
 ## Architecture
 
@@ -218,6 +218,99 @@ Authorization: Bearer <jwt_token>
 }
 ```
 
+### Client Job Management
+
+#### `GET /backend/api/client-jobs.php`
+Retrieves all jobs for the authenticated client with optional filtering.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Query Parameters:**
+- `status`: Filter by job status (optional)
+- `location_id`: Filter by location ID (optional)
+- `provider_id`: Filter by service provider ID (optional)
+- `user_id`: Filter by reporting user ID (optional)
+
+**Response:**
+```json
+{
+  "jobs": [
+    {
+      "id": 1,
+      "item_identifier": "COMPUTER-001",
+      "fault_description": "Screen not working",
+      "contact_person": "John Smith",
+      "job_status": "Reported",
+      "location_name": "Main Office",
+      "assigned_provider_name": "Tech Solutions Inc",
+      "reporting_user": "jane.doe",
+      "created_at": "2025-01-15 09:00:00",
+      "updated_at": "2025-01-15 09:00:00",
+      "image_count": 2
+    }
+  ]
+}
+```
+
+#### `POST /backend/api/client-jobs.php`
+Creates a new fault report for the authenticated client.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "item_identifier": "COMPUTER-001",
+  "fault_description": "Screen not working",
+  "contact_person": "John Smith",
+  "client_location_id": 1
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Job created successfully",
+  "job_id": 1
+}
+```
+
+#### `PUT /backend/api/client-jobs.php`
+Updates an existing job (role-based permissions apply).
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "job_id": 1,
+  "item_identifier": "COMPUTER-001-UPDATED",
+  "fault_description": "Screen and keyboard not working",
+  "assigned_provider_id": 2,
+  "job_status": "Assigned"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Job updated successfully"
+}
+```
+
 ### Technician Jobs
 
 #### `GET /backend/api/technician-jobs.php`
@@ -270,15 +363,25 @@ backend/
 │   ├── register-service-provider.php # Service provider registration endpoint
 │   ├── technicians.php          # Technician management API
 │   ├── technician-jobs.php      # Technician jobs API
+│   ├── client-jobs.php          # Client job management (CRUD operations)
+│   ├── job-status-update.php    # Job status update endpoint
+│   ├── job-images.php           # Job image management
+│   ├── upload-job-image.php     # Image upload handling
 │   ├── service-providers.php    # Service provider management
 │   ├── service-provider-profile.php # Profile management
 │   ├── service-provider-approved-clients.php # Client approvals
 │   ├── service-provider-client-jobs.php # Client job management
-│   └── client-users.php         # Client user management
+│   ├── client-users.php         # Client user management
+│   ├── client-locations.php     # Client location management
+│   └── no-includes-test.php     # Testing endpoint
 ├── config/
 │   └── database.php             # Database connection configuration
-└── includes/
-    └── JWT.php                  # JWT token handling utilities
+├── includes/
+│   └── JWT.php                  # JWT token handling utilities
+├── uploads/
+│   └── job_images/              # Uploaded job images storage
+└── public/
+    └── index.php                # Main entry point
 ```
 
 ## Dependencies

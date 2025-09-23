@@ -246,6 +246,30 @@
               </div>
             </div>
 
+            <!-- Attached Images -->
+            <div v-if="jobImages[selectedJob.id] && jobImages[selectedJob.id].length > 0" class="mb-6">
+              <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span class="material-icon-sm text-orange-600">image</span>
+                Attached Images ({{ jobImages[selectedJob.id].length }})
+              </h4>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div v-for="image in jobImages[selectedJob.id]" :key="image.id" class="relative group">
+                  <div class="aspect-w-16 aspect-h-12 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                    <img
+                      :src="image.url"
+                      :alt="image.original_filename"
+                      class="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                      @click="openImageModal(image)"
+                    >
+                  </div>
+                  <div class="mt-2 text-sm text-gray-600">
+                    <div class="font-medium truncate">{{ image.original_filename }}</div>
+                    <div class="text-xs">{{ formatFileSize(image.file_size) }} • {{ formatDate(image.uploaded_at) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Status History -->
             <div>
               <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -316,12 +340,30 @@
                 <span class="material-icon-sm text-gray-500">flag</span>
                 New Status
               </label>
-              <select id="newStatus" v-model="newStatus" class="form-input">
-                <option value="Assigned">Assigned</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-                <option value="On Hold">On Hold</option>
+            <select id="newStatus" v-model="newStatus" class="form-input">
+              <option v-if="canSelectStatus('Declined')" value="Declined">Declined</option>
+              <option v-if="canSelectStatus('In Progress')" value="In Progress">In Progress</option>
+              <option v-if="canSelectStatus('Quote Provided')" value="Quote Provided">Quote Provided</option>
+              <option v-if="canSelectStatus('Repaired')" value="Repaired">Repaired</option>
+              <option v-if="canSelectStatus('Payment Requested')" value="Payment Requested">Payment Requested</option>
+            </select>
+            </div>
+
+            <!-- Technician Selection (only for In Progress) -->
+            <div v-if="newStatus === 'In Progress'" class="mb-6">
+              <label for="technician" class="form-label flex items-center gap-2">
+                <span class="material-icon-sm text-gray-500">engineering</span>
+                Assign Technician *
+              </label>
+              <select id="technician" v-model="selectedTechnicianId" class="form-input">
+                <option value="">Select a technician...</option>
+                <option v-for="technician in technicians" :key="technician.id" :value="technician.id">
+                  {{ technician.full_name }} ({{ technician.username }})
+                </option>
               </select>
+              <p v-if="!selectedTechnicianId" class="text-sm text-red-600 mt-1">
+                A technician must be assigned before setting the job to "In Progress"
+              </p>
             </div>
 
             <!-- Notes -->
@@ -360,7 +402,11 @@ export default {
       statusUpdateJob: null,
       newStatus: '',
       statusNotes: '',
-      updatingStatus: false
+      updatingStatus: false,
+      userRole: null,
+      technicians: [],
+      selectedTechnicianId: null,
+      jobImages: {} // Store images for each job
     }
   },
   computed: {
@@ -374,6 +420,7 @@ export default {
     }
   },
   mounted() {
+    this.getUserRole()
     const clientId = this.$route.params.clientId
     if (clientId) {
       this.loadClientJobs(clientId)
@@ -407,24 +454,35 @@ export default {
       }
     },
 
-    showJobDetails(job) {
+    async showJobDetails(job) {
       this.selectedJob = { ...job }
+      console.log('Loading images for job:', job.id)
+      // Load images for this job
+      await this.loadJobImages(job.id)
+      console.log('Images loaded:', this.jobImages[job.id])
     },
 
     closeJobDetails() {
       this.selectedJob = null
     },
 
-    showStatusModal(job) {
+    async showStatusModal(job) {
       this.statusUpdateJob = { ...job }
       this.newStatus = job.job_status
       this.statusNotes = ''
+      this.selectedTechnicianId = null
+
+      // Load technicians if user is admin (only admins can assign technicians)
+      if (this.userRole === 3) {
+        await this.loadTechnicians()
+      }
     },
 
     closeStatusModal() {
       this.statusUpdateJob = null
       this.newStatus = ''
       this.statusNotes = ''
+      this.selectedTechnicianId = null
     },
 
     canUpdateStatus(job) {
@@ -438,20 +496,33 @@ export default {
         return
       }
 
+      // Validate technician assignment for "In Progress" status
+      if (this.newStatus === 'In Progress' && !this.selectedTechnicianId) {
+        alert('Please select a technician before setting the job to "In Progress"')
+        return
+      }
+
       this.updatingStatus = true
       try {
         const token = localStorage.getItem('token')
+        const requestData = {
+          job_id: this.statusUpdateJob.id,
+          status: this.newStatus,
+          notes: this.statusNotes
+        }
+
+        // Include technician assignment if setting to "In Progress"
+        if (this.newStatus === 'In Progress' && this.selectedTechnicianId) {
+          requestData.technician_id = this.selectedTechnicianId
+        }
+
         const response = await fetch('/backend/api/job-status-update.php', {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            job_id: this.statusUpdateJob.id,
-            status: this.newStatus,
-            notes: this.statusNotes
-          })
+          body: JSON.stringify(requestData)
         })
 
         if (response.ok) {
@@ -460,6 +531,14 @@ export default {
           if (jobIndex !== -1) {
             this.jobs[jobIndex].job_status = this.newStatus
             this.jobs[jobIndex].updated_at = new Date().toISOString()
+
+            // Update assigned technician if changed
+            if (this.newStatus === 'In Progress' && this.selectedTechnicianId) {
+              const selectedTech = this.technicians.find(t => t.id == this.selectedTechnicianId)
+              if (selectedTech) {
+                this.jobs[jobIndex].assigned_technician = selectedTech.full_name
+              }
+            }
           }
 
           this.closeStatusModal()
@@ -491,11 +570,107 @@ export default {
       return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     },
 
+    formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes'
+      const k = 1024
+      const sizes = ['Bytes', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    },
+
+    openImageModal(image) {
+      // For now, just open the image in a new tab
+      // In a real application, you might want a modal with zoom functionality
+      window.open(image.url, '_blank')
+    },
+
     handleError(error) {
       if (error.error) {
         alert(error.error)
       } else {
         alert('An error occurred')
+      }
+    },
+
+    getUserRole() {
+      const token = localStorage.getItem('token')
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+          this.userRole = payload.role_id
+        } catch (error) {
+          console.error('Error parsing token:', error)
+          this.userRole = null
+        }
+      }
+    },
+
+    async loadTechnicians() {
+      try {
+        const token = localStorage.getItem('token')
+        const response = await fetch('/backend/api/technicians.php', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          this.technicians = data.technicians || []
+        } else {
+          console.error('Failed to load technicians')
+          this.technicians = []
+        }
+      } catch (error) {
+        console.error('Error loading technicians:', error)
+        this.technicians = []
+      }
+    },
+
+    async loadJobImages(jobId) {
+      try {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`/backend/api/job-images.php?job_id=${jobId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          this.jobImages[jobId] = data.images || []
+        } else {
+          console.error('Failed to load job images')
+          this.jobImages[jobId] = []
+        }
+      } catch (error) {
+        console.error('Error loading job images:', error)
+        this.jobImages[jobId] = []
+      }
+    },
+
+    canSelectStatus(status) {
+      if (!this.statusUpdateJob) return false
+
+      const currentStatus = this.statusUpdateJob.job_status
+      const isAdmin = this.userRole === 3
+      const isTechnician = this.userRole === 4
+
+      switch (status) {
+        case 'Declined':
+          return isAdmin && currentStatus === 'Assigned'
+        case 'In Progress':
+          return isAdmin && currentStatus === 'Assigned'
+        case 'Quote Provided':
+          return isAdmin // Can be set when quotation is provided via email
+        case 'Repaired':
+          return (isAdmin || isTechnician) && currentStatus === 'In Progress'
+        case 'Payment Requested':
+          return isAdmin && currentStatus === 'Repaired'
+        default:
+          return false
       }
     }
   }

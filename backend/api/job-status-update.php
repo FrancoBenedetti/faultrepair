@@ -6,7 +6,6 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: PUT, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json');
-
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
@@ -58,13 +57,20 @@ if (!$input || !isset($input['job_id']) || !isset($input['status'])) {
 $job_id = (int)$input['job_id'];
 $new_status = $input['status'];
 $notes = isset($input['notes']) ? trim($input['notes']) : '';
+$technician_id = isset($input['technician_id']) ? (int)$input['technician_id'] : null;
+
+// Validate technician assignment for "In Progress" status
+if ($new_status === 'In Progress' && !$technician_id) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Technician assignment is required when setting job status to "In Progress"']);
+    exit;
+}
 
 try {
     // Verify the job exists and belongs to the user's service provider
     $stmt = $pdo->prepare("
-        SELECT j.id, j.assigned_technician_id, j.job_status, t.service_provider_id
+        SELECT j.id, j.assigned_technician_id, j.job_status, j.assigned_provider_id as service_provider_id
         FROM jobs j
-        JOIN technicians t ON j.assigned_technician_id = t.user_id
         WHERE j.id = ?
     ");
     $stmt->execute([$job_id]);
@@ -89,14 +95,34 @@ try {
         echo json_encode(['error' => 'Access denied. Job does not belong to your service provider.']);
         exit;
     }
+    // Update job status and technician assignment if provided
+    if ($technician_id) {
+        // Verify the technician belongs to the same service provider
+        $stmt = $pdo->prepare("
+            SELECT u.id FROM users u
+            WHERE u.id = ? AND u.role_id = 4 AND u.entity_type = 'service_provider' AND u.entity_id = ?
+        ");
+        $stmt->execute([$technician_id, $entity_id]);
+        if (!$stmt->fetch()) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid technician assignment']);
+            exit;
+        }
 
-    // Update job status
-    $stmt = $pdo->prepare("
-        UPDATE jobs
-        SET job_status = ?, updated_at = NOW()
-        WHERE id = ?
-    ");
-    $stmt->execute([$new_status, $job_id]);
+        $stmt = $pdo->prepare("
+            UPDATE jobs
+            SET job_status = ?, assigned_technician_id = ?, updated_at = NOW()
+            WHERE id = ?
+        ");
+        $stmt->execute([$new_status, $technician_id, $job_id]);
+    } else {
+        $stmt = $pdo->prepare("
+            UPDATE jobs
+            SET job_status = ?, updated_at = NOW()
+            WHERE id = ?
+        ");
+        $stmt->execute([$new_status, $job_id]);
+    }
 
     // Insert status history
     $stmt = $pdo->prepare("

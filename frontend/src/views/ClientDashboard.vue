@@ -2,8 +2,13 @@
     <div class="client-dashboard max-w-7xl mx-auto px-6 py-8">
       <div class="dashboard-header flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6 mb-8 p-6 bg-gray-50 rounded-xl border border-gray-200">
         <div class="header-left">
-          <h1 class="text-3xl font-bold text-gray-900 mb-4">Client Dashboard</h1>
-          <div class="profile-completeness flex items-center gap-4">
+          <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ userRole === 1 ? 'Report Dashboard' : 'Client Dashboard' }}</h1>
+          <!-- Show user name in mobile view for reporting employees -->
+          <div v-if="userRole === 1" class="user-name-mobile lg:hidden">
+            <p class="text-lg font-medium text-gray-700">{{ getCurrentUserName() }}</p>
+          </div>
+          <!-- Profile completeness bar - hidden for reporting employees -->
+          <div v-if="userRole === 2" class="profile-completeness flex items-center gap-4">
             <div class="completeness-bar w-64 h-3 bg-gray-200 rounded-full overflow-hidden">
               <div class="completeness-fill h-full bg-blue-600 transition-all duration-500 ease-out" :style="{ width: profileCompleteness + '%' }"></div>
             </div>
@@ -11,16 +16,16 @@
           </div>
         </div>
         <div class="header-right">
-          <button @click="signOut" class="btn-outlined">
-            <span class="material-icon-sm mr-2">logout</span>
+          <button @click="signOut" class="btn-filled flex items-center gap-2">
+            <span class="material-icon-sm">logout</span>
             Sign Out
           </button>
         </div>
       </div>
 
     <div class="dashboard-content grid gap-8">
-      <!-- User Management Section -->
-      <div class="users-section card p-6">
+      <!-- User Management Section - Hidden for reporting employees -->
+      <div v-if="userRole === 2" class="users-section card p-6">
         <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
           <h2 class="text-title-large text-on-surface mb-0">User Management</h2>
           <button v-if="isAdmin" @click="showAddUserModal = true" class="btn-filled">
@@ -87,8 +92,16 @@
 
       <!-- Jobs Section -->
       <div class="jobs-section card p-6">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
+        <!-- Section header hidden for reporting employees -->
+        <div v-if="userRole === 2" class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
           <h2 class="text-title-large text-on-surface mb-0">Job Management</h2>
+          <button @click="showCreateJobModal = true" class="btn-filled">
+            <span class="material-icon-sm mr-2">add</span>
+            Report New Fault
+          </button>
+        </div>
+        <!-- Simplified header for reporting employees -->
+        <div v-else class="section-header flex justify-end mb-6 pb-4 border-b border-neutral-200">
           <button @click="showCreateJobModal = true" class="btn-filled">
             <span class="material-icon-sm mr-2">add</span>
             Report New Fault
@@ -107,7 +120,8 @@
               <option value="Completed">Completed</option>
             </select>
           </div>
-          <div class="filter-group min-w-40">
+          <!-- Location and Provider filters only for budget controllers -->
+          <div v-if="userRole === 2" class="filter-group min-w-40">
             <label for="location-filter" class="form-label mb-1">Location:</label>
             <select id="location-filter" v-model="jobFilters.location_id" @change="loadJobs" class="form-input">
               <option value="">All Locations</option>
@@ -116,7 +130,7 @@
               </option>
             </select>
           </div>
-          <div class="filter-group min-w-40">
+          <div v-if="userRole === 2" class="filter-group min-w-40">
             <label for="provider-filter" class="form-label mb-1">Provider:</label>
             <select id="provider-filter" v-model="jobFilters.provider_id" @change="loadJobs" class="form-input">
               <option value="">All Providers</option>
@@ -204,8 +218,8 @@
         </div>
       </div>
 
-      <!-- Locations Section -->
-      <div class="locations-section card p-6">
+      <!-- Locations Section - Hidden for reporting employees -->
+      <div v-if="userRole === 2" class="locations-section card p-6">
         <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
           <h2 class="text-title-large text-on-surface mb-0">Locations</h2>
           <div class="header-right flex items-center gap-4">
@@ -334,8 +348,8 @@
         </div>
       </div>
 
-      <!-- Approved Providers Section -->
-      <div class="providers-section card p-6">
+      <!-- Approved Providers Section - Hidden for reporting employees -->
+      <div v-if="userRole === 2" class="providers-section card p-6">
         <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
           <h2 class="text-title-large text-on-surface mb-0">Approved Service Providers</h2>
           <router-link v-if="isAdmin" to="/browse-providers" class="btn-outlined">
@@ -533,9 +547,22 @@
         <form @submit.prevent="createJob" class="job-form">
           <div class="form-row">
             <div class="form-group">
-              <label for="location">Location{{ locations && locations.length > 0 ? ' *' : '' }}</label>
-              <select v-if="locations && locations.length > 0" id="location" v-model="newJob.client_location_id" required>
-                <option value="">Select Location</option>
+              <label for="item-identifier">Item Identifier *</label>
+              <div class="input-with-button">
+                <input type="text" id="item-identifier" v-model="newJob.item_identifier" required
+                       placeholder="e.g., Computer-001, Printer-ABC or scan QR code">
+                <QrScanner
+                  :client-id="getClientId()"
+                  @qr-detected="handleQrDetected"
+                  class="qr-scanner-inline"
+                />
+              </div>
+              <small class="form-help">Required: Unique identifier for the item (scan QR or enter manually)</small>
+            </div>
+            <div class="form-group">
+              <label for="location">Location</label>
+              <select v-if="locations && locations.length > 0" id="location" v-model="newJob.client_location_id">
+                <option value="">Select Location (optional)</option>
                 <option v-for="location in locations" :key="location.id" :value="location.id">
                   {{ location.name }}
                 </option>
@@ -544,15 +571,9 @@
                 <span class="default-location-text">Default Location (Client Name)</span>
                 <input type="hidden" v-model="newJob.client_location_id" value="">
               </div>
-              <small v-if="!locations || locations.length === 0" class="form-help">
-                No custom locations defined. This fault will be associated with your client name.
+              <small class="form-help">
+                Optional: Can be auto-filled from QR code. If no custom locations defined, this fault will be associated with your client name.
               </small>
-            </div>
-            <div class="form-group">
-              <label for="item-identifier">Item Identifier</label>
-              <input type="text" id="item-identifier" v-model="newJob.item_identifier"
-                     placeholder="e.g., Computer-001, Printer-ABC">
-              <small class="form-help">Optional: Unique identifier for the item</small>
             </div>
           </div>
 
@@ -570,37 +591,12 @@
           </div>
 
           <!-- Image Upload Section -->
-          <div class="image-upload-section">
-            <h4>Attach Photos (Optional)</h4>
-            <p class="form-help">Add photos to help describe the fault</p>
-
-            <div class="image-upload-area" @click="$refs.imageInput.click()"
-                 @dragover.prevent @drop.prevent>
-              <div class="upload-placeholder">
-                <div class="upload-icon">📷</div>
-                <p>Click to select photos or drag and drop</p>
-                <small>Supported formats: JPG, PNG, GIF (Max 5MB each)</small>
-              </div>
-            </div>
-
-            <input type="file" ref="imageInput" @change="handleImageSelection"
-                   accept="image/*" multiple style="display: none;">
-
-            <!-- Selected Images Preview -->
-            <div v-if="selectedImages.length > 0" class="selected-images">
-              <h5>Selected Images ({{ selectedImages.length }})</h5>
-              <div class="image-previews">
-                <div v-for="(image, index) in selectedImages" :key="index" class="image-preview">
-                  <img :src="image.preview" :alt="image.name" class="preview-image">
-                  <div class="image-info">
-                    <span class="image-name">{{ image.name }}</span>
-                    <span class="image-size">({{ formatFileSize(image.size) }})</span>
-                  </div>
-                  <button type="button" @click="removeImage(index)" class="remove-image-btn">&times;</button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <ImageUpload
+            ref="imageUpload"
+            :max-images="10"
+            :max-file-size="10 * 1024 * 1024"
+            @images-changed="handleImagesChanged"
+          />
 
           <div class="form-actions">
             <button type="button" @click="showCreateJobModal = false" class="btn-secondary">Cancel</button>
@@ -789,6 +785,17 @@
               <textarea id="edit-fault-description" v-model="editingJob.fault_description" required
                         rows="4" placeholder="Describe the fault in detail..."></textarea>
             </div>
+
+            <!-- Image Upload Section for editing -->
+            <div class="form-group">
+              <label>Attach Additional Images</label>
+              <ImageUpload
+                ref="editImageUpload"
+                :max-images="10"
+                :max-file-size="10 * 1024 * 1024"
+                @images-changed="handleEditImagesChanged"
+              />
+            </div>
           </div>
 
           <!-- Read-only details when not fully editable -->
@@ -811,6 +818,30 @@
             </div>
           </div>
 
+          <!-- Existing Images Gallery -->
+          <div class="images-section">
+            <h4>Attached Images ({{ editingJob.images?.length || 0 }})</h4>
+
+            <div v-if="!editingJob.images || editingJob.images.length === 0" class="no-images">
+              <div class="no-images-icon">📷</div>
+              <p>No images attached to this job</p>
+            </div>
+
+            <div v-else class="images-gallery">
+              <div class="gallery-grid">
+                <div v-for="image in editingJob.images" :key="image.id" class="gallery-item">
+                  <img :src="`/backend/uploads/job_images/${image.filename}`"
+                       :alt="image.original_filename"
+                       class="gallery-image"
+                       @click="openImageModal(image)">
+                  <div class="image-overlay">
+                    <span class="image-filename">{{ image.original_filename }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="form-actions">
             <button type="button" @click="showEditJobModal = false" class="btn-secondary">Cancel</button>
             <button type="submit" class="btn-primary">
@@ -820,6 +851,8 @@
         </form>
       </div>
     </div>
+
+
 
     <!-- Image Modal for Full Size View -->
     <div v-if="selectedImage" class="modal-overlay" @click="selectedImage = null">
@@ -839,8 +872,15 @@
 </template>
 
 <script>
+import ImageUpload from '@/components/ImageUpload.vue'
+import QrScanner from '@/components/QrScanner.vue'
+
 export default {
   name: 'ClientDashboard',
+  components: {
+    ImageUpload,
+    QrScanner
+  },
   data() {
     return {
       users: null, // Start as null to show loading state
@@ -876,7 +916,7 @@ export default {
         contact_person: ''
       },
       jobToAssign: null,
-      selectedImages: [], // Array to store selected images
+      selectedImages: [], // Array to store selected images from component
       newUser: {
         username: '',
         email: '',
@@ -903,7 +943,8 @@ export default {
       locationsViewMode: 'cards', // 'cards' or 'table'
       editingJob: null,
       originalJobStatus: null,
-      originalProviderId: null
+      originalProviderId: null,
+      editingImages: [] // Array to store additional images for editing
     }
   },
   mounted() {
@@ -1205,6 +1246,11 @@ export default {
         if (this.jobFilters.location_id) params.append('location_id', this.jobFilters.location_id)
         if (this.jobFilters.provider_id) params.append('provider_id', this.jobFilters.provider_id)
 
+        // For reporting employees, only show their own jobs
+        if (this.userRole === 1) {
+          params.append('user_id', this.userId)
+        }
+
         const response = await fetch(`/backend/api/client-jobs.php?${params}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -1402,49 +1448,42 @@ export default {
       }
     },
 
-    handleImageSelection(event) {
-      const files = Array.from(event.target.files)
-      this.addImages(files)
-    },
+    async uploadEditJobImages(jobId) {
+      const token = localStorage.getItem('token')
 
-    addImages(files) {
-      files.forEach(file => {
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-          alert(`${file.name} is not an image file`)
-          return
+      for (const image of this.editingImages) {
+        const formData = new FormData()
+        formData.append('job_id', jobId)
+        formData.append('image', image.file)
+
+        try {
+          const response = await fetch('/backend/api/upload-job-image.php', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+              // Don't set Content-Type for FormData - let browser set it with boundary
+            },
+            body: formData
+          })
+
+          if (response.ok) {
+            console.log('Successfully uploaded additional image:', image.name)
+          } else {
+            const errorData = await response.json()
+            console.error('Failed to upload additional image:', image.name, errorData.error)
+          }
+        } catch (error) {
+          console.error('Error uploading additional image:', image.name, error)
         }
-
-        // Validate file size (5MB limit)
-        if (file.size > 5 * 1024 * 1024) {
-          alert(`${file.name} is too large. Maximum size is 5MB`)
-          return
-        }
-
-        // Create preview URL
-        const preview = URL.createObjectURL(file)
-
-        this.selectedImages.push({
-          file: file,
-          name: file.name,
-          size: file.size,
-          preview: preview
-        })
-      })
+      }
     },
 
-    removeImage(index) {
-      // Revoke the object URL to free memory
-      URL.revokeObjectURL(this.selectedImages[index].preview)
-      this.selectedImages.splice(index, 1)
+    handleImagesChanged(images) {
+      this.selectedImages = images
     },
 
-    formatFileSize(bytes) {
-      if (bytes === 0) return '0 Bytes'
-      const k = 1024
-      const sizes = ['Bytes', 'KB', 'MB', 'GB']
-      const i = Math.floor(Math.log(bytes) / Math.log(k))
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    handleEditImagesChanged(images) {
+      this.editingImages = images
     },
 
     resetNewJobForm() {
@@ -1454,11 +1493,11 @@ export default {
         fault_description: '',
         contact_person: ''
       }
-      // Clear selected images
-      this.selectedImages.forEach(image => {
-        URL.revokeObjectURL(image.preview)
-      })
-      this.selectedImages = []
+      // Clear selected images in component
+      if (this.$refs.imageUpload) {
+        // The component manages its own images, so we just need to reset our local array
+        this.selectedImages = []
+      }
     },
 
     // Location management methods
@@ -1582,6 +1621,35 @@ export default {
       this.originalJobStatus = job.job_status
       this.originalProviderId = job.assigned_provider_id
 
+      // Load job images if not already loaded
+      if (!job.images) {
+        try {
+          const token = localStorage.getItem('token')
+          const response = fetch(`/backend/api/job-images.php?job_id=${job.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+
+          response.then(res => {
+            if (res.ok) {
+              return res.json()
+            }
+          }).then(data => {
+            this.editingJob.images = data.images || []
+          }).catch(error => {
+            console.error('Failed to load job images:', error)
+            this.editingJob.images = []
+          })
+        } catch (error) {
+          console.error('Failed to load job images:', error)
+          this.editingJob.images = []
+        }
+      } else {
+        this.editingJob.images = job.images
+      }
+
       // Refresh approved providers list to ensure it's current
       this.loadApprovedProviders().then(() => {
         // Ensure the current assigned provider is still approved
@@ -1624,31 +1692,64 @@ export default {
           updateData.assigned_provider_id = this.editingJob.assigned_provider_id || null
         }
 
-        // Only proceed if there are changes
-        if (Object.keys(updateData).length <= 1) {
+        // Only proceed if there are changes or new images to upload
+        const hasChanges = Object.keys(updateData).length > 1
+        const hasNewImages = this.editingImages && this.editingImages.length > 0
+
+        if (!hasChanges && !hasNewImages) {
           alert('No changes to save')
           return
         }
 
-        const response = await fetch('/backend/api/client-jobs.php', {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(updateData)
-        })
+        // Update job details if there are changes
+        if (hasChanges) {
+          const response = await fetch('/backend/api/client-jobs.php', {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updateData)
+          })
 
-        if (response.ok) {
-          alert('Job updated successfully!')
-          this.showEditJobModal = false
-          this.loadJobs()
-        } else {
-          const errorData = await response.json()
-          this.handleError(errorData)
+          if (!response.ok) {
+            const errorData = await response.json()
+            this.handleError(errorData)
+            return
+          }
         }
+
+        // Upload additional images if any were selected
+        if (hasNewImages) {
+          await this.uploadEditJobImages(this.editingJob.id)
+        }
+
+        alert('Job updated successfully!')
+        this.showEditJobModal = false
+        this.loadJobs()
       } catch (error) {
         alert('Failed to update job')
+      }
+    },
+
+    getCurrentUserName() {
+      // Get current user name from localStorage or users array
+      try {
+        const userData = localStorage.getItem('user')
+        if (userData) {
+          const user = JSON.parse(userData)
+          return user.username || 'User'
+        }
+
+        // Fallback: find current user in users array
+        if (this.users && this.users.length > 0 && this.userId) {
+          const currentUser = this.users.find(u => u.id == this.userId)
+          return currentUser ? currentUser.username : 'User'
+        }
+
+        return 'User'
+      } catch (error) {
+        return 'User'
       }
     },
 
@@ -1672,7 +1773,45 @@ export default {
       }
 
       this.profileCompleteness = Math.round((completeness / totalCriteria) * 100)
+    },
+
+    // QR Scanner methods
+    handleQrDetected(qrData) {
+      console.log('QR data detected:', qrData)
+
+      // Populate item_identifier (required field)
+      this.newJob.item_identifier = qrData.itemIdentifier
+
+      // Auto-fill location if available in QR and matches existing locations
+      if (qrData.locationName && this.locations && this.locations.length > 0) {
+        const matchingLocation = this.locations.find(location =>
+          location.name.toLowerCase() === qrData.locationName.toLowerCase()
+        )
+        if (matchingLocation) {
+          this.newJob.client_location_id = matchingLocation.id
+          alert(`QR code scanned successfully! Item: ${qrData.itemIdentifier}, Location: ${qrData.locationName}`)
+        } else {
+          alert(`QR code scanned successfully! Item: ${qrData.itemIdentifier}. Location "${qrData.locationName}" not found in your locations.`)
+        }
+      } else {
+        alert(`QR code scanned successfully! Item: ${qrData.itemIdentifier}`)
+      }
+    },
+
+    getClientId() {
+      try {
+        const token = localStorage.getItem('token')
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+          return payload.entity_id
+        }
+      } catch (error) {
+        console.error('Failed to get client ID from token:', error)
+      }
+      return null
     }
+
+
   }
 }
 </script>
@@ -2152,6 +2291,20 @@ export default {
 .form-group input:disabled {
   background: #f8f9fa;
   color: #666;
+}
+
+.input-with-button {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.input-with-button input {
+  flex: 1;
+}
+
+.qr-scanner-inline {
+  flex-shrink: 0;
 }
 
 .form-help {
@@ -2685,6 +2838,7 @@ export default {
   .modal-content {
     width: 95%;
     margin: 10px;
+    padding: 5px 10px;
   }
 
   .large-modal .modal-content {
@@ -2721,4 +2875,6 @@ export default {
     gap: 5px;
   }
 }
+
+
 </style>

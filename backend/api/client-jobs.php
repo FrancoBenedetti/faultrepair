@@ -51,6 +51,7 @@ try {
         $status_filter = isset($_GET['status']) ? $_GET['status'] : null;
         $location_filter = isset($_GET['location_id']) ? (int)$_GET['location_id'] : null;
         $provider_filter = isset($_GET['provider_id']) ? (int)$_GET['provider_id'] : null;
+        $user_filter = isset($_GET['user_id']) ? (int)$_GET['user_id'] : null;
 
         $query = "
             SELECT
@@ -92,6 +93,11 @@ try {
         if ($provider_filter) {
             $query .= " AND j.assigned_provider_id = ?";
             $params[] = $provider_filter;
+        }
+
+        if ($user_filter) {
+            $query .= " AND j.reporting_user_id = ?";
+            $params[] = $user_filter;
         }
 
         $query .= " ORDER BY j.created_at DESC";

@@ -21,6 +21,9 @@ The frontend follows Vue.js best practices with:
 - **JavaScript (ES6+)**: Modern JavaScript features
 - **CSS**: Component-scoped styling
 - **HTML5**: Semantic markup
+- **html5-qrcode**: QR code scanning library
+- **jsQR**: Direct QR code detection library
+- **Camera API**: Device camera access for QR scanning and photo capture
 
 ## Project Structure
 
@@ -139,10 +142,12 @@ frontend/
 #### `ClientDashboard.vue`
 - **Purpose**: Main dashboard for client users
 - **Features**:
-  - Job creation and management
+  - Job creation and management with QR code scanning
   - Service provider browsing
   - Job status tracking
   - Role-based access (Reporting Employee vs Budget Controller)
+  - QR Code Integration: Scan QR codes to auto-fill fault reports
+  - Camera access for both QR scanning and photo capture
 - **Routes**: `/client-dashboard`
 
 #### `ClientServiceProviderBrowser.vue`

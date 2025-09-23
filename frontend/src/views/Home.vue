@@ -1,8 +1,8 @@
 <template>
   <div class="home max-w-2xl mx-auto px-6 py-12 text-center">
-    <h1 class="text-4xl font-bold text-gray-900 mb-4">Fault Reporter</h1>
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">Jobsnapper</h1>
     <p class="text-lg text-gray-700 mb-12">
-      Welcome to the Fault Reporter system. Please select your access type below:
+      Welcome to the Jobsnapper. Login or register below:
     </p>
 
     <div class="bg-white rounded-xl shadow-lg border border-gray-200 mb-8 overflow-hidden">

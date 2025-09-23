@@ -65,8 +65,7 @@ if ($role_id === 4) {
     $stmt = $pdo->prepare("
         SELECT u.id
         FROM users u
-        JOIN technicians t ON u.id = t.user_id
-        WHERE u.id = ? AND t.service_provider_id = ?
+        WHERE u.id = ? AND u.role_id = 4 AND u.entity_type = 'service_provider' AND u.entity_id = ?
     ");
     $stmt->execute([$technician_id, $entity_id]);
     if (!$stmt->fetch()) {
@@ -83,14 +82,13 @@ try {
             u.id,
             u.username,
             u.email,
-            t.first_name,
-            t.last_name,
-            t.phone,
-            t.is_active,
-            CONCAT(t.first_name, ' ', t.last_name) as full_name
+            u.first_name,
+            u.last_name,
+            u.phone,
+            u.is_active,
+            CONCAT(u.first_name, ' ', u.last_name) as full_name
         FROM users u
-        JOIN technicians t ON u.id = t.user_id
-        WHERE u.id = ?
+        WHERE u.id = ? AND u.role_id = 4 AND u.entity_type = 'service_provider'
     ");
     $stmt->execute([$technician_id]);
     $technician = $stmt->fetch(PDO::FETCH_ASSOC);

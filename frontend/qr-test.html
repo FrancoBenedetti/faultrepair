@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .qr-code {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+        .test-data {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>QR Code Test Data</h1>
+    <p>Use these QR codes to test the fault reporting system:</p>
+
+    <div class="test-data">
+        <h3>Test QR Code 1 (Valid for client ID 1):</h3>
+        <p><strong>Data:</strong> CLIENT:1|ITEM:COMPUTER-001|LOCATION:Main Office</p>
+        <div class="qr-code">
+            <!-- This would be a real QR code image in production -->
+            [QR Code Image Here - CLIENT:1|ITEM:COMPUTER-001|LOCATION:Main Office]
+        </div>
+    </div>
+
+    <div class="test-data">
+        <h3>Test QR Code 2 (Valid for client ID 1):</h3>
+        <p><strong>Data:</strong> CLIENT:1|ITEM:PRINTER-ABC|LOCATION:Warehouse</p>
+        <div class="qr-code">
+            <!-- This would be a real QR code image in production -->
+            [QR Code Image Here - CLIENT:1|ITEM:PRINTER-ABC|LOCATION:Warehouse]
+        </div>
+    </div>
+
+    <div class="test-data">
+        <h3>Test QR Code 3 (Invalid - wrong client):</h3>
+        <p><strong>Data:</strong> CLIENT:2|ITEM:LAPTOP-123|LOCATION:Branch Office</p>
+        <div class="qr-code">
+            <!-- This would be a real QR code image in production -->
+            [QR Code Image Here - CLIENT:2|ITEM:LAPTOP-123|LOCATION:Branch Office]
+        </div>
+        <p><em>This should be rejected because client ID doesn't match current user</em></p>
+    </div>
+
+    <h2>How to Test:</h2>
+    <ol>
+        <li>Log in to the fault reporting system with username 'reporter' and password 'test123'</li>
+        <li>Click "Report New Fault"</li>
+        <li>Click the "Scan QR" button next to the Item Identifier field</li>
+        <li>Allow camera access when prompted</li>
+        <li>Point camera at one of the QR codes above (you'll need to generate real QR codes)</li>
+        <li>Verify that the item identifier is auto-filled and location is populated if it matches</li>
+    </ol>
+
+    <h2>QR Code Format:</h2>
+    <p><code>CLIENT:{client_id}|ITEM:{item_identifier}|LOCATION:{location_name}</code></p>
+
+    <p><strong>Note:</strong> To generate actual QR codes for testing, you can use online QR code generators with the data strings above.</p>
+</body>
+</html>

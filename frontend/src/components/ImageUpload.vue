@@ -3,18 +3,18 @@
     <div class="upload-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
       <h4 class="text-lg font-semibold text-gray-900 mb-0">Attach Images</h4>
       <div class="upload-actions flex gap-3">
-        <button @click="triggerFileInput" class="btn-outlined btn-small">
+        <button type="button" @click.stop="triggerFileInput" class="btn-outlined btn-small">
           <span class="material-icon-sm mr-2">upload_file</span>
           Choose Files
         </button>
-        <button @click="openCamera" class="btn-filled btn-small" v-if="cameraSupported">
+        <button type="button" @click.stop="openCamera" class="btn-filled btn-small">
           <span class="material-icon-sm mr-2">photo_camera</span>
           Take Photo
         </button>
       </div>
     </div>
 
-    <!-- Hidden file input -->
+    <!-- Hidden file inputs -->
     <input
       ref="fileInput"
       type="file"
@@ -24,20 +24,30 @@
       class="hidden"
     >
 
+    <!-- Camera capture fallback for mobile -->
+    <input
+      ref="cameraInput"
+      type="file"
+      accept="image/*"
+      capture="environment"
+      @change="handleFileSelection"
+      class="hidden"
+    >
+
     <!-- Camera capture -->
     <div v-if="showCamera" class="modal-overlay">
       <div class="modal-content max-w-md">
         <div class="modal-header">
           <h3 class="text-xl font-semibold text-gray-900 mb-0">Take Photo</h3>
-          <button @click="closeCamera" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+          <button type="button" @click="closeCamera" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
         </div>
         <div class="modal-body p-6">
           <video ref="cameraVideo" autoplay playsinline class="camera-video w-full rounded-lg bg-black"></video>
           <canvas ref="cameraCanvas" class="hidden"></canvas>
         </div>
         <div class="modal-footer">
-          <button @click="closeCamera" class="btn-outlined">Cancel</button>
-          <button @click="capturePhoto" class="btn-filled" :disabled="!cameraStream">
+          <button type="button" @click="closeCamera" class="btn-outlined">Cancel</button>
+          <button type="button" @click="capturePhoto" class="btn-filled" :disabled="!cameraStream">
             <span class="material-icon-sm mr-2">camera</span>
             Capture
           </button>
@@ -119,7 +129,19 @@ export default {
   },
   methods: {
     checkCameraSupport() {
-      this.cameraSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+      // Basic check for API availability and secure context
+      const hasAPI = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+      const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+
+      this.cameraSupported = hasAPI && isSecure
+
+      if (!hasAPI) {
+        console.log('Camera not supported: MediaDevices API not available')
+      } else if (!isSecure) {
+        console.log('Camera not supported: Not in secure context (HTTPS required)')
+      } else {
+        console.log('Camera potentially supported - will request permission when used')
+      }
     },
 
     triggerFileInput() {
@@ -187,14 +209,53 @@ export default {
 
     async openCamera() {
       try {
-        this.cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' } // Use back camera on mobile
-        })
-        this.$refs.cameraVideo.srcObject = this.cameraStream
+        // Clear any previous errors
+        this.error = null
+
+        // Try back camera first, then fall back to any camera
+        let constraints = { video: { facingMode: 'environment' } }
+
+        try {
+          this.cameraStream = await navigator.mediaDevices.getUserMedia(constraints)
+        } catch (firstError) {
+          console.log('Back camera not available, trying any camera:', firstError.message)
+          // Fall back to any available camera
+          constraints = { video: true }
+          this.cameraStream = await navigator.mediaDevices.getUserMedia(constraints)
+        }
+
+        // Show the modal first to ensure video element is rendered
         this.showCamera = true
+
+        // Use nextTick to ensure DOM is updated before setting video source
+        await this.$nextTick()
+
+        // Now set the video source
+        const video = this.$refs.cameraVideo
+        if (video) {
+          video.srcObject = this.cameraStream
+          console.log('Camera opened successfully')
+        } else {
+          throw new Error('Video element not found')
+        }
       } catch (error) {
         console.error('Error accessing camera:', error)
-        this.error = 'Unable to access camera. Please check permissions.'
+
+        // Provide more specific error messages
+        let errorMessage = 'Unable to access camera.'
+        if (error.name === 'NotAllowedError') {
+          errorMessage += ' Camera permission was denied. Please allow camera access and try again.'
+        } else if (error.name === 'NotFoundError') {
+          errorMessage += ' No camera found on this device.'
+        } else if (error.name === 'NotReadableError') {
+          errorMessage += ' Camera is already in use by another application.'
+        } else if (error.name === 'OverconstrainedError') {
+          errorMessage += ' Camera constraints cannot be satisfied.'
+        } else {
+          errorMessage += ` ${error.message}`
+        }
+
+        this.error = errorMessage
       }
     },
 
