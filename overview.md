@@ -47,11 +47,18 @@ The system must support the following user roles with clearly defined permission
         * Can manage users (Technicians) for their service provider company.
         * Has a dashboard to view all jobs assigned to their company.
         * Can assign jobs to a specific Technician within their company.
-        * Can set job statuses as "In Progress", "Quote Provided", "Repaired", "Payment Requested", and "Completed".
+        * Can set job statuses as:
+            * "In Progress" 
+            * "Quote Provided" 
+            * "Repaired"
+            * "Payment Requested"
+            * "Completed"
     * **Technician:**
-        * Can view jobs assigned to them.
-        * Can add notes to a job report (Technician Notes).
-        * Can change a job's status to "Repaired" and "Payment Requested." This action must be optimized for mobile access.
+        * Can view jobs that have been assigned to the user only
+        * Can add notes to a job report (Technician Notes)
+        * Can change a job's status from "In Progress" to 
+            "Repaired"
+            "Not repairable"
 
 ## **4. Workflow and Job Statuses**
 
@@ -64,10 +71,11 @@ The application must manage the state of a job through the following workflow. T
     * `Quote Accepted`
     * `Completion Confirmed`
 * **Service Provider-side Status Changes (set by service provider):**
-    * 'Declined' - This is enabled when the status of the job is 'Assigned' and is only settable by the service provider administrator. 
+    * `Declined` - This is enabled when the status of the job is 'Assigned' and is only settable by the service provider administrator. 
     * `In Progress` - This setting is enabled when the status of the task is 'assigned' and is automatically applied when a technician is assigned to the job. This is used to inform the client that the job has been accepted. This is only settable by the administrator
-    * `Quote Provided' - This is applied only when a quotation was requested by the client and has been submitted by the service provider via another channel, e.g. via email
+    * `Quote Provided` - This is applied only when a quotation was requested by the client and has been submitted by the service provider via another channel, e.g. via email
     * `Repaired` - This is enabled only when the status is 'In Progress' and is settable by either the administrator or the technician
+    * `Not repairable` - This is enabled only when the status is 'In Progress' and is settable by either the administrator or the technician 
     * `Payment Requested` - This is only settable when the status is 'Repaired'. This can only be set by the administrator.
 * **Final Archiving Flags:**
     * `Archived by Service Provider` (hides the job from the service provider's active job list)

@@ -5,40 +5,70 @@
       Welcome to the Jobsnapper. Login or register below:
     </p>
 
-    <div class="bg-white rounded-xl shadow-lg border border-gray-200 mb-8 overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-xl font-semibold text-gray-900 mb-0 flex items-center justify-center gap-3">
-          <span class="material-icon text-blue-600">business</span>
-          For Clients
-        </h2>
-      </div>
-      <div class="px-6 py-4">
-        <div class="flex flex-col sm:flex-row justify-center gap-4">
-          <router-link to="/client-registration" class="bg-blue-600 text-white font-medium px-6 py-2.5 rounded-full shadow-lg hover:bg-blue-700 hover:shadow-xl active:bg-blue-800 active:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 transition-all duration-200 ease-out">
-            Register as Client
-          </router-link>
-          <router-link to="/client-signin" class="bg-transparent text-blue-600 border-2 border-blue-600 font-medium px-6 py-2.5 rounded-full hover:bg-blue-50 hover:shadow-lg active:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 transition-all duration-200 ease-out">
-            Sign In as Client
-          </router-link>
-        </div>
-      </div>
-    </div>
-
     <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200">
         <h2 class="text-xl font-semibold text-gray-900 mb-0 flex items-center justify-center gap-3">
-          <span class="material-icon text-pink-600">engineering</span>
-          For Service Providers
+          <span class="material-icon text-blue-600">login</span>
+          Sign In
         </h2>
       </div>
       <div class="px-6 py-4">
-        <div class="flex flex-col sm:flex-row justify-center gap-4">
-          <router-link to="/service-provider-registration" class="bg-blue-600 text-white font-medium px-6 py-2.5 rounded-full shadow-lg hover:bg-blue-700 hover:shadow-xl active:bg-blue-800 active:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 transition-all duration-200 ease-out">
-            Register as Service Provider
-          </router-link>
-          <router-link to="/service-provider-signin" class="bg-transparent text-blue-600 border-2 border-blue-600 font-medium px-6 py-2.5 rounded-full hover:bg-blue-50 hover:shadow-lg active:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 transition-all duration-200 ease-out">
-            Sign In as Service Provider
-          </router-link>
+        <form @submit.prevent="signin" class="space-y-6">
+          <div>
+            <label for="username" class="form-label flex items-center gap-2">
+              <span class="material-icon-sm text-gray-500">person</span>
+              Username
+            </label>
+            <input
+              type="text"
+              id="username"
+              v-model="form.username"
+              required
+              class="form-input"
+              placeholder="Enter your username"
+            >
+          </div>
+
+          <div>
+            <label for="password" class="form-label flex items-center gap-2">
+              <span class="material-icon-sm text-gray-500">lock</span>
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              v-model="form.password"
+              required
+              class="form-input"
+              placeholder="Enter your password"
+            >
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              class="btn-filled w-full flex items-center justify-center gap-2"
+              :disabled="loading"
+            >
+              <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
+              <span v-else class="material-icon-sm">login</span>
+              {{ loading ? 'Signing In...' : 'Sign In' }}
+            </button>
+          </div>
+        </form>
+
+        <div class="mt-6 text-center">
+          <p class="text-sm text-gray-600 mb-4">
+            Don't have an account?
+          </p>
+          <div class="flex flex-col sm:flex-row justify-center gap-4">
+            <router-link to="/client-registration" class="bg-blue-600 text-white font-medium px-6 py-2.5 rounded-full shadow-lg hover:bg-blue-700 hover:shadow-xl active:bg-blue-800 active:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 transition-all duration-200 ease-out">
+              Register as Client
+            </router-link>
+            <router-link to="/service-provider-registration" class="bg-transparent text-blue-600 border-2 border-blue-600 font-medium px-6 py-2.5 rounded-full hover:bg-blue-50 hover:shadow-lg active:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 transition-all duration-200 ease-out">
+              Register as Service Provider
+            </router-link>
+          </div>
         </div>
       </div>
     </div>
@@ -47,6 +77,64 @@
 
 <script>
 export default {
-  name: 'Home'
+  name: 'Home',
+  data() {
+    return {
+      loading: false,
+      form: {
+        username: '',
+        password: ''
+      }
+    }
+  },
+  mounted() {
+    // Check if user is already authenticated
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+        if (payload.entity_type === 'client') {
+          // Already signed in as client, redirect to dashboard
+          this.$router.push('/client-dashboard')
+        } else if (payload.entity_type === 'service_provider') {
+          // Already signed in as service provider, redirect to dashboard
+          this.$router.push('/service-provider-dashboard')
+        }
+      } catch (error) {
+        // Invalid token, remove it
+        localStorage.removeItem('token')
+      }
+    }
+  },
+  methods: {
+    async signin() {
+      this.loading = true
+      try {
+        const response = await fetch('/backend/api/auth.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(this.form)
+        });
+        const data = await response.json();
+        if (response.ok) {
+          localStorage.setItem('token', data.token);
+          const payload = JSON.parse(atob(data.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+          if (payload.entity_type === 'client') {
+            this.$router.push('/client-dashboard');
+          } else if (payload.entity_type === 'service_provider') {
+            this.$router.push('/service-provider-dashboard');
+          }
+        } else {
+          alert(data.error);
+        }
+      } catch (error) {
+        alert('Sign in failed');
+      } finally {
+        this.loading = false
+      }
+    }
+  }
 }
 </script>

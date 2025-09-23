@@ -56,7 +56,7 @@ if (!$input || !isset($input['job_id']) || !isset($input['status'])) {
 
 $job_id = (int)$input['job_id'];
 $new_status = $input['status'];
-$notes = isset($input['notes']) ? trim($input['notes']) : '';
+$technician_notes = isset($input['technician_notes']) ? trim($input['technician_notes']) : '';
 $technician_id = isset($input['technician_id']) ? (int)$input['technician_id'] : null;
 
 // Validate technician assignment for "In Progress" status
@@ -95,7 +95,7 @@ try {
         echo json_encode(['error' => 'Access denied. Job does not belong to your service provider.']);
         exit;
     }
-    // Update job status and technician assignment if provided
+    // Update job status, technician assignment, and technician notes if provided
     if ($technician_id) {
         // Verify the technician belongs to the same service provider
         $stmt = $pdo->prepare("
@@ -111,17 +111,17 @@ try {
 
         $stmt = $pdo->prepare("
             UPDATE jobs
-            SET job_status = ?, assigned_technician_id = ?, updated_at = NOW()
+            SET job_status = ?, assigned_technician_id = ?, technician_notes = ?, updated_at = NOW()
             WHERE id = ?
         ");
-        $stmt->execute([$new_status, $technician_id, $job_id]);
+        $stmt->execute([$new_status, $technician_id, $technician_notes, $job_id]);
     } else {
         $stmt = $pdo->prepare("
             UPDATE jobs
-            SET job_status = ?, updated_at = NOW()
+            SET job_status = ?, technician_notes = ?, updated_at = NOW()
             WHERE id = ?
         ");
-        $stmt->execute([$new_status, $job_id]);
+        $stmt->execute([$new_status, $technician_notes, $job_id]);
     }
 
     // Insert status history
