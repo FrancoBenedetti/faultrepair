@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../includes/JWT.php';
+require_once '../includes/email.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -103,36 +104,36 @@ function createTechnician($provider_id) {
 
     $data = json_decode(file_get_contents('php://input'), true);
 
-    if (!$data || !isset($data['username']) || !isset($data['password']) ||
-        !isset($data['email']) || !isset($data['first_name']) || !isset($data['last_name'])) {
+    if (!$data || !isset($data['username']) || !isset($data['email']) ||
+        !isset($data['first_name']) || !isset($data['last_name']) || !isset($data['phone'])) {
         http_response_code(400);
-        echo json_encode(['error' => 'Required fields: username, password, email, first_name, last_name']);
+        echo json_encode(['error' => 'Required fields: username, email, first_name, last_name, phone']);
         return;
     }
 
     $username = trim($data['username']);
-    $password = $data['password'];
     $email = trim($data['email']);
     $first_name = trim($data['first_name']);
     $last_name = trim($data['last_name']);
-    $phone = isset($data['phone']) ? trim($data['phone']) : null;
+    $phone = trim($data['phone']);
 
     // Validation
-    if (empty($username) || empty($password) || empty($email) || empty($first_name) || empty($last_name)) {
+    if (empty($username) || empty($email) || empty($first_name) || empty($last_name) || empty($phone)) {
         http_response_code(400);
         echo json_encode(['error' => 'All required fields must be non-empty']);
-        return;
-    }
-
-    if (strlen($password) < 6) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Password must be at least 6 characters long']);
         return;
     }
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         http_response_code(400);
         echo json_encode(['error' => 'Invalid email format']);
+        return;
+    }
+
+    // Validate phone number (basic validation)
+    if (!preg_match('/^[0-9+\-\s()]+$/', $phone)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid phone number format']);
         return;
     }
 
@@ -149,24 +150,37 @@ function createTechnician($provider_id) {
             return;
         }
 
+        // Generate verification token
+        $verificationToken = EmailService::generateVerificationToken();
+        $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+
         // Create technician user
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
         $stmt = $pdo->prepare("
             INSERT INTO users (
                 username, password_hash, email, first_name, last_name, phone,
-                role_id, entity_type, entity_id, is_active, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, 4, 'service_provider', ?, 1, NOW())
+                role_id, entity_type, entity_id, is_active, email_verified, verification_token, token_expires, created_at
+            ) VALUES (?, NULL, ?, ?, ?, ?, 4, 'service_provider', ?, FALSE, FALSE, ?, ?, NOW())
         ");
-        $stmt->execute([$username, $hashed_password, $email, $first_name, $last_name, $phone, $provider_id]);
+        $stmt->execute([$username, $email, $first_name, $last_name, $phone, $provider_id, $verificationToken, $tokenExpires]);
 
         $technician_id = $pdo->lastInsertId();
 
         $pdo->commit();
 
-        echo json_encode([
-            'message' => 'Technician created successfully',
-            'technician_id' => $technician_id
-        ]);
+        // Send set password email
+        $emailSent = EmailService::sendSetPasswordEmail($email, $username, $verificationToken);
+
+        if ($emailSent) {
+            echo json_encode([
+                'message' => 'Technician created successfully. An email has been sent to set up their password.',
+                'technician_id' => $technician_id
+            ]);
+        } else {
+            echo json_encode([
+                'message' => 'Technician created successfully, but email could not be sent. Please contact support.',
+                'technician_id' => $technician_id
+            ]);
+        }
 
     } catch (Exception $e) {
         $pdo->rollBack();
@@ -208,11 +222,52 @@ function updateTechnician($provider_id) {
         $updateFields = [];
         $updateValues = [];
 
-        $allowedFields = ['first_name', 'last_name', 'email', 'phone', 'is_active'];
+        $allowedFields = ['first_name', 'last_name', 'email', 'phone', 'is_active', 'role_id'];
         foreach ($allowedFields as $field) {
             if (isset($data[$field])) {
-                $updateFields[] = "$field = ?";
-                $updateValues[] = $data[$field];
+                if ($field === 'role_id') {
+                    $new_role_id = (int)$data[$field];
+                    // Verify role exists and is appropriate for service providers
+                    $stmt = $pdo->prepare("SELECT id, name FROM roles WHERE id = ? AND name IN ('Technician', 'Service Provider Admin')");
+                    $stmt->execute([$new_role_id]);
+                    $role = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if (!$role) {
+                        $pdo->rollBack();
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Invalid role selected']);
+                        return;
+                    }
+
+                    // If promoting to Service Provider Admin, check email verification
+                    if ($role['name'] === 'Service Provider Admin') {
+                        $stmt = $pdo->prepare("SELECT email_verified, email, username FROM users WHERE id = ?");
+                        $stmt->execute([$technician_id]);
+                        $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        if (!$user_info['email_verified']) {
+                            // Send verification email and don't allow promotion
+                            $verificationToken = EmailService::generateVerificationToken();
+                            $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+
+                            $stmt = $pdo->prepare("UPDATE users SET verification_token = ?, token_expires = ? WHERE id = ?");
+                            $stmt->execute([$verificationToken, $tokenExpires, $technician_id]);
+
+                            $pdo->rollBack(); // Don't commit the role change
+
+                            $emailSent = EmailService::sendVerificationEmail($user_info['email'], $user_info['username'], $verificationToken);
+
+                            http_response_code(403);
+                            echo json_encode(['error' => 'Email verification required before promoting to admin role. Verification email sent.']);
+                            return;
+                        }
+                    }
+
+                    $updateFields[] = "role_id = ?";
+                    $updateValues[] = $new_role_id;
+                } else {
+                    $updateFields[] = "$field = ?";
+                    $updateValues[] = $data[$field];
+                }
             }
         }
 

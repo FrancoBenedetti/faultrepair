@@ -28,7 +28,7 @@ if (!$data || !isset($data['username']) || !isset($data['password'])) {
 $username = $data['username'];
 $password = $data['password'];
 
-$stmt = $pdo->prepare("SELECT id, password_hash, role_id, entity_type, entity_id FROM users WHERE username = ?");
+$stmt = $pdo->prepare("SELECT id, password_hash, role_id, entity_type, entity_id FROM users WHERE username = ? AND is_active = TRUE");
 $stmt->execute([$username]);
 $user = $stmt->fetch();
 

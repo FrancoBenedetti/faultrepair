@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../includes/JWT.php';
+require_once '../includes/email.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -111,20 +112,21 @@ function addClientUser($client_id) {
     $data = json_decode(file_get_contents('php://input'), true);
 
     if (!$data || !isset($data['username']) || !isset($data['email']) ||
-        !isset($data['password']) || !isset($data['mobile']) || !isset($data['role_id'])) {
+        !isset($data['first_name']) || !isset($data['last_name']) || !isset($data['phone']) || !isset($data['role_id'])) {
         http_response_code(400);
-        echo json_encode(['error' => 'All fields are required: username, email, password, mobile, role_id']);
+        echo json_encode(['error' => 'All fields are required: username, email, first_name, last_name, phone, role_id']);
         exit;
     }
 
     $username = trim($data['username']);
     $email = trim($data['email']);
-    $password = $data['password'];
-    $mobile = trim($data['mobile']);
+    $first_name = trim($data['first_name']);
+    $last_name = trim($data['last_name']);
+    $phone = trim($data['phone']);
     $role_id = (int)$data['role_id'];
 
     // Validation
-    if (empty($username) || empty($email) || empty($password) || empty($mobile)) {
+    if (empty($username) || empty($email) || empty($first_name) || empty($last_name) || empty($phone)) {
         http_response_code(400);
         echo json_encode(['error' => 'All fields must be non-empty']);
         exit;
@@ -136,16 +138,10 @@ function addClientUser($client_id) {
         exit;
     }
 
-    if (strlen($password) < 6) {
+    // Validate phone number (basic validation)
+    if (!preg_match('/^[0-9+\-\s()]+$/', $phone)) {
         http_response_code(400);
-        echo json_encode(['error' => 'Password must be at least 6 characters long']);
-        exit;
-    }
-
-    // Validate mobile number (basic validation)
-    if (!preg_match('/^[0-9+\-\s()]+$/', $mobile)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Invalid mobile number format']);
+        echo json_encode(['error' => 'Invalid phone number format']);
         exit;
     }
 
@@ -173,34 +169,46 @@ function addClientUser($client_id) {
             exit;
         }
 
-        // Hash password
-        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+        // Generate verification token
+        $verificationToken = EmailService::generateVerificationToken();
+        $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
         // Insert user
         $stmt = $pdo->prepare("
-            INSERT INTO users (username, password_hash, email, role_id, entity_type, entity_id)
-            VALUES (?, ?, ?, ?, 'client', ?)
+            INSERT INTO users (username, password_hash, email, first_name, last_name, phone, role_id, entity_type, entity_id, is_active, email_verified, verification_token, token_expires)
+            VALUES (?, NULL, ?, ?, ?, ?, ?, 'client', ?, FALSE, FALSE, ?, ?)
         ");
-        $stmt->execute([$username, $passwordHash, $email, $role_id, $client_id]);
+        $stmt->execute([$username, $email, $first_name, $last_name, $phone, $role_id, $client_id, $verificationToken, $tokenExpires]);
 
         $userId = $pdo->lastInsertId();
 
-        // Store mobile number (we'll add this to the users table or create a separate profile table)
-        // For now, we'll store it in a comment or extend the users table later
-        // TODO: Add mobile field to users table
-
         $pdo->commit();
 
-        echo json_encode([
-            'message' => 'User added successfully',
-            'user' => [
-                'id' => $userId,
-                'username' => $username,
-                'email' => $email,
-                'role_name' => $role['name'],
-                'mobile' => $mobile
-            ]
-        ]);
+        // Send set password email
+        $emailSent = EmailService::sendSetPasswordEmail($email, $username, $verificationToken);
+
+        if ($emailSent) {
+            echo json_encode([
+                'message' => 'User added successfully. An email has been sent to set up their password.',
+                'user' => [
+                    'id' => $userId,
+                    'username' => $username,
+                    'email' => $email,
+                    'role_name' => $role['name']
+                ]
+            ]);
+        } else {
+            // Email failed, but user created - admin can resend
+            echo json_encode([
+                'message' => 'User added successfully, but email could not be sent. Please contact support.',
+                'user' => [
+                    'id' => $userId,
+                    'username' => $username,
+                    'email' => $email,
+                    'role_name' => $role['name']
+                ]
+            ]);
+        }
 
     } catch (Exception $e) {
         $pdo->rollBack();
@@ -274,20 +282,45 @@ function updateClientUser($client_id) {
 
         // Handle role update
         if (isset($data['role_id'])) {
-            $role_id = (int)$data['role_id'];
+            $new_role_id = (int)$data['role_id'];
 
             // Verify role exists and is appropriate for clients
-            $stmt = $pdo->prepare("SELECT id FROM roles WHERE id = ? AND name IN ('Reporting Employee', 'Site Budget Controller')");
-            $stmt->execute([$role_id]);
-            if (!$stmt->fetch()) {
+            $stmt = $pdo->prepare("SELECT id, name FROM roles WHERE id = ? AND name IN ('Reporting Employee', 'Site Budget Controller')");
+            $stmt->execute([$new_role_id]);
+            $role = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$role) {
                 $pdo->rollBack();
                 http_response_code(400);
                 echo json_encode(['error' => 'Invalid role selected']);
                 exit;
             }
 
+            // If promoting to Site Budget Controller, check email verification
+            if ($role['name'] === 'Site Budget Controller') {
+                $stmt = $pdo->prepare("SELECT email_verified, email, username FROM users WHERE id = ?");
+                $stmt->execute([$user_id]);
+                $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$user_info['email_verified']) {
+                    // Send verification email and don't allow promotion
+                    $verificationToken = EmailService::generateVerificationToken();
+                    $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+
+                    $stmt = $pdo->prepare("UPDATE users SET verification_token = ?, token_expires = ? WHERE id = ?");
+                    $stmt->execute([$verificationToken, $tokenExpires, $user_id]);
+
+                    $pdo->rollBack(); // Don't commit the role change
+
+                    $emailSent = EmailService::sendVerificationEmail($user_info['email'], $user_info['username'], $verificationToken);
+
+                    http_response_code(403);
+                    echo json_encode(['error' => 'Email verification required before promoting to admin role. Verification email sent.']);
+                    exit;
+                }
+            }
+
             $updateFields[] = "role_id = ?";
-            $updateValues[] = $role_id;
+            $updateValues[] = $new_role_id;
         }
 
         // Handle password update

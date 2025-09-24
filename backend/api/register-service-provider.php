@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../includes/JWT.php';
+require_once '../includes/email.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -81,13 +82,25 @@ try {
     // Hash password
     $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
+    // Generate verification token
+    $verificationToken = EmailService::generateVerificationToken();
+    $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+
     // Insert user
-    $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, email, role_id, entity_type, entity_id) VALUES (?, ?, ?, ?, 'service_provider', ?)");
-    $stmt->execute([$username, $passwordHash, $email, $role['id'], $providerId]);
+    $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, email, role_id, entity_type, entity_id, is_active, email_verified, verification_token, token_expires) VALUES (?, ?, ?, ?, 'service_provider', ?, FALSE, FALSE, ?, ?)");
+    $stmt->execute([$username, $passwordHash, $email, $role['id'], $providerId, $verificationToken, $tokenExpires]);
 
     $pdo->commit();
 
-    echo json_encode(['message' => 'Service provider registered successfully']);
+    // Send verification email
+    $emailSent = EmailService::sendVerificationEmail($email, $username, $verificationToken);
+
+    if ($emailSent) {
+        echo json_encode(['message' => 'Service provider registered successfully. Please check your email to verify your account.']);
+    } else {
+        // Email failed, but registration succeeded - user can request resend
+        echo json_encode(['message' => 'Service provider registered successfully. Email verification could not be sent. Please contact support or try logging in to resend verification email.']);
+    }
 
 } catch (Exception $e) {
     $pdo->rollBack();
