@@ -468,8 +468,19 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="mobile">Mobile Number *</label>
-              <input type="tel" id="mobile" v-model="newUser.mobile" required
+              <label for="first_name">First Name *</label>
+              <input type="text" id="first_name" v-model="newUser.first_name" required>
+            </div>
+            <div class="form-group">
+              <label for="last_name">Last Name *</label>
+              <input type="text" id="last_name" v-model="newUser.last_name" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="phone">Phone Number *</label>
+              <input type="tel" id="phone" v-model="newUser.phone" required
                      placeholder="+27 12 345 6789">
             </div>
             <div class="form-group">
@@ -480,18 +491,6 @@
                   {{ role.name }}
                 </option>
               </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="password">Password *</label>
-              <input type="password" id="password" v-model="newUser.password" required
-                     minlength="6">
-            </div>
-            <div class="form-group">
-              <label for="confirmPassword">Confirm Password *</label>
-              <input type="password" id="confirmPassword" v-model="newUser.confirmPassword" required>
             </div>
           </div>
 
@@ -897,6 +896,7 @@
 <script>
 import ImageUpload from '@/components/ImageUpload.vue'
 import QrScanner from '@/components/QrScanner.vue'
+import { apiFetch } from '@/utils/api.js'
 
 export default {
   name: 'ClientDashboard',
@@ -943,9 +943,9 @@ export default {
       newUser: {
         username: '',
         email: '',
-        mobile: '',
-        password: '',
-        confirmPassword: '',
+        first_name: '',
+        last_name: '',
+        phone: '',
         role_id: ''
       },
       editingUser: {
@@ -1030,13 +1030,7 @@ export default {
 
     async loadUsers() {
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/client-users.php', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiFetch('/backend/api/client-users.php')
 
         if (response.ok) {
           const data = await response.json()
@@ -1051,13 +1045,7 @@ export default {
 
     async loadApprovedProviders() {
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/client-approved-providers.php', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiFetch('/backend/api/client-approved-providers.php')
 
         if (response.ok) {
           const data = await response.json()
@@ -1079,26 +1067,16 @@ export default {
     },
 
     async addUser() {
-      // Validate form
-      if (this.newUser.password !== this.newUser.confirmPassword) {
-        alert('Passwords do not match')
-        return
-      }
-
       this.addingUser = true
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/client-users.php', {
+        const response = await apiFetch('/backend/api/client-users.php', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify({
             username: this.newUser.username,
             email: this.newUser.email,
-            password: this.newUser.password,
-            mobile: this.newUser.mobile,
+            first_name: this.newUser.first_name,
+            last_name: this.newUser.last_name,
+            phone: this.newUser.phone,
             role_id: this.newUser.role_id
           })
         })
@@ -1134,7 +1112,6 @@ export default {
     async updateUser() {
       this.updatingUser = true
       try {
-        const token = localStorage.getItem('token')
         const updateData = {
           user_id: this.editingUser.id,
           email: this.editingUser.email,
@@ -1145,12 +1122,8 @@ export default {
           updateData.password = this.editingUser.newPassword
         }
 
-        const response = await fetch('/backend/api/client-users.php', {
+        const response = await apiFetch('/backend/api/client-users.php', {
           method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify(updateData)
         })
 
@@ -1175,13 +1148,8 @@ export default {
       }
 
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch(`/backend/api/client-users.php?user_id=${user.id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+        const response = await apiFetch(`/backend/api/client-users.php?user_id=${user.id}`, {
+          method: 'DELETE'
         })
 
         if (response.ok) {
@@ -1218,9 +1186,9 @@ export default {
       this.newUser = {
         username: '',
         email: '',
-        mobile: '',
-        password: '',
-        confirmPassword: '',
+        first_name: '',
+        last_name: '',
+        phone: '',
         role_id: ''
       }
     },
@@ -1254,13 +1222,7 @@ export default {
     // Job-related methods
     async loadLocations() {
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/client-locations.php', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiFetch('/backend/api/client-locations.php')
 
         if (response.ok) {
           const data = await response.json()
@@ -1275,7 +1237,6 @@ export default {
 
     async loadJobs() {
       try {
-        const token = localStorage.getItem('token')
         const params = new URLSearchParams()
 
         if (this.jobFilters.status) params.append('status', this.jobFilters.status)
@@ -1287,12 +1248,7 @@ export default {
           params.append('user_id', this.userId)
         }
 
-        const response = await fetch(`/backend/api/client-jobs.php?${params}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiFetch(`/backend/api/client-jobs.php?${params}`)
 
         if (response.ok) {
           const data = await response.json()
@@ -1347,13 +1303,7 @@ export default {
       // Load job images if not already loaded
       if (!job.images) {
         try {
-          const token = localStorage.getItem('token')
-          const response = await fetch(`/backend/api/job-images.php?job_id=${job.id}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          })
+          const response = await apiFetch(`/backend/api/job-images.php?job_id=${job.id}`)
 
           if (response.ok) {
             const data = await response.json()
@@ -1381,13 +1331,8 @@ export default {
 
     async assignJob(jobId, providerId) {
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/client-jobs.php', {
+        const response = await apiFetch('/backend/api/client-jobs.php', {
           method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify({
             job_id: jobId,
             assigned_provider_id: providerId,
@@ -1411,8 +1356,6 @@ export default {
     async createJob() {
       this.creatingJob = true
       try {
-        const token = localStorage.getItem('token')
-
         // First create the job
         const jobData = {
           client_location_id: this.newJob.client_location_id,
@@ -1421,12 +1364,8 @@ export default {
           contact_person: this.newJob.contact_person || null
         }
 
-        const response = await fetch('/backend/api/client-jobs.php', {
+        const response = await apiFetch('/backend/api/client-jobs.php', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify(jobData)
         })
 
@@ -1434,10 +1373,23 @@ export default {
           const data = await response.json()
           const jobId = data.job_id
 
-          // Upload images if any were selected
-          if (this.selectedImages.length > 0) {
-            await this.uploadJobImages(jobId)
-          }
+      // Upload images if any were selected - let the ImageUpload component handle this
+      if (this.selectedImages.length > 0) {
+        console.log('ClientDashboard: Starting image upload for job', jobId, 'with', this.selectedImages.length, 'images')
+        try {
+          console.log('ClientDashboard: Calling uploadImages with jobId:', jobId)
+          await this.$refs.imageUpload.uploadImages(jobId)
+          console.log('ClientDashboard: Image upload completed successfully')
+        } catch (imageError) {
+          console.error('ClientDashboard: Image upload failed:', imageError)
+          // Show a warning but don't fail the job creation
+          setTimeout(() => {
+            alert('Job created successfully, but image upload failed. You can try uploading images again by editing the job.')
+          }, 100)
+        }
+      } else {
+        console.log('ClientDashboard: No images selected, skipping upload')
+      }
 
           alert('Fault reported successfully!')
           this.showCreateJobModal = false
@@ -1454,65 +1406,9 @@ export default {
       }
     },
 
-    async uploadJobImages(jobId) {
-      const token = localStorage.getItem('token')
 
-      for (const image of this.selectedImages) {
-        const formData = new FormData()
-        formData.append('job_id', jobId)
-        formData.append('image', image.file)
 
-        try {
-          const response = await fetch('/backend/api/upload-job-image.php', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-              // Don't set Content-Type for FormData - let browser set it with boundary
-            },
-            body: formData
-          })
 
-          if (response.ok) {
-            console.log('Successfully uploaded image:', image.name)
-          } else {
-            const errorData = await response.json()
-            console.error('Failed to upload image:', image.name, errorData.error)
-          }
-        } catch (error) {
-          console.error('Error uploading image:', image.name, error)
-        }
-      }
-    },
-
-    async uploadEditJobImages(jobId) {
-      const token = localStorage.getItem('token')
-
-      for (const image of this.editingImages) {
-        const formData = new FormData()
-        formData.append('job_id', jobId)
-        formData.append('image', image.file)
-
-        try {
-          const response = await fetch('/backend/api/upload-job-image.php', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-              // Don't set Content-Type for FormData - let browser set it with boundary
-            },
-            body: formData
-          })
-
-          if (response.ok) {
-            console.log('Successfully uploaded additional image:', image.name)
-          } else {
-            const errorData = await response.json()
-            console.error('Failed to upload additional image:', image.name, errorData.error)
-          }
-        } catch (error) {
-          console.error('Error uploading additional image:', image.name, error)
-        }
-      }
-    },
 
     handleImagesChanged(images) {
       this.selectedImages = images
@@ -1540,13 +1436,8 @@ export default {
     async addLocation() {
       this.addingLocation = true
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/client-locations.php', {
+        const response = await apiFetch('/backend/api/client-locations.php', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify({
             name: this.newLocation.name.trim(),
             address: this.newLocation.address ? this.newLocation.address.trim() : ''
@@ -1586,13 +1477,8 @@ export default {
       const newAddress = prompt('Edit location address:', location.address || '')
 
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/client-locations.php', {
+        const response = await apiFetch('/backend/api/client-locations.php', {
           method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify({
             location_id: location.id,
             name: newName.trim(),
@@ -1619,13 +1505,8 @@ export default {
       }
 
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch(`/backend/api/client-locations.php?location_id=${location.id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+        const response = await apiFetch(`/backend/api/client-locations.php?location_id=${location.id}`, {
+          method: 'DELETE'
         })
 
         if (response.ok) {
@@ -1651,33 +1532,27 @@ export default {
       this.selectedImage = image
     },
 
-    editJob(job) {
+    async editJob(job) {
       // Set the job being edited and store original values for comparison
       this.editingJob = { ...job }
       this.originalJobStatus = job.job_status
       this.originalProviderId = job.assigned_provider_id
+      this.originalItemIdentifier = job.item_identifier
+      this.originalFaultDescription = job.fault_description
+      this.originalContactPerson = job.contact_person
 
       // Load job images if not already loaded
       if (!job.images) {
         try {
-          const token = localStorage.getItem('token')
-          const response = fetch(`/backend/api/job-images.php?job_id=${job.id}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          })
+          const response = await apiFetch(`/backend/api/job-images.php?job_id=${job.id}`)
 
-          response.then(res => {
-            if (res.ok) {
-              return res.json()
-            }
-          }).then(data => {
+          if (response.ok) {
+            const data = await response.json()
             this.editingJob.images = data.images || []
-          }).catch(error => {
-            console.error('Failed to load job images:', error)
+          } else {
+            console.error('Failed to load job images')
             this.editingJob.images = []
-          })
+          }
         } catch (error) {
           console.error('Failed to load job images:', error)
           this.editingJob.images = []
@@ -1706,17 +1581,22 @@ export default {
       }
 
       try {
-        const token = localStorage.getItem('token')
         const updateData = {
           job_id: this.editingJob.id
         }
 
         // Only include fields that can be edited based on status and role
         if (this.canEditJobDetails(this.editingJob)) {
-          // Full edit when status is 'Reported'
-          updateData.item_identifier = this.editingJob.item_identifier || null
-          updateData.fault_description = this.editingJob.fault_description
-          updateData.contact_person = this.editingJob.contact_person || null
+          // Full edit when status is 'Reported' - only add changed fields
+          if (this.editingJob.item_identifier !== this.originalItemIdentifier) {
+            updateData.item_identifier = this.editingJob.item_identifier || null
+          }
+          if (this.editingJob.fault_description !== this.originalFaultDescription) {
+            updateData.fault_description = this.editingJob.fault_description
+          }
+          if (this.editingJob.contact_person !== this.originalContactPerson) {
+            updateData.contact_person = this.editingJob.contact_person || null
+          }
         }
 
         // Status and provider can always be edited (when allowed)
@@ -1739,12 +1619,8 @@ export default {
 
         // Update job details if there are changes
         if (hasChanges) {
-          const response = await fetch('/backend/api/client-jobs.php', {
+          const response = await apiFetch('/backend/api/client-jobs.php', {
             method: 'PUT',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
             body: JSON.stringify(updateData)
           })
 
@@ -1757,7 +1633,7 @@ export default {
 
         // Upload additional images if any were selected
         if (hasNewImages) {
-          await this.uploadEditJobImages(this.editingJob.id)
+          await this.$refs.editImageUpload.uploadImages(this.editingJob.id)
         }
 
         alert('Job updated successfully!')

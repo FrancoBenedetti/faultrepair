@@ -17,17 +17,26 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// JWT Authentication
+// JWT Authentication - check both headers and form data for live server compatibility
+$token = null;
+
+// Try to get token from Authorization header first
 $headers = getallheaders();
 $auth_header = isset($headers['Authorization']) ? $headers['Authorization'] : '';
-
-if (!$auth_header || !preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Authorization header missing or invalid']);
-    exit;
+if ($auth_header && preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+    $token = $matches[1];
 }
 
-$token = $matches[1];
+// If no token in header, try form data or query parameter
+if (!$token) {
+    $token = $_POST['token'] ?? $_GET['token'] ?? null;
+}
+
+if (!$token) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Authorization token missing']);
+    exit;
+}
 try {
     $payload = JWT::decode($token);
     $user_id = $payload['user_id'];

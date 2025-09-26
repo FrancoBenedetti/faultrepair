@@ -1,12 +1,21 @@
 <?php
+require_once __DIR__ . '/../config/site.php';
+
 class JWT {
-    private static $secret = 'your-secret-key'; // Change this to a secure key
+    private static $secret = null;
+
+    private static function getSecret() {
+        if (self::$secret === null) {
+            self::$secret = getenv('JWT_SECRET') ?: 'your-secret-key';
+        }
+        return self::$secret;
+    }
 
     public static function encode($payload) {
         $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
         $header_encoded = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
         $payload_encoded = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode(json_encode($payload)));
-        $signature = hash_hmac('sha256', $header_encoded . "." . $payload_encoded, self::$secret, true);
+        $signature = hash_hmac('sha256', $header_encoded . "." . $payload_encoded, self::getSecret(), true);
         $signature_encoded = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
         return $header_encoded . "." . $payload_encoded . "." . $signature_encoded;
     }
@@ -19,12 +28,15 @@ class JWT {
         $header = $parts[0];
         $payload = $parts[1];
         $signature = $parts[2];
-        $expected_signature = hash_hmac('sha256', $header . "." . $payload, self::$secret, true);
+        $expected_signature = hash_hmac('sha256', $header . "." . $payload, self::getSecret(), true);
         $expected_signature_encoded = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($expected_signature));
         if ($signature !== $expected_signature_encoded) {
             return false;
         }
         $payload_decoded = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $payload)), true);
+        if (isset($payload_decoded['exp']) && time() > $payload_decoded['exp']) {
+            return false; // Token expired
+        }
         return $payload_decoded;
     }
 }

@@ -357,6 +357,8 @@
 </template>
 
 <script>
+import { apiFetch } from '@/utils/api.js'
+
 export default {
   name: 'ClientServiceProviderBrowser',
   data() {
@@ -417,7 +419,6 @@ export default {
     async loadProviders() {
       this.loading = true
       try {
-        const token = localStorage.getItem('token')
         const params = new URLSearchParams({
           page: this.currentPage,
           limit: 12,
@@ -428,12 +429,7 @@ export default {
           order: this.filters.sortOrder
         })
 
-        const response = await fetch(`/backend/api/service-providers.php?${params}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiFetch(`/backend/api/service-providers.php?${params}`)
 
         if (response.ok) {
           const data = await response.json()
@@ -500,13 +496,8 @@ export default {
     async addToApproved(providerId) {
       this.approvingProvider = providerId
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/client-approved-providers.php', {
+        const response = await apiFetch('/backend/api/client-approved-providers.php', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify({ service_provider_id: providerId })
         })
 
@@ -533,13 +524,8 @@ export default {
     async removeFromApproved(providerId) {
       this.removingProvider = providerId
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch(`/backend/api/client-approved-providers.php?provider_id=${providerId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+        const response = await apiFetch(`/backend/api/client-approved-providers.php?provider_id=${providerId}`, {
+          method: 'DELETE'
         })
 
         if (response.ok) {

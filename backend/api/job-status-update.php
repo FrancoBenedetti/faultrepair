@@ -16,17 +16,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
     exit;
 }
 
-// JWT Authentication
-$headers = getallheaders();
-$auth_header = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+// JWT Authentication - Read from query parameter for live server compatibility
+$token = $_GET['token'] ?? '';
 
-if (!$auth_header || !preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+if (!$token) {
     http_response_code(401);
-    echo json_encode(['error' => 'Authorization header missing or invalid']);
+    echo json_encode(['error' => 'Authorization token missing']);
     exit;
 }
-
-$token = $matches[1];
 try {
     $payload = JWT::decode($token);
     $user_id = $payload['user_id'];

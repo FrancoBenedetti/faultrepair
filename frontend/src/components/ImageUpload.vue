@@ -293,8 +293,12 @@ export default {
       }, 'image/jpeg', 0.8)
     },
 
-    async uploadImages() {
-      if (!this.jobId || this.images.length === 0) {
+    async uploadImages(jobId = null) {
+      const uploadJobId = jobId || this.jobId
+      console.log('ImageUpload: uploadImages called with jobId:', uploadJobId, 'images:', this.images.length)
+
+      if (!uploadJobId || this.images.length === 0) {
+        console.log('ImageUpload: Skipping upload - jobId or images missing')
         return
       }
 
@@ -303,31 +307,42 @@ export default {
       this.error = null
 
       const token = localStorage.getItem('token')
+      console.log('ImageUpload: Using token:', token ? 'present' : 'missing')
+
       let successCount = 0
 
       for (let i = 0; i < this.images.length; i++) {
         const image = this.images[i]
         const formData = new FormData()
         formData.append('image', image.file)
-        formData.append('job_id', this.jobId.toString())
+        formData.append('job_id', uploadJobId.toString())
+
+        console.log('ImageUpload: Uploading image', i + 1, 'of', this.images.length, 'for job', uploadJobId)
 
         try {
-          const response = await fetch('/backend/api/upload-job-image.php', {
+          // Use query parameter authentication for file uploads (FormData)
+          // Note: Don't set Content-Type header for FormData - browser sets it automatically
+          const url = `/backend/api/upload-job-image.php?token=${encodeURIComponent(token)}`
+          console.log('ImageUpload: Making request to:', url)
+
+          const response = await fetch(url, {
             method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            },
             body: formData
           })
 
+          console.log('ImageUpload: Response status:', response.status, response.ok)
+
           if (response.ok) {
+            const responseData = await response.json()
+            console.log('ImageUpload: Upload successful:', responseData)
             successCount++
           } else {
             const errorData = await response.json()
+            console.error('ImageUpload: Upload failed with response:', errorData)
             throw new Error(errorData.error || 'Upload failed')
           }
         } catch (error) {
-          console.error('Upload error:', error)
+          console.error('ImageUpload: Upload error:', error)
           this.error = `Failed to upload ${image.name}: ${error.message}`
           break
         }
@@ -336,10 +351,14 @@ export default {
       }
 
       this.uploading = false
+      console.log('ImageUpload: Upload process complete. Success count:', successCount, 'of', this.images.length)
 
       if (successCount === this.images.length) {
+        console.log('ImageUpload: All uploads successful, clearing images')
         this.images = []
         this.$emit('upload-complete', successCount)
+      } else {
+        console.log('ImageUpload: Some uploads failed')
       }
     },
 

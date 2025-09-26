@@ -265,6 +265,8 @@
 </template>
 
 <script>
+import { apiFetch } from '@/utils/api.js'
+
 export default {
   name: 'ServiceProviderTechnicianJobs',
   data() {
@@ -306,13 +308,7 @@ export default {
     async loadTechnicianJobs(technicianId) {
       this.loading = true
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch(`/backend/api/technician-jobs.php?technician_id=${technicianId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiFetch(`/backend/api/technician-jobs.php?technician_id=${technicianId}`)
 
         if (response.ok) {
           const data = await response.json()
@@ -376,7 +372,6 @@ export default {
 
       this.updatingStatus = true
       try {
-        const token = localStorage.getItem('token')
         const requestData = {
           job_id: this.statusUpdateJob.id,
           status: this.newStatus,
@@ -388,12 +383,8 @@ export default {
           requestData.technician_id = this.selectedTechnicianId
         }
 
-        const response = await fetch('/backend/api/job-status-update.php', {
+        const response = await apiFetch('/backend/api/job-status-update.php', {
           method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify(requestData)
         })
 
@@ -479,13 +470,7 @@ export default {
 
     async loadTechnicians() {
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/technicians.php', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiFetch('/backend/api/technicians.php')
 
         if (response.ok) {
           const data = await response.json()
@@ -502,13 +487,7 @@ export default {
 
     async loadJobImages(jobId) {
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch(`/backend/api/job-images.php?job_id=${jobId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiFetch(`/backend/api/job-images.php?job_id=${jobId}`)
 
         if (response.ok) {
           const data = await response.json()

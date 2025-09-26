@@ -104,7 +104,7 @@
         <div class="mt-6 text-center">
           <p class="text-sm text-gray-600">
             Already have an account?
-            <router-link to="/client-signin" class="font-medium text-blue-600 hover:text-blue-500 transition-colors">
+            <router-link to="/" class="font-medium text-blue-600 hover:text-blue-500 transition-colors">
               Sign in here
             </router-link>
           </p>
@@ -142,8 +142,8 @@ export default {
         });
         const data = await response.json();
         if (response.ok) {
-          alert('Registration successful! You can now sign in.');
-          this.$router.push('/client-signin');
+          alert('Registration successful! Please check your email to verify your account before signing in.');
+          this.$router.push('/');
         } else {
           alert(data.error);
         }

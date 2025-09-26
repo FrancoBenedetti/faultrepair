@@ -1,14 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import ClientRegistration from '../views/ClientRegistration.vue'
-import ClientSignin from '../views/ClientSignin.vue'
 import ClientDashboard from '../views/ClientDashboard.vue'
 import ServiceProviderRegistration from '../views/ServiceProviderRegistration.vue'
-import ServiceProviderSignin from '../views/ServiceProviderSignin.vue'
 import ServiceProviderDashboard from '../views/ServiceProviderDashboard.vue'
 import ServiceProviderClientJobs from '../views/ServiceProviderClientJobs.vue'
 import ServiceProviderTechnicianJobs from '../views/ServiceProviderTechnicianJobs.vue'
 import ClientServiceProviderBrowser from '../views/ClientServiceProviderBrowser.vue'
+import ForgotPassword from '../views/ForgotPassword.vue'
+import ResetPassword from '../views/ResetPassword.vue'
 
 const routes = [
   {
@@ -22,11 +22,6 @@ const routes = [
     component: ClientRegistration
   },
   {
-    path: '/client-signin',
-    name: 'ClientSignin',
-    component: ClientSignin
-  },
-  {
     path: '/client-dashboard',
     name: 'ClientDashboard',
     component: ClientDashboard,
@@ -36,11 +31,6 @@ const routes = [
     path: '/service-provider-registration',
     name: 'ServiceProviderRegistration',
     component: ServiceProviderRegistration
-  },
-  {
-    path: '/service-provider-signin',
-    name: 'ServiceProviderSignin',
-    component: ServiceProviderSignin
   },
   {
     path: '/service-provider-dashboard',
@@ -67,6 +57,21 @@ const routes = [
     name: 'ClientServiceProviderBrowser',
     component: ClientServiceProviderBrowser,
     meta: { requiresAuth: true, userType: 'client' }
+  },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: ForgotPassword
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: ResetPassword
+  },
+  {
+    path: '/verify-email',
+    name: 'VerifyEmail',
+    component: () => import('../views/VerifyEmail.vue')
   }
 ]
 
@@ -82,14 +87,8 @@ router.beforeEach((to, from, next) => {
   const userType = to.matched.find(record => record.meta.userType)?.meta.userType
 
   if (requiresAuth && !token) {
-    // Redirect to appropriate signin page
-    if (userType === 'client') {
-      next('/client-signin')
-    } else if (userType === 'service_provider') {
-      next('/service-provider-signin')
-    } else {
-      next('/')
-    }
+    // Redirect to home page for signin
+    next('/')
     return
   }
 

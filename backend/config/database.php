@@ -5,6 +5,12 @@ $user = 'root';
 $pass = '';
 $charset = 'utf8mb4';
 
+// $host = 'sql18.cpt4.host-h.net';
+// $db = 'pkouv_jobcard';
+// $user = 'jgdwb_lvvli_jobcard';
+// $pass = 'c8078j441JD52Y';
+// $charset = 'utf8mb4';
+
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,

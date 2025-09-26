@@ -1,13 +1,16 @@
 <?php
-
+ini_set('log_errors', true);
+ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/mail.log');
 /**
  * Email utility functions for the fault reporting system
  */
 
+require_once __DIR__ . '/../config/site.php';
+
 class EmailService {
 
-    private static $fromEmail = 'noreply@fault-reporter.local';
-    private static $fromName = 'Fault Reporter System';
+    private static $fromEmail = 'noreply@' . DOMAIN;
+    private static $fromName = SITE_NAME . ' System';
 
     /**
      * Send an email verification link
@@ -15,16 +18,17 @@ class EmailService {
     public static function sendVerificationEmail($toEmail, $username, $verificationToken, $isPasswordReset = false) {
         $subject = $isPasswordReset ? 'Password Reset Verification' : 'Email Verification Required';
 
-        $baseUrl = 'http://fault-reporter.local'; // Adjust for production
+        $baseUrl = (DOMAIN === 'localhost' ? 'http' : 'https') . '://' . DOMAIN;
 
         if ($isPasswordReset) {
-            $verificationUrl = $baseUrl . "/verify-email?token=" . urlencode($verificationToken) . "&action=reset";
-            $body = self::getPasswordResetEmailBody($username, $verificationUrl);
+            $resetUrl = $baseUrl . "/reset-password?token=" . urlencode($verificationToken);
+            $body = self::getPasswordResetEmailBody($username, $resetUrl);
         } else {
             $verificationUrl = $baseUrl . "/verify-email?token=" . urlencode($verificationToken);
             $body = self::getVerificationEmailBody($username, $verificationUrl);
         }
-
+        error_log(__FILE__.'/'.__LINE__.'/ >>>> '.$body);
+        
         return self::sendEmail($toEmail, $subject, $body);
     }
 
@@ -34,11 +38,11 @@ class EmailService {
     public static function sendSetPasswordEmail($toEmail, $username, $verificationToken) {
         $subject = 'Account Setup - Set Your Password';
 
-        $baseUrl = 'http://fault-reporter.local'; // Adjust for production
+        $baseUrl = (DOMAIN === 'localhost' ? 'http' : 'https') . '://' . DOMAIN;
         $setPasswordUrl = $baseUrl . "/verify-email?token=" . urlencode($verificationToken) . "&action=set_password";
 
         $body = self::getSetPasswordEmailBody($username, $setPasswordUrl);
-
+        error_log(__FILE__.'/'.__LINE__.'/ >>>> '.$body);
         return self::sendEmail($toEmail, $subject, $body);
     }
 
@@ -47,6 +51,7 @@ class EmailService {
      */
     public static function sendNotificationEmail($toEmail, $subject, $message) {
         $body = self::getNotificationEmailBody($subject, $message);
+        error_log(__FILE__.'/'.__LINE__.'/ >>>> '.$body);
         return self::sendEmail($toEmail, $subject, $body);
     }
 
@@ -65,13 +70,14 @@ class EmailService {
         $headersString = implode("\r\n", $headers);
 
         // For development/testing, log emails instead of sending
-        // Uncomment the line below to enable logging mode
-        error_log("EMAIL TO: $to\nSUBJECT: $subject\nBODY:\n$body\n" . str_repeat("=", 50) . "\n");
+        error_log("EMAIL TO: $to\nSUBJECT: $subject\nHEADERS:\n$headersString\nBODY:\n$body\n" . str_repeat("=", 50) . "\n", 3, __DIR__ . '/../../public/all-logs/mail.log');
 
-        // Comment out the mail() call for testing
-        // return mail($to, $subject, $body, $headersString);
+        // For development, return true to simulate successful sending
+        // Uncomment the mail() call below for production
+        // $result = mail($to, $subject, $body, $headersString);
+        // error_log(__FILE__.'/'.__LINE__.'/ >>>> '.json_encode($result));
+        // return $result;
 
-        // Return true for testing purposes
         return true;
     }
 
@@ -101,11 +107,11 @@ class EmailService {
         <body>
             <div class='container'>
                 <div class='header'>
-                    <h1>Welcome to Fault Reporter</h1>
+                    <h1>Welcome to " . SITE_NAME . "</h1>
                 </div>
                 <div class='content'>
                     <h2>Hello $username,</h2>
-                    <p>Thank you for registering with the Fault Reporter system. To complete your registration and activate your account, please verify your email address by clicking the button below:</p>
+                    <p>Thank you for registering with the " . SITE_NAME . " system. To complete your registration and activate your account, please verify your email address by clicking the button below:</p>
                     <p style='text-align: center;'>
                         <a href='$verificationUrl' class='button'>Verify Email Address</a>
                     </p>
@@ -115,7 +121,7 @@ class EmailService {
                     <p>If you didn't create this account, please ignore this email.</p>
                 </div>
                 <div class='footer'>
-                    <p>This is an automated message from the Fault Reporter system. Please do not reply to this email.</p>
+                    <p>This is an automated message from the " . SITE_NAME . " system. Please do not reply to this email.</p>
                 </div>
             </div>
         </body>
@@ -146,7 +152,7 @@ class EmailService {
                 </div>
                 <div class='content'>
                     <h2>Hello $username,</h2>
-                    <p>You have requested to reset your password for the Fault Reporter system. Click the button below to proceed with the password reset:</p>
+                    <p>You have requested to reset your password for the " . SITE_NAME . " system. Click the button below to proceed with the password reset:</p>
                     <p style='text-align: center;'>
                         <a href='$resetUrl' class='button'>Reset Password</a>
                     </p>
@@ -156,7 +162,7 @@ class EmailService {
                     <p>If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
                 </div>
                 <div class='footer'>
-                    <p>This is an automated message from the Fault Reporter system. Please do not reply to this email.</p>
+                    <p>This is an automated message from the " . SITE_NAME . " system. Please do not reply to this email.</p>
                 </div>
             </div>
         </body>
@@ -183,11 +189,11 @@ class EmailService {
         <body>
             <div class='container'>
                 <div class='header'>
-                    <h1>Welcome to Fault Reporter</h1>
+                    <h1>Welcome to " . SITE_NAME . "</h1>
                 </div>
                 <div class='content'>
                     <h2>Hello $username,</h2>
-                    <p>You have been added to the Fault Reporter system. To activate your account and set your password, please click the button below:</p>
+                    <p>You have been added to the " . SITE_NAME . " system. To activate your account and set your password, please click the button below:</p>
                     <p style='text-align: center;'>
                         <a href='$setPasswordUrl' class='button'>Set Your Password</a>
                     </p>
@@ -197,7 +203,7 @@ class EmailService {
                     <p>If you didn't expect this invitation, please ignore this email.</p>
                 </div>
                 <div class='footer'>
-                    <p>This is an automated message from the Fault Reporter system. Please do not reply to this email.</p>
+                    <p>This is an automated message from the " . SITE_NAME . " system. Please do not reply to this email.</p>
                 </div>
             </div>
         </body>
@@ -229,7 +235,7 @@ class EmailService {
                     $message
                 </div>
                 <div class='footer'>
-                    <p>This is an automated message from the Fault Reporter system. Please do not reply to this email.</p>
+                    <p>This is an automated message from the " . SITE_NAME . " system. Please do not reply to this email.</p>
                 </div>
             </div>
         </body>

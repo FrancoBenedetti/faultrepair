@@ -12,17 +12,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
 
-// JWT Authentication
-$headers = getallheaders();
-$auth_header = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+// JWT Authentication - Read from query parameter for live server compatibility
+$token = $_GET['token'] ?? '';
 
-if (!$auth_header || !preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+if (!$token) {
     http_response_code(401);
-    echo json_encode(['error' => 'Authorization header missing or invalid']);
+    echo json_encode(['error' => 'Authorization token missing']);
     exit;
 }
-
-$token = $matches[1];
 try {
     $payload = JWT::decode($token);
     $user_id = $payload['user_id'];
@@ -173,19 +170,23 @@ function addClientUser($client_id) {
         $verificationToken = EmailService::generateVerificationToken();
         $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
+        // Generate a temporary password hash (user will set their own password via email)
+        $tempPassword = bin2hex(random_bytes(16)); // Generate a random temporary password
+        $tempPasswordHash = password_hash($tempPassword, PASSWORD_DEFAULT);
+
         // Insert user
         $stmt = $pdo->prepare("
             INSERT INTO users (username, password_hash, email, first_name, last_name, phone, role_id, entity_type, entity_id, is_active, email_verified, verification_token, token_expires)
-            VALUES (?, NULL, ?, ?, ?, ?, ?, 'client', ?, FALSE, FALSE, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'client', ?, FALSE, FALSE, ?, ?)
         ");
-        $stmt->execute([$username, $email, $first_name, $last_name, $phone, $role_id, $client_id, $verificationToken, $tokenExpires]);
+        $stmt->execute([$username, $tempPasswordHash, $email, $first_name, $last_name, $phone, $role_id, $client_id, $verificationToken, $tokenExpires]);
 
         $userId = $pdo->lastInsertId();
 
         $pdo->commit();
 
-        // Send set password email
-        $emailSent = EmailService::sendSetPasswordEmail($email, $username, $verificationToken);
+        // Send password reset email
+        $emailSent = EmailService::sendVerificationEmail($email, $username, $verificationToken, true);
 
         if ($emailSent) {
             echo json_encode([
@@ -257,6 +258,8 @@ function updateClientUser($client_id) {
         $updateValues = [];
 
         // Handle email update
+        $emailChanged = false;
+        $newEmail = null;
         if (isset($data['email'])) {
             $email = trim($data['email']);
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -274,6 +277,16 @@ function updateClientUser($client_id) {
                 http_response_code(409);
                 echo json_encode(['error' => 'Email already exists']);
                 exit;
+            }
+
+            // Check if email actually changed
+            $stmt = $pdo->prepare("SELECT email, username FROM users WHERE id = ?");
+            $stmt->execute([$user_id]);
+            $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($currentUser['email'] !== $email) {
+                $emailChanged = true;
+                $newEmail = $email;
             }
 
             $updateFields[] = "email = ?";
@@ -352,7 +365,25 @@ function updateClientUser($client_id) {
 
         $pdo->commit();
 
-        echo json_encode(['message' => 'User updated successfully']);
+        // Send password reset email to new email address if email was changed
+        if ($emailChanged && $newEmail) {
+            $resetToken = EmailService::generateVerificationToken();
+            $tokenExpires = date('Y-m-d H:i:s', strtotime('+1 hour')); // Password reset links expire in 1 hour
+
+            // Update the verification token for password reset
+            $stmt = $pdo->prepare("UPDATE users SET verification_token = ?, token_expires = ? WHERE id = ?");
+            $stmt->execute([$resetToken, $tokenExpires, $user_id]);
+
+            $emailSent = EmailService::sendVerificationEmail($newEmail, $currentUser['username'], $resetToken, true);
+
+            if ($emailSent) {
+                echo json_encode(['message' => 'User updated successfully. A password reset email has been sent to the new email address.']);
+            } else {
+                echo json_encode(['message' => 'User updated successfully, but password reset email could not be sent to the new email address.']);
+            }
+        } else {
+            echo json_encode(['message' => 'User updated successfully']);
+        }
 
     } catch (Exception $e) {
         $pdo->rollBack();

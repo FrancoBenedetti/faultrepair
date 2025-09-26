@@ -24,7 +24,7 @@
       </div>
       <button type="submit">Register</button>
     </form>
-    <p>Already have an account? <router-link to="/service-provider-signin">Sign In</router-link></p>
+    <p>Already have an account? <router-link to="/">Sign In</router-link></p>
   </div>
 </template>
 
@@ -54,8 +54,8 @@ export default {
         });
         const data = await response.json();
         if (response.ok) {
-          alert('Registration successful! You can now sign in.');
-          this.$router.push('/service-provider-signin');
+          alert('Registration successful! Please check your email to verify your account before signing in.');
+          this.$router.push('/');
         } else {
           alert(data.error);
         }

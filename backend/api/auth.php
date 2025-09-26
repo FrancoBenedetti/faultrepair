@@ -28,11 +28,29 @@ if (!$data || !isset($data['username']) || !isset($data['password'])) {
 $username = $data['username'];
 $password = $data['password'];
 
-$stmt = $pdo->prepare("SELECT id, password_hash, role_id, entity_type, entity_id FROM users WHERE username = ? AND is_active = TRUE");
+$stmt = $pdo->prepare("SELECT id, password_hash, role_id, entity_type, entity_id, is_active, email_verified FROM users WHERE username = ?");
 $stmt->execute([$username]);
 $user = $stmt->fetch();
 
-if (!$user || !password_verify($password, $user['password_hash'])) {
+if (!$user) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Invalid credentials']);
+    exit;
+}
+
+if (!$user['is_active']) {
+    if (!$user['email_verified']) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Please verify your email address before signing in. Check your email for the verification link.']);
+        exit;
+    } else {
+        http_response_code(403);
+        echo json_encode(['error' => 'Your account is inactive. Please contact support.']);
+        exit;
+    }
+}
+
+if (!password_verify($password, $user['password_hash'])) {
     http_response_code(401);
     echo json_encode(['error' => 'Invalid credentials']);
     exit;
@@ -44,7 +62,7 @@ $payload = [
     'entity_type' => $user['entity_type'],
     'entity_id' => $user['entity_id'],
     'iat' => time(),
-    'exp' => time() + 3600 // 1 hour
+    'exp' => time() + 86400 // 24 hours
 ];
 
 $token = JWT::encode($payload);

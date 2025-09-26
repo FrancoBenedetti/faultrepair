@@ -1,4 +1,6 @@
 <?php
+ini_set('log_errors', true);
+ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/mail.log');
 require_once '../config/database.php';
 require_once '../includes/email.php';
 
@@ -35,9 +37,11 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
 try {
     // Find user by email
-    $stmt = $pdo->prepare("SELECT id, username, email_verified FROM users WHERE email = ?");
+    $stmt = $pdo->prepare("SELECT id, username, email, email_verified FROM users WHERE email = ?");
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    error_log(__FILE__.'/'.__LINE__.'/ >>>> '.json_encode($user));
 
     if (!$user) {
         // Don't reveal if email exists or not for security
@@ -53,6 +57,9 @@ try {
 
     // Generate reset token
     $resetToken = EmailService::generateVerificationToken();
+
+    error_log(__FILE__.'/'.__LINE__.'/ >>>> '.$resetToken);
+
     $tokenExpires = date('Y-m-d H:i:s', strtotime('+1 hour')); // Shorter for password reset
 
     // Update user with reset token
@@ -61,6 +68,8 @@ try {
 
     // Send reset email
     $emailSent = EmailService::sendVerificationEmail($user['email'], $user['username'], $resetToken, true);
+
+    error_log(__FILE__.'/'.__LINE__.'/ >>>> '.json_encode($emailSent));
 
     if ($emailSent) {
         echo json_encode(['message' => 'Password reset link sent to your email.']);

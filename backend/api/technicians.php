@@ -12,17 +12,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
 
-// JWT Authentication
-$headers = getallheaders();
-$auth_header = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+// JWT Authentication - Read from query parameter for live server compatibility
+$token = $_GET['token'] ?? '';
 
-if (!$auth_header || !preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+if (!$token) {
     http_response_code(401);
-    echo json_encode(['error' => 'Authorization header missing or invalid']);
+    echo json_encode(['error' => 'Authorization token missing']);
     exit;
 }
-
-$token = $matches[1];
 try {
     $payload = JWT::decode($token);
     $user_id = $payload['user_id'];
@@ -105,9 +102,9 @@ function createTechnician($provider_id) {
     $data = json_decode(file_get_contents('php://input'), true);
 
     if (!$data || !isset($data['username']) || !isset($data['email']) ||
-        !isset($data['first_name']) || !isset($data['last_name']) || !isset($data['phone'])) {
+        !isset($data['first_name']) || !isset($data['last_name'])) {
         http_response_code(400);
-        echo json_encode(['error' => 'Required fields: username, email, first_name, last_name, phone']);
+        echo json_encode(['error' => 'Required fields: username, email, first_name, last_name']);
         return;
     }
 
@@ -154,21 +151,25 @@ function createTechnician($provider_id) {
         $verificationToken = EmailService::generateVerificationToken();
         $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
+        // Generate a temporary password hash (user will set their own password via email)
+        $tempPassword = bin2hex(random_bytes(16)); // Generate a random temporary password
+        $tempPasswordHash = password_hash($tempPassword, PASSWORD_DEFAULT);
+
         // Create technician user
         $stmt = $pdo->prepare("
             INSERT INTO users (
                 username, password_hash, email, first_name, last_name, phone,
                 role_id, entity_type, entity_id, is_active, email_verified, verification_token, token_expires, created_at
-            ) VALUES (?, NULL, ?, ?, ?, ?, 4, 'service_provider', ?, FALSE, FALSE, ?, ?, NOW())
+            ) VALUES (?, ?, ?, ?, ?, ?, 4, 'service_provider', ?, FALSE, FALSE, ?, ?, NOW())
         ");
-        $stmt->execute([$username, $email, $first_name, $last_name, $phone, $provider_id, $verificationToken, $tokenExpires]);
+        $stmt->execute([$username, $tempPasswordHash, $email, $first_name, $last_name, $phone, $provider_id, $verificationToken, $tokenExpires]);
 
         $technician_id = $pdo->lastInsertId();
 
         $pdo->commit();
 
-        // Send set password email
-        $emailSent = EmailService::sendSetPasswordEmail($email, $username, $verificationToken);
+        // Send password reset email
+        $emailSent = EmailService::sendVerificationEmail($email, $username, $verificationToken, true);
 
         if ($emailSent) {
             echo json_encode([

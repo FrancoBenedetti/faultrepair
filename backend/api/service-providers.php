@@ -17,14 +17,24 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     exit;
 }
 
-// Optional JWT Authentication for clients
+// Optional JWT Authentication for clients - check both headers and query parameters
+$token = null;
+
+// Try to get token from Authorization header first
 $headers = getallheaders();
 $auth_header = isset($headers['Authorization']) ? $headers['Authorization'] : '';
-$client_id = null;
-
 if ($auth_header && preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+    $token = $matches[1];
+}
+
+// If no token in header, try query parameter (for live server compatibility)
+if (!$token) {
+    $token = $_GET['token'] ?? null;
+}
+
+$client_id = null;
+if ($token) {
     try {
-        $token = $matches[1];
         $payload = JWT::decode($token);
         if ($payload['entity_type'] === 'client') {
             $client_id = $payload['entity_id'];

@@ -12,8 +12,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
-$token = isset($_GET['token']) ? trim($_GET['token']) : (isset($_POST['token']) ? trim($_POST['token']) : null);
-$action = isset($_GET['action']) ? trim($_GET['action']) : (isset($_POST['action']) ? trim($_POST['action']) : null);
+
+// For GET requests, get token from query parameter (for email verification links)
+if ($method === 'GET') {
+    $token = isset($_GET['token']) ? trim($_GET['token']) : null;
+    $action = null; // GET requests don't have actions
+} else {
+    // For POST requests, get token and action from JSON body or POST data
+    $token = isset($_POST['token']) ? trim($_POST['token']) : null;
+    $action = isset($_POST['action']) ? trim($_POST['action']) : null;
+
+    // If not in POST data, check JSON body
+    if (empty($token) && empty($action)) {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $token = isset($data['token']) ? trim($data['token']) : null;
+        $action = isset($data['action']) ? trim($data['action']) : null;
+    }
+}
 
 if (!$token) {
     http_response_code(400);
@@ -44,7 +59,7 @@ try {
     }
 
     if ($action === 'reset') {
-        // Handle password reset - allow password change
+        // Handle password reset - allow password change and ensure account is active
         $data = json_decode(file_get_contents('php://input'), true);
         $newPassword = isset($data['password']) ? $data['password'] : null;
 
@@ -56,10 +71,11 @@ try {
 
         $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
 
-        $stmt = $pdo->prepare("UPDATE users SET password_hash = ?, verification_token = NULL, token_expires = NULL WHERE id = ?");
+        // Always ensure the account is active and verified after password reset
+        $stmt = $pdo->prepare("UPDATE users SET password_hash = ?, email_verified = TRUE, is_active = TRUE, verification_token = NULL, token_expires = NULL WHERE id = ?");
         $stmt->execute([$passwordHash, $user['id']]);
 
-        echo json_encode(['message' => 'Password reset successfully. You can now log in with your new password.']);
+        echo json_encode(['message' => 'Password reset successful. Your account is now active and you can log in with your new password.']);
     } elseif ($action === 'set_password') {
         // Handle setting password for new users (technicians/reporters)
         $data = json_decode(file_get_contents('php://input'), true);

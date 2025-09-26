@@ -925,22 +925,8 @@
             </div>
           </div>
 
-          <!-- Password and Phone Row -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label for="tech_password" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">lock</span>
-                Password *
-              </label>
-              <input
-                type="password"
-                id="tech_password"
-                v-model="technicianForm.password"
-                required
-                class="form-input"
-                placeholder="Create a secure password"
-              >
-            </div>
+          <!-- Phone Row -->
+          <div class="grid grid-cols-1 gap-4">
             <div>
               <label for="tech_phone" class="form-label flex items-center gap-2">
                 <span class="material-icon-sm text-gray-500">phone</span>
@@ -1384,6 +1370,8 @@
 </template>
 
 <script>
+import { apiFetch } from '@/utils/api.js'
+
 export default {
   name: 'ServiceProviderDashboard',
   data() {
@@ -1433,7 +1421,6 @@ export default {
       },
       technicianForm: {
         username: '',
-        password: '',
         email: '',
         first_name: '',
         last_name: '',
@@ -1465,13 +1452,7 @@ export default {
   methods: {
     async loadProfile() {
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/service-provider-profile.php', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiFetch('/backend/api/service-provider-profile.php')
 
         if (response.ok) {
           const data = await response.json()
@@ -1501,13 +1482,7 @@ export default {
 
     async loadAvailableOptions() {
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/service-providers.php', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiFetch('/backend/api/service-providers.php')
 
         if (response.ok) {
           const data = await response.json()
@@ -1522,13 +1497,8 @@ export default {
     async updateProfile() {
       this.loading = true
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/service-provider-profile.php', {
+        const response = await apiFetch('/backend/api/service-provider-profile.php', {
           method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify(this.editForm)
         })
 
@@ -1558,13 +1528,8 @@ export default {
           is_primary: serviceId === this.primaryServiceId
         }))
 
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/service-provider-profile.php', {
+        const response = await apiFetch('/backend/api/service-provider-profile.php', {
           method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify({
             services: servicesData
           })
@@ -1592,13 +1557,8 @@ export default {
           id: regionId
         }))
 
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/service-provider-profile.php', {
+        const response = await apiFetch('/backend/api/service-provider-profile.php', {
           method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify({
             regions: regionsData
           })
@@ -1634,13 +1594,7 @@ export default {
 
     async loadApprovedClients() {
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/service-provider-approved-clients.php', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiFetch('/backend/api/service-provider-approved-clients.php')
 
         if (response.ok) {
           const data = await response.json()
@@ -1700,13 +1654,7 @@ export default {
     // Technician Management Methods
     async loadTechnicians() {
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/technicians.php', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiFetch('/backend/api/technicians.php')
 
         if (response.ok) {
           const data = await response.json()
@@ -1722,7 +1670,6 @@ export default {
     openAddTechnicianModal() {
       this.technicianForm = {
         username: '',
-        password: '',
         email: '',
         first_name: '',
         last_name: '',
@@ -1736,7 +1683,6 @@ export default {
       this.showAddTechnicianModal = false
       this.technicianForm = {
         username: '',
-        password: '',
         email: '',
         first_name: '',
         last_name: '',
@@ -1745,21 +1691,16 @@ export default {
     },
 
     async createTechnician() {
-      if (!this.technicianForm.username || !this.technicianForm.password ||
-          !this.technicianForm.email || !this.technicianForm.first_name || !this.technicianForm.last_name) {
+      if (!this.technicianForm.username || !this.technicianForm.email ||
+          !this.technicianForm.first_name || !this.technicianForm.last_name) {
         alert('Please fill in all required fields')
         return
       }
 
       this.loading = true
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/technicians.php', {
+        const response = await apiFetch('/backend/api/technicians.php', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify(this.technicianForm)
         })
 
@@ -1809,13 +1750,8 @@ export default {
 
       this.loading = true
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/backend/api/technicians.php', {
+        const response = await apiFetch('/backend/api/technicians.php', {
           method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify({
             technician_id: this.editingTechnician.id,
             ...this.technicianForm
@@ -1842,13 +1778,8 @@ export default {
       }
 
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch(`/backend/api/technicians.php?id=${technician.id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+        const response = await apiFetch(`/backend/api/technicians.php?id=${technician.id}`, {
+          method: 'DELETE'
         })
 
         if (response.ok) {
@@ -1879,12 +1810,7 @@ export default {
           if (this.jobFilters.technician_id) params.append('technician_id', this.jobFilters.technician_id)
         }
 
-        const response = await fetch(`/backend/api/service-provider-jobs.php?${params}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiFetch(`/backend/api/service-provider-jobs.php?${params}`)
 
         if (response.ok) {
           const data = await response.json()
@@ -1916,13 +1842,7 @@ export default {
       // Load job images if not already loaded
       if (!job.images) {
         try {
-          const token = localStorage.getItem('token')
-          const response = await fetch(`/backend/api/job-images.php?job_id=${job.id}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          })
+          const response = await apiFetch(`/backend/api/job-images.php?job_id=${job.id}`)
 
           if (response.ok) {
             const data = await response.json()
@@ -1947,13 +1867,7 @@ export default {
       // Load job images if not already loaded
       if (!job.images) {
         try {
-          const token = localStorage.getItem('token')
-          const response = fetch(`/backend/api/job-images.php?job_id=${job.id}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          })
+          const response = apiFetch(`/backend/api/job-images.php?job_id=${job.id}`)
 
           response.then(res => {
             if (res.ok) {
@@ -2046,12 +1960,8 @@ export default {
 
         // Update job details if there are changes
         if (hasChanges) {
-          const response = await fetch('/backend/api/job-status-update.php', {
+          const response = await apiFetch('/backend/api/job-status-update.php', {
             method: 'PUT',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
             body: JSON.stringify(updateData)
           })
 
@@ -2085,20 +1995,14 @@ export default {
     },
 
     async uploadEditJobImages(jobId) {
-      const token = localStorage.getItem('token')
-
       for (const image of this.editingImages) {
         const formData = new FormData()
         formData.append('job_id', jobId)
         formData.append('image', image.file)
 
         try {
-          const response = await fetch('/backend/api/upload-job-image.php', {
+          const response = await apiFetch('/backend/api/upload-job-image.php', {
             method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-              // Don't set Content-Type for FormData - let browser set it with boundary
-            },
             body: formData
           })
 

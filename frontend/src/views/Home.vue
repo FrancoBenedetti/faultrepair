@@ -1,8 +1,8 @@
 <template>
   <div class="home max-w-2xl mx-auto px-6 py-12 text-center">
-    <h1 class="text-4xl font-bold text-gray-900 mb-4">Jobsnapper</h1>
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">{{ siteName }}</h1>
     <p class="text-lg text-gray-700 mb-12">
-      Welcome to the Jobsnapper. Login or register below:
+      Welcome to the {{ siteName }}. Login or register below:
     </p>
 
     <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
@@ -42,6 +42,11 @@
               class="form-input"
               placeholder="Enter your password"
             >
+            <div class="text-right mt-2">
+              <router-link to="/forgot-password" class="text-sm text-blue-600 hover:text-blue-500 transition-colors">
+                Forgot your password?
+              </router-link>
+            </div>
           </div>
 
           <div>
@@ -76,6 +81,8 @@
 </template>
 
 <script>
+import { apiFetch } from '@/utils/api.js'
+
 export default {
   name: 'Home',
   data() {
@@ -87,7 +94,15 @@ export default {
       }
     }
   },
+  computed: {
+    siteName() {
+      return import.meta.env.VITE_SITE_NAME || 'Fault Reporter'
+    }
+  },
   mounted() {
+    // Set dynamic page title
+    document.title = this.siteName
+
     // Check if user is already authenticated
     const token = localStorage.getItem('token')
     if (token) {
@@ -110,11 +125,8 @@ export default {
     async signin() {
       this.loading = true
       try {
-        const response = await fetch('/backend/api/auth.php', {
+        const response = await apiFetch('/backend/api/auth.php', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify(this.form)
         });
         const data = await response.json();
