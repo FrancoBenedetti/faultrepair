@@ -347,6 +347,15 @@
               <option value="Completed">Completed</option>
             </select>
           </div>
+          <!-- Archive filter only for budget controllers -->
+          <div v-if="userRole === 2" class="filter-group min-w-40">
+            <label for="archive-filter" class="form-label mb-1">Archive Status:</label>
+            <select id="archive-filter" v-model="jobFilters.archive_status" @change="loadJobs" class="form-input">
+              <option value="">All Jobs</option>
+              <option value="active">Active Jobs</option>
+              <option value="archived">Archived Jobs</option>
+            </select>
+          </div>
           <!-- Location and Provider filters only for budget controllers -->
           <div v-if="userRole === 2" class="filter-group min-w-40">
             <label for="location-filter" class="form-label mb-1">Location:</label>
@@ -389,6 +398,10 @@
                 </button>
                 <button v-else @click="viewJobDetails(job)" class="btn-outlined btn-small">
                   <span class="material-icon-sm">visibility</span>
+                </button>
+                <!-- Archive/Unarchive button for budget controllers -->
+                <button v-if="userRole === 2" @click="toggleArchiveJob(job)" class="btn-outlined btn-small" :class="{ 'text-orange-600 border-orange-600': job.archived_by_client }">
+                  <span class="material-icon-sm">{{ job.archived_by_client ? 'unarchive' : 'archive' }}</span>
                 </button>
               </div>
             </div>
@@ -930,7 +943,8 @@ export default {
       jobFilters: {
         status: '',
         location_id: '',
-        provider_id: ''
+        provider_id: '',
+        archive_status: 'active'
       },
       newJob: {
         client_location_id: '',
@@ -1251,8 +1265,17 @@ export default {
         const response = await apiFetch(`/backend/api/client-jobs.php?${params}`)
 
         if (response.ok) {
-          const data = await response.json()
-          this.jobs = data.jobs
+          let data = await response.json()
+          let jobs = data.jobs
+
+          // Filter by archive status on the frontend (since backend doesn't support it yet)
+          if (this.jobFilters.archive_status === 'active') {
+            jobs = jobs.filter(job => !job.archived_by_client)
+          } else if (this.jobFilters.archive_status === 'archived') {
+            jobs = jobs.filter(job => job.archived_by_client)
+          }
+
+          this.jobs = jobs
         } else {
           console.error('Failed to load jobs')
           this.jobs = []
@@ -1278,6 +1301,11 @@ export default {
     },
 
     canEditJob(job) {
+      // Cannot edit archived jobs
+      if (job.archived_by_client) {
+        return false
+      }
+
       // Reporting employees can edit their own jobs when status is 'Reported'
       if (this.userRole === 1 && job.job_status === 'Reported' && job.reporting_user_id === this.userId) {
         return true
@@ -1726,6 +1754,42 @@ export default {
     // Section collapse/expand functionality
     toggleSection(sectionName) {
       this.sectionsExpanded[sectionName] = !this.sectionsExpanded[sectionName]
+    },
+
+    // Archive/unarchive job functionality
+    async toggleArchiveJob(job) {
+      const action = job.archived_by_client ? 'unarchive' : 'archive'
+      const confirmMessage = `Are you sure you want to ${action} this job?`
+
+      if (!confirm(confirmMessage)) {
+        return
+      }
+
+      try {
+        const response = await apiFetch('/backend/api/client-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            job_id: job.id,
+            archived_by_client: !job.archived_by_client
+          })
+        })
+
+        if (response.ok) {
+          // Update the job in the local array
+          const jobIndex = this.jobs.findIndex(j => j.id === job.id)
+          if (jobIndex !== -1) {
+            this.jobs[jobIndex].archived_by_client = !job.archived_by_client
+            this.jobs[jobIndex].updated_at = new Date().toISOString()
+          }
+
+          alert(`Job ${action}d successfully!`)
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert(`Failed to ${action} job`)
+      }
     }
 
 
@@ -2185,6 +2249,7 @@ export default {
   max-width: 600px;
   max-height: 90vh;
   overflow-y: auto;
+  padding: 5px 10px;
 }
 
 .modal-header {
@@ -2243,6 +2308,13 @@ export default {
 .form-group input:disabled {
   background: #f8f9fa;
   color: #666;
+}
+
+.form-group textarea {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  box-sizing: border-box;
 }
 
 .input-with-button {

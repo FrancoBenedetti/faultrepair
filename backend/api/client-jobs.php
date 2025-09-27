@@ -61,6 +61,7 @@ try {
                 j.updated_at,
                 j.contact_person,
                 j.reporting_user_id,
+                j.archived_by_client,
                 l.name as location_name,
                 l.address as location_address,
                 sp.name as assigned_provider_name,
@@ -294,7 +295,7 @@ try {
             // Reporting employees CANNOT assign providers - only budget controllers can
         }
 
-        // Handle fields that can be edited by budget controllers (including provider assignment)
+        // Handle fields that can be edited by budget controllers (including provider assignment and archiving)
         if ($role_id === 2) {
             if (isset($input['assigned_provider_id'])) {
                 $updates[] = "assigned_provider_id = ?";
@@ -315,6 +316,12 @@ try {
                         exit;
                     }
                 }
+            }
+
+            // Handle archiving by client budget controllers
+            if (isset($input['archived_by_client'])) {
+                $updates[] = "archived_by_client = ?";
+                $params[] = $input['archived_by_client'] ? 1 : 0;
             }
         }
 

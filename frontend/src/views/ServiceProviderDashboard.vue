@@ -2131,6 +2131,7 @@ export default {
   max-width: 600px;
   max-height: 90vh;
   overflow-y: auto;
+  padding: 5px 10px;
 }
 
 .large-modal .modal-content {

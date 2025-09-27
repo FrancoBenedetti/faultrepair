@@ -138,6 +138,11 @@
                   <span class="material-icon-sm">update</span>
                   Update Status
                 </button>
+                <!-- Archive/Unarchive button for service provider admins -->
+                <button @click="toggleArchiveJob(job)" class="btn-text flex items-center gap-2" :class="{ 'text-orange-600': job.archived_by_service_provider }">
+                  <span class="material-icon-sm">{{ job.archived_by_service_provider ? 'unarchive' : 'archive' }}</span>
+                  {{ job.archived_by_service_provider ? 'Unarchive' : 'Archive' }}
+                </button>
               </div>
             </div>
           </div>
@@ -482,6 +487,11 @@ export default {
     },
 
     canUpdateStatus(job) {
+      // Cannot update status of archived jobs
+      if (job.archived_by_service_provider) {
+        return false
+      }
+
       // Allow status updates for active jobs
       return ['Reported', 'Assigned', 'In Progress', 'On Hold'].includes(job.job_status)
     },
@@ -650,6 +660,42 @@ export default {
           return isAdmin && currentStatus === 'Repaired'
         default:
           return false
+      }
+    },
+
+    // Archive/unarchive job functionality
+    async toggleArchiveJob(job) {
+      const action = job.archived_by_service_provider ? 'unarchive' : 'archive'
+      const confirmMessage = `Are you sure you want to ${action} this job?`
+
+      if (!confirm(confirmMessage)) {
+        return
+      }
+
+      try {
+        const response = await apiFetch('/backend/api/service-provider-client-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            job_id: job.id,
+            archived_by_service_provider: !job.archived_by_service_provider
+          })
+        })
+
+        if (response.ok) {
+          // Update the job in the local array
+          const jobIndex = this.jobs.findIndex(j => j.id === job.id)
+          if (jobIndex !== -1) {
+            this.jobs[jobIndex].archived_by_service_provider = !job.archived_by_service_provider
+            this.jobs[jobIndex].updated_at = new Date().toISOString()
+          }
+
+          alert(`Job ${action}d successfully!`)
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert(`Failed to ${action} job`)
       }
     }
   }

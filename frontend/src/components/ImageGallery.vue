@@ -140,10 +140,6 @@ export default {
       type: Array,
       default: () => []
     },
-    jobId: {
-      type: Number,
-      required: true
-    },
     canDelete: {
       type: Boolean,
       default: false

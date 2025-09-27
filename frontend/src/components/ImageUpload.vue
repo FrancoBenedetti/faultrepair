@@ -97,10 +97,6 @@
 export default {
   name: 'ImageUpload',
   props: {
-    jobId: {
-      type: Number,
-      default: null
-    },
     maxImages: {
       type: Number,
       default: 10
@@ -294,7 +290,7 @@ export default {
     },
 
     async uploadImages(jobId = null) {
-      const uploadJobId = jobId || this.jobId
+      const uploadJobId = jobId
       console.log('ImageUpload: uploadImages called with jobId:', uploadJobId, 'images:', this.images.length)
 
       if (!uploadJobId || this.images.length === 0) {
