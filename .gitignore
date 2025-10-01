@@ -1,0 +1,6 @@
+
+# Ignore runtime/dev artifacts
+/public/
+/backend/uploads/
+/all-logs/
+public/all-logs/
