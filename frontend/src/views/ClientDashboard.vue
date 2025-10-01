@@ -160,12 +160,37 @@
 
             <div class="location-content card-content">
               <h3 class="location-name text-title-medium text-on-surface mb-2">{{ location.name }}</h3>
-              <p class="location-address text-body-medium text-on-surface-variant mb-4">{{ location.address || 'No address specified' }}</p>
+              <p class="location-address text-body-medium text-on-surface-variant mb-2">{{ location.address || 'No address specified' }}</p>
+
+              <!-- GPS Coordinates -->
+              <div v-if="location.coordinates" class="location-coordinates mb-2">
+                <a :href="`https://maps.google.com/maps?q=${encodeURIComponent(location.coordinates)}`"
+                   target="_blank"
+                   class="coordinates-link text-blue-600 hover:text-blue-800 font-medium">
+                  📍 {{ location.coordinates }}
+                </a>
+              </div>
+
+              <!-- Access Rules Link -->
+              <div v-if="location.access_rules" class="location-access mb-2">
+                <a :href="location.access_rules"
+                   target="_blank"
+                   class="access-link text-green-600 hover:text-green-800 font-medium">
+                  🔗 Site Information
+                </a>
+              </div>
+
+              <!-- Access Instructions -->
+              <div v-if="location.access_instructions" class="location-instructions mb-3">
+                <p class="text-sm text-gray-600 line-clamp-2">
+                  <span class="font-medium text-gray-700">Instructions:</span> {{ location.access_instructions }}
+                </p>
+              </div>
 
               <div class="location-stats">
                 <div class="stat-item">
                   <span class="stat-number text-2xl font-bold text-on-surface">{{ location.job_count }}</span>
-                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Fault Reports</span>
+                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Service Requests</span>
                 </div>
               </div>
             </div>
@@ -201,7 +226,7 @@
                 <tr>
                   <th class="col-name">Location Name</th>
                   <th class="col-address">Address</th>
-                  <th class="col-jobs">Fault Reports</th>
+                  <th class="col-jobs">Service Requests</th>
                   <th class="col-actions" v-if="isAdmin">Actions</th>
                 </tr>
               </thead>
@@ -324,7 +349,7 @@
           <h2 class="text-title-large text-on-surface mb-0">Job Management</h2>
           <button @click="showCreateJobModal = true" class="btn-filled">
             <span class="material-icon-sm mr-2">add</span>
-            Report New Fault
+            Service Request
           </button>
         </div>
         <!-- Simplified header for reporting employees -->
@@ -575,7 +600,7 @@
     <div v-if="showCreateJobModal" class="modal-overlay" @click="showCreateJobModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>Report New Fault</h3>
+          <h3>New Service Request</h3>
           <button @click="showCreateJobModal = false" class="close-btn">&times;</button>
         </div>
 
@@ -607,21 +632,21 @@
                 <input type="hidden" v-model="newJob.client_location_id" value="">
               </div>
               <small class="form-help">
-                Optional: Can be auto-filled from QR code. If no custom locations defined, this fault will be associated with your client name.
+                Optional: Can be auto-filled from QR code. If no custom locations defined, this service request will be associated with your client name.
               </small>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="fault-description">Fault Description *</label>
+            <label for="fault-description">Service Description *</label>
             <textarea id="fault-description" v-model="newJob.fault_description" required
-                      rows="4" placeholder="Describe the fault in detail..."></textarea>
+                      rows="4" placeholder="Describe the service request in detail..."></textarea>
           </div>
 
           <div class="form-group">
-            <label for="contact-person">Contact Person</label>
-            <input type="text" id="contact-person" v-model="newJob.contact_person"
-                   placeholder="Person to contact about this fault">
+              <label for="contact-person">Contact Person</label>
+              <input type="text" id="contact-person" v-model="newJob.contact_person"
+                   placeholder="Person to contact about this service request">
             <small class="form-help">Optional: Who should the technician contact?</small>
           </div>
 
@@ -665,10 +690,84 @@
             <small class="form-help">Optional: Physical address of the location</small>
           </div>
 
+          <div class="form-group">
+            <label for="location-coordinates">GPS Coordinates</label>
+            <input type="text" id="location-coordinates" v-model="newLocation.coordinates"
+                   placeholder="e.g., -26.1234,28.5678 or 2FGJ+4Q villes, France">
+            <small class="form-help">Optional: Latitude,longitude format or Google Plus Code for mapping integration</small>
+          </div>
+
+          <div class="form-group">
+            <label for="location-access-rules">Site Information URL</label>
+            <input type="url" id="location-access-rules" v-model="newLocation.access_rules"
+                   placeholder="https://example.com/access-rules">
+            <small class="form-help">Optional: Link to online safety and security protocols</small>
+          </div>
+
+          <div class="form-group">
+            <label for="location-access-instructions">Access Instructions</label>
+            <textarea id="location-access-instructions" v-model="newLocation.access_instructions"
+                      rows="4" placeholder="Additional instructions for accessing this location (contact details, parking, etc.)"></textarea>
+            <small class="form-help">Optional: Any additional information that technicians should know</small>
+          </div>
+
           <div class="form-actions">
             <button type="button" @click="showAddLocationModal = false" class="btn-secondary">Cancel</button>
             <button type="submit" class="btn-primary" :disabled="addingLocation">
               {{ addingLocation ? 'Adding Location...' : 'Add Location' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Edit Location Modal -->
+    <div v-if="showEditLocationModal" class="modal-overlay" @click="showEditLocationModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>Edit Location</h3>
+          <button @click="showEditLocationModal = false" class="close-btn">&times;</button>
+        </div>
+
+        <form @submit.prevent="updateLocation" class="location-form">
+          <div class="form-group">
+            <label for="edit-location-name">Location Name *</label>
+            <input type="text" id="edit-location-name" v-model="editingLocation.name" required
+                   placeholder="e.g., Main Office, Warehouse, Branch Office">
+          </div>
+
+          <div class="form-group">
+            <label for="edit-location-address">Address</label>
+            <textarea id="edit-location-address" v-model="editingLocation.address"
+                      rows="3" placeholder="Street address, city, postal code"></textarea>
+            <small class="form-help">Optional: Physical address of the location</small>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-location-coordinates">GPS Coordinates</label>
+            <input type="text" id="edit-location-coordinates" v-model="editingLocation.coordinates"
+                   placeholder="e.g., -26.1234,28.5678 or 2FGJ+4Q villes, France">
+            <small class="form-help">Optional: Latitude,longitude format or Google Plus Code for mapping integration</small>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-location-site-information">Site Information URL</label>
+            <input type="url" id="edit-location-site-information" v-model="editingLocation.access_rules"
+                   placeholder="https://example.com/site-information">
+            <small class="form-help">Optional: Link to online site information or access protocols</small>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-location-access-instructions">Access Instructions</label>
+            <textarea id="edit-location-access-instructions" v-model="editingLocation.access_instructions"
+                      rows="4" placeholder="Additional instructions for accessing this location (contact details, parking, etc.)"></textarea>
+            <small class="form-help">Optional: Any additional information that technicians should know</small>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" @click="showEditLocationModal = false" class="btn-secondary">Cancel</button>
+            <button type="submit" class="btn-primary">
+              Update Location
             </button>
           </div>
         </form>
@@ -935,6 +1034,14 @@ export default {
       showAssignModal: false,
       showAddLocationModal: false,
       showEditLocationModal: false,
+      editingLocation: {
+        id: null,
+        name: '',
+        address: '',
+        coordinates: '',
+        access_rules: '',
+        access_instructions: ''
+      },
       showJobDetailsModal: false,
       showEditJobModal: false,
       addingUser: false,
@@ -972,7 +1079,10 @@ export default {
       },
       newLocation: {
         name: '',
-        address: ''
+        address: '',
+        coordinates: '',
+        access_rules: '',
+        access_instructions: ''
       },
       addingLocation: false,
       selectedJob: null,
@@ -1419,7 +1529,7 @@ export default {
         console.log('ClientDashboard: No images selected, skipping upload')
       }
 
-          alert('Fault reported successfully!')
+          alert('Service request submitted successfully!')
           this.showCreateJobModal = false
           this.resetNewJobForm()
           this.loadJobs() // Refresh the jobs list
@@ -1468,7 +1578,10 @@ export default {
           method: 'POST',
           body: JSON.stringify({
             name: this.newLocation.name.trim(),
-            address: this.newLocation.address ? this.newLocation.address.trim() : ''
+            address: this.newLocation.address ? this.newLocation.address.trim() : '',
+            coordinates: this.newLocation.coordinates ? this.newLocation.coordinates.trim() : '',
+            access_rules: this.newLocation.access_rules ? this.newLocation.access_rules.trim() : '',
+            access_instructions: this.newLocation.access_instructions ? this.newLocation.access_instructions.trim() : ''
           })
         })
 
@@ -1492,31 +1605,44 @@ export default {
     resetNewLocationForm() {
       this.newLocation = {
         name: '',
-        address: ''
+        address: '',
+        coordinates: '',
+        access_rules: '',
+        access_instructions: ''
       }
     },
 
     async editLocation(location) {
-      const newName = prompt('Edit location name:', location.name)
-      if (!newName || !newName.trim() || newName.trim() === location.name) {
-        return
+      // Populate the editing form with current location data
+      this.editingLocation = {
+        id: location.id,
+        name: location.name,
+        address: location.address || '',
+        coordinates: location.coordinates || '',
+        access_rules: location.access_rules || '',
+        access_instructions: location.access_instructions || ''
       }
+      this.showEditLocationModal = true
+    },
 
-      const newAddress = prompt('Edit location address:', location.address || '')
-
+    async updateLocation() {
       try {
         const response = await apiFetch('/backend/api/client-locations.php', {
           method: 'PUT',
           body: JSON.stringify({
-            location_id: location.id,
-            name: newName.trim(),
-            address: newAddress ? newAddress.trim() : ''
+            location_id: this.editingLocation.id,
+            name: this.editingLocation.name.trim(),
+            address: this.editingLocation.address ? this.editingLocation.address.trim() : '',
+            coordinates: this.editingLocation.coordinates ? this.editingLocation.coordinates.trim() : '',
+            access_rules: this.editingLocation.access_rules ? this.editingLocation.access_rules.trim() : '',
+            access_instructions: this.editingLocation.access_instructions ? this.editingLocation.access_instructions.trim() : ''
           })
         })
 
         if (response.ok) {
           const data = await response.json()
           alert(data.message)
+          this.showEditLocationModal = false
           this.loadLocations()
         } else {
           const errorData = await response.json()

@@ -49,11 +49,14 @@ try {
                     l.id,
                     l.name,
                     l.address,
+                    l.coordinates,
+                    l.access_rules,
+                    l.access_instructions,
                     COUNT(j.id) as job_count
                 FROM locations l
                 LEFT JOIN jobs j ON l.id = j.client_location_id
                 WHERE l.client_id = ?
-                GROUP BY l.id, l.name, l.address
+                GROUP BY l.id, l.name, l.address, l.coordinates, l.access_rules, l.access_instructions
                 ORDER BY l.name ASC
             ");
 
@@ -84,10 +87,32 @@ try {
 
             $name = trim($data['name']);
             $address = isset($data['address']) ? trim($data['address']) : '';
+            $coordinates = isset($data['coordinates']) ? trim($data['coordinates']) : '';
+            $access_rules = isset($data['access_rules']) ? trim($data['access_rules']) : '';
+            $access_instructions = isset($data['access_instructions']) ? trim($data['access_instructions']) : '';
 
             if (empty($name)) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Location name cannot be empty']);
+                exit;
+            }
+
+            // Validate coordinates format if provided (accepts both lat/long and Plus Codes)
+            if (!empty($coordinates)) {
+                $isLatLong = preg_match('/^-?\d{1,3}\.?\d*,\s*-?\d{1,3}\.?\d*$/', $coordinates);
+                $isPlusCode = preg_match('/^[A-Z0-9]{4,6}\+[A-Z0-9]{2,3}(\s+.*)?$/', $coordinates);
+
+                if (!$isLatLong && !$isPlusCode) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Coordinates must be in latitude,longitude format (e.g., -26.1234,28.5678) or Plus Code format (e.g., 2FGJ+4Q villes, France)']);
+                    exit;
+                }
+            }
+
+            // Validate access_rules URL format if provided
+            if (!empty($access_rules) && !filter_var($access_rules, FILTER_VALIDATE_URL)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Site Information URL must be a valid URL']);
                 exit;
             }
 
@@ -102,10 +127,10 @@ try {
 
             // Create new location
             $stmt = $pdo->prepare("
-                INSERT INTO locations (client_id, name, address)
-                VALUES (?, ?, ?)
+                INSERT INTO locations (client_id, name, address, coordinates, access_rules, access_instructions)
+                VALUES (?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$entity_id, $name, $address]);
+            $stmt->execute([$entity_id, $name, $address, $coordinates, $access_rules, $access_instructions]);
 
             $location_id = $pdo->lastInsertId();
 
@@ -139,10 +164,32 @@ try {
             $location_id = $data['location_id'];
             $name = trim($data['name']);
             $address = isset($data['address']) ? trim($data['address']) : '';
+            $coordinates = isset($data['coordinates']) ? trim($data['coordinates']) : '';
+            $access_rules = isset($data['access_rules']) ? trim($data['access_rules']) : '';
+            $access_instructions = isset($data['access_instructions']) ? trim($data['access_instructions']) : '';
 
             if (empty($name)) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Location name cannot be empty']);
+                exit;
+            }
+
+            // Validate coordinates format if provided (accepts both lat/long and Plus Codes)
+            if (!empty($coordinates)) {
+                $isLatLong = preg_match('/^-?\d{1,3}\.?\d*,\s*-?\d{1,3}\.?\d*$/', $coordinates);
+                $isPlusCode = preg_match('/^[A-Z0-9]{4,6}\+[A-Z0-9]{2,3}(\s+.*)?$/', $coordinates);
+
+                if (!$isLatLong && !$isPlusCode) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Coordinates must be in latitude,longitude format (e.g., -26.1234,28.5678) or Plus Code format (e.g., 2FGJ+4Q villes, France)']);
+                    exit;
+                }
+            }
+
+            // Validate access_rules URL format if provided
+            if (!empty($access_rules) && !filter_var($access_rules, FILTER_VALIDATE_URL)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Site Information URL must be a valid URL']);
                 exit;
             }
 
@@ -167,10 +214,10 @@ try {
             // Update location
             $stmt = $pdo->prepare("
                 UPDATE locations
-                SET name = ?, address = ?
+                SET name = ?, address = ?, coordinates = ?, access_rules = ?, access_instructions = ?
                 WHERE id = ? AND client_id = ?
             ");
-            $stmt->execute([$name, $address, $location_id, $entity_id]);
+            $stmt->execute([$name, $address, $coordinates, $access_rules, $access_instructions, $location_id, $entity_id]);
 
             echo json_encode(['message' => 'Location updated successfully']);
             break;

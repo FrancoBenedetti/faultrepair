@@ -7,7 +7,11 @@ USE faultreporter;
 ALTER TABLE users ADD COLUMN first_name VARCHAR(50);
 ALTER TABLE users ADD COLUMN last_name VARCHAR(50);
 ALTER TABLE users ADD COLUMN phone VARCHAR(20);
-ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
+ALTER TABLE users MODIFY COLUMN password_hash VARCHAR(255) NULL;
+ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN verification_token VARCHAR(255);
+ALTER TABLE users ADD COLUMN token_expires TIMESTAMP NULL;
 
 -- Verify the changes
 DESCRIBE users;
@@ -31,6 +35,11 @@ CREATE TABLE IF NOT EXISTS job_images (
 CREATE INDEX idx_job_images_job_id ON job_images(job_id);
 CREATE INDEX idx_job_images_uploaded_by ON job_images(uploaded_by);
 CREATE INDEX idx_job_images_uploaded_at ON job_images(uploaded_at);
+
+-- Add new columns to locations table for GPS coordinates and access information
+ALTER TABLE locations ADD COLUMN coordinates VARCHAR(50);
+ALTER TABLE locations ADD COLUMN access_rules VARCHAR(500);
+ALTER TABLE locations ADD COLUMN access_instructions TEXT;
 
 -- Display success message
 SELECT 'Database update completed successfully!' as status;
