@@ -422,7 +422,11 @@
                 <p class="job-description text-body-medium text-on-surface-variant mb-2 line-clamp-2">{{ job.fault_description }}</p>
                 <p class="job-location text-body-small text-on-surface-variant mb-4">
                   <span class="material-icon-sm mr-1">location_on</span>
-                  {{ job.location_name }}
+                  <a :href="`https://maps.google.com/maps?q=${encodeURIComponent(job.location_coordinates || job.location_name)}`"
+                     target="_blank"
+                     class="location-link text-blue-600 hover:text-blue-800 underline">
+                    {{ job.location_name }}
+                  </a>
                 </p>
 
                 <div class="job-meta grid grid-cols-2 gap-3 text-sm">
@@ -1127,7 +1131,11 @@
               </div>
               <div class="info-item">
                 <label>Location:</label>
-                <span>{{ selectedJob.location_name }}</span>
+                <a :href="`https://maps.google.com/maps?q=${encodeURIComponent(selectedJob.location_coordinates || selectedJob.location_name)}`"
+                   target="_blank"
+                   class="location-link text-blue-600 hover:text-blue-800 underline">
+                  {{ selectedJob.location_name }}
+                </a>
               </div>
               <div class="info-item">
                 <label>Reported By:</label>
@@ -1148,7 +1156,7 @@
             </div>
 
             <div class="description-section">
-              <label>Fault Description:</label>
+              <label>Service Description:</label>
               <p class="fault-description">{{ selectedJob.fault_description }}</p>
             </div>
 
@@ -1156,7 +1164,28 @@
               <label>Contact Person:</label>
               <span>{{ selectedJob.contact_person }}</span>
             </div>
+
+            <!-- Site Information -->
+            <div v-if="selectedJob.location_access_rules || selectedJob.location_access_instructions" class="access-section">
+              <!-- Site Information Link -->
+              <div v-if="selectedJob.location_access_rules" class="info-item">
+                <label>Site Information:</label>
+                <a :href="selectedJob.location_access_rules"
+                   target="_blank"
+                   class="access-link text-green-600 hover:text-green-800 underline">
+                  📋 Open Site Information
+                </a>
+              </div>
+
+              <!-- Access Instructions -->
+              <div v-if="selectedJob.location_access_instructions" class="info-item">
+                <label>Access Instructions:</label>
+                <div class="access-instructions-content">{{ selectedJob.location_access_instructions }}</div>
+              </div>
+            </div>
           </div>
+
+
 
           <!-- Technician Notes (visible to service providers only) -->
           <div v-if="(userRole === 3 || userRole === 4) && selectedJob.technician_notes" class="technician-notes-section">
@@ -1263,16 +1292,16 @@
               </div>
               <div class="form-group">
                 <label for="edit-contact-person">Contact Person</label>
-                <input type="text" id="edit-contact-person" v-model="editingJob.contact_person"
-                       placeholder="Person to contact about this fault">
+                    <input type="text" id="edit-contact-person" v-model="editingJob.contact_person"
+                       placeholder="Person to contact about this service request">
                 <small class="form-help">Optional: Who should the technician contact?</small>
               </div>
             </div>
 
             <div class="form-group">
-              <label for="edit-fault-description">Fault Description *</label>
+              <label for="edit-fault-description">Service Description *</label>
               <textarea id="edit-fault-description" v-model="editingJob.fault_description" required
-                        rows="4" placeholder="Describe the fault in detail..."></textarea>
+                        rows="4" placeholder="Describe the service request in detail..."></textarea>
             </div>
 
             <!-- Image Upload Section for editing -->
@@ -1312,7 +1341,7 @@
                 <span>{{ editingJob.contact_person || 'Not specified' }}</span>
               </div>
               <div class="info-row">
-                <label>Fault Description:</label>
+                <label>Service Description:</label>
                 <span>{{ editingJob.fault_description }}</span>
               </div>
             </div>
@@ -2489,6 +2518,43 @@ export default {
 .info-row span {
   color: #333;
   font-size: 14px;
+}
+
+/* Location Details Section */
+.location-details-section {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border: 1px solid #0ea5e9;
+  border-left: 4px solid #0ea5e9;
+}
+
+.location-details-section h4 {
+  margin: 0 0 15px 0;
+  color: #1e40af;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.location-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.location-info-grid .info-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.access-instructions-content {
+  background: white;
+  padding: 12px;
+  border-radius: 6px;
+  line-height: 1.5;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  white-space: pre-wrap;
 }
 
 /* Technician Notes Section */

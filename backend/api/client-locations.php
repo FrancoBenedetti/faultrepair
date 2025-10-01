@@ -112,7 +112,7 @@ try {
             // Validate access_rules URL format if provided
             if (!empty($access_rules) && !filter_var($access_rules, FILTER_VALIDATE_URL)) {
                 http_response_code(400);
-                echo json_encode(['error' => 'Access rules must be a valid URL']);
+                echo json_encode(['error' => 'Site Information URL must be a valid URL']);
                 exit;
             }
 
@@ -189,7 +189,7 @@ try {
             // Validate access_rules URL format if provided
             if (!empty($access_rules) && !filter_var($access_rules, FILTER_VALIDATE_URL)) {
                 http_response_code(400);
-                echo json_encode(['error' => 'Access rules must be a valid URL']);
+                echo json_encode(['error' => 'Site Information URL must be a valid URL']);
                 exit;
             }
 
