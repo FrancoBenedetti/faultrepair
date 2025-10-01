@@ -31,6 +31,9 @@ CREATE TABLE locations (
     client_id INT NOT NULL,
     name VARCHAR(100),
     address TEXT,
+    coordinates VARCHAR(50),
+    access_rules VARCHAR(500),
+    access_instructions TEXT,
     FOREIGN KEY (client_id) REFERENCES clients(id)
 );
 
