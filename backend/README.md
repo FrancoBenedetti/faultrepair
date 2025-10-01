@@ -386,13 +386,17 @@ backend/
 
 ## Dependencies
 
-- **PHP 7.4+**: Server-side scripting
-- **MySQL 5.7+**: Database server
+- **PHP 8.0+**: Server-side scripting
+- **MariaDB/MySQL 5.7+**: Database server
 - **PDO**: PHP Data Objects for database access
+- **JWT Library**: Custom JWT implementation
+- **Email functionality**: Basic email sending (requires mail server)
 
 ## Configuration
 
 ### Database Configuration (`config/database.php`)
+Create the database connection file:
+
 ```php
 <?php
 $host = 'localhost';
@@ -409,6 +413,18 @@ try {
 ?>
 ```
 
+### Site Configuration (`config/site.php`)
+Configure site-wide settings:
+
+```php
+<?php
+define('SITE_URL', 'http://localhost');
+define('JWT_SECRET', 'your-secret-key-here');
+define('JWT_EXPIRY', 3600); // 1 hour
+define('EMAIL_FROM', 'noreply@yourdomain.com');
+?>
+```
+
 ## Error Handling
 
 The API uses standard HTTP status codes:
@@ -419,23 +435,42 @@ The API uses standard HTTP status codes:
 - `409`: Conflict (duplicate data)
 - `500`: Internal Server Error
 
-## Future Enhancements
+## Additional Features
 
-- User profile management endpoints
-- Job creation and management APIs
-- File upload for job attachments
-- Email notifications
-- Role-based access control middleware
-- API rate limiting
-- Comprehensive logging
+- **Email Verification**: User email verification for registration
+- **Password Reset**: Secure password reset functionality
+- **Job Images**: Upload and manage images for fault reports
+- **QR Code Integration**: Scan QR codes for equipment identification
+- **Client-Service Provider Approvals**: Managed approval system
+- **Job Status History**: Complete audit trail of status changes
+- **Technician Management**: Full CRUD operations for technicians
+- **Multi-location Support**: Clients can have multiple locations
 
 ## Setup Instructions
 
-1. Create MySQL database using `schema.sql`
-2. Configure database connection in `config/database.php`
-3. Ensure PHP has PDO MySQL extension enabled
-4. Make sure the web server can serve PHP files
-5. Test endpoints using tools like Postman or curl
+1. **Database Setup**:
+   - Create a MySQL/MariaDB database
+   - Run `schema.sql` to create tables
+   - Optionally run `database-update.sql` for additional updates
+
+2. **Backend Configuration**:
+   - Copy `config/database.php` and update with your database credentials
+   - Copy `config/site.php` and configure site settings including JWT secret
+
+3. **Server Requirements**:
+   - PHP 8.0+ with PDO MySQL extension
+   - Apache/Nginx web server
+   - Write permissions for `uploads/` directory
+
+4. **Web Server Setup**:
+   - Configure Apache virtual host or Nginx server block
+   - Ensure `.htaccess` files are processed
+   - Point document root to `backend/public/`
+   - Allow URL rewriting
+
+5. **Testing**:
+   - Use the included test endpoints in `backend/public/test-*.php`
+   - Verify API endpoints with Postman or curl
 
 ## Testing
 

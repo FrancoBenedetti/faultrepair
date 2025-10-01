@@ -18,12 +18,16 @@ The frontend follows Vue.js best practices with:
 - **Vue.js 3**: Progressive JavaScript framework
 - **Vue Router 4**: Official router for Vue.js
 - **Vite**: Fast build tool and development server
+- **Axios**: HTTP client for API requests
+- **TailwindCSS**: Utility-first CSS framework
+- **PostCSS**: CSS processing tool
 - **JavaScript (ES6+)**: Modern JavaScript features
-- **CSS**: Component-scoped styling
+- **CSS**: Component-scoped styling and global styles
 - **HTML5**: Semantic markup
 - **html5-qrcode**: QR code scanning library
 - **jsQR**: Direct QR code detection library
 - **Camera API**: Device camera access for QR scanning and photo capture
+- **Material Symbols**: Icon library for UI elements
 
 ## Project Structure
 
@@ -33,17 +37,27 @@ frontend/
 │   └── index.html               # Main HTML template
 ├── src/
 │   ├── views/                   # Page components
-│   │   ├── Home.vue            # Landing page with navigation
-│   │   ├── ClientRegistration.vue     # Client registration form
-│   │   ├── ClientSignin.vue           # Client sign-in form
-│   │   ├── ClientDashboard.vue        # Client dashboard with job management
+│   │   ├── Home.vue             # Landing page with navigation
+│   │   ├── ClientDashboard.vue  # Client dashboard with job management and QR scanning
+│   │   ├── ClientRegistration.vue # Client registration form
+│   │   ├── ClientServiceProviderBrowser.vue # Browse approved providers
+│   │   ├── ServiceProviderDashboard.vue # Service provider dashboard
 │   │   ├── ServiceProviderRegistration.vue # Service provider registration
-│   │   ├── ServiceProviderSignin.vue      # Service provider sign-in
-│   │   ├── ServiceProviderDashboard.vue   # Service provider dashboard
-│   │   ├── ServiceProviderClientJobs.vue  # View jobs for specific client
+│   │   ├── ServiceProviderClientJobs.vue # View jobs for specific client
 │   │   ├── ServiceProviderTechnicianJobs.vue # View jobs for specific technician
-│   │   ├── TechnicianDashboard.vue       # Technician dashboard
-│   │   └── ClientServiceProviderBrowser.vue # Browse approved providers
+│   │   ├── TechnicianDashboard.vue # Technician dashboard
+│   │   ├── VerifyEmail.vue       # Email verification page
+│   │   ├── ResetPassword.vue     # Password reset page
+│   │   ├── ForgotPassword.vue    # Forgot password page
+│   │   └── Home.vue              # Landing page
+│   ├── components/              # Reusable components
+│   │   ├── ImageUpload.vue      # Image upload component
+│   │   ├── ImageGallery.vue     # Image gallery display
+│   │   └── QrScanner.vue        # QR code scanner component
+│   ├── utils/
+│   │   └── api.js               # API utility functions (using Axios)
+│   ├── assets/
+│   │   └── main.css             # Global styles
 │   ├── router/
 │   │   └── index.js             # Vue Router configuration
 │   ├── App.vue                  # Root component

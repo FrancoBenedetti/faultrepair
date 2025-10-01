@@ -1,0 +1,24 @@
+[26-Sep-2025 07:44:07 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/218/ >>>> {"job_id":22,"item_identifier":"Test image","fault_description":"Test image","contact_person":"Piet"}
+[26-Sep-2025 07:44:07 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/276/ >>>> 2
+[26-Sep-2025 07:45:19 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/218/ >>>> {"job_id":22,"item_identifier":"Test image","fault_description":"Test image","contact_person":"Piet"}
+[26-Sep-2025 07:45:19 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/276/ >>>> 2
+[26-Sep-2025 07:50:01 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/218/ >>>> {"job_id":23,"item_identifier":"Test image","fault_description":"Test image","contact_person":null}
+[26-Sep-2025 07:50:01 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/276/ >>>> 2
+[26-Sep-2025 09:21:05 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/218/ >>>> {"job_id":25,"item_identifier":"test upload","fault_description":"test","contact_person":null}
+[26-Sep-2025 09:21:05 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/276/ >>>> 2
+[26-Sep-2025 09:24:34 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/218/ >>>> {"job_id":26,"item_identifier":"Test image","fault_description":"Faulty","contact_person":null}
+[26-Sep-2025 09:24:34 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/276/ >>>> 2
+[26-Sep-2025 09:30:58 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/218/ >>>> {"job_id":26,"item_identifier":"Test image","fault_description":"Faulty","contact_person":null}
+[26-Sep-2025 09:30:58 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/276/ >>>> 2
+[26-Sep-2025 09:31:48 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/218/ >>>> {"job_id":26,"item_identifier":"Test image","fault_description":"Faulty","contact_person":null}
+[26-Sep-2025 09:31:48 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/276/ >>>> 2
+[26-Sep-2025 09:34:14 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/218/ >>>> {"job_id":26,"assigned_provider_id":7}
+[26-Sep-2025 09:34:14 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/276/ >>>> 2
+[26-Sep-2025 09:34:14 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/303/ >>>> [1,7]
+[26-Sep-2025 09:34:14 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/304/ >>>> SELECT id FROM client_approved_providers WHERE client_id = ? AND service_provider_id = ?
+[26-Sep-2025 09:34:43 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/218/ >>>> {"job_id":26,"assigned_provider_id":1}
+[26-Sep-2025 09:34:43 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/276/ >>>> 2
+[26-Sep-2025 09:34:43 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/303/ >>>> [1,1]
+[26-Sep-2025 09:34:43 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/304/ >>>> SELECT id FROM client_approved_providers WHERE client_id = ? AND service_provider_id = ?
+[26-Sep-2025 14:13:26 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/219/ >>>> {"job_id":26,"archived_by_client":true}
+[26-Sep-2025 14:13:26 UTC] /home/franco/Projects/fault-reporter/backend/api/client-jobs.php/277/ >>>> 2

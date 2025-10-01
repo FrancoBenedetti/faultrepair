@@ -1,0 +1,296 @@
+[25-Sep-2025 11:51:47 UTC] /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php/44/ >>>> false
+[25-Sep-2025 11:52:58 UTC] /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php/44/ >>>> false
+[25-Sep-2025 11:56:11 UTC] /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php/44/ >>>> {"id":2,"username":"Franco","email_verified":1}
+[25-Sep-2025 11:56:11 UTC] /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php/61/ >>>> bcdee5d66ee4c867f254a78736519d288f7affff7d52f8ef76d57f2e47e8f435
+[25-Sep-2025 11:56:11 UTC] PHP Warning:  Undefined array key "email" in /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php on line 70
+[25-Sep-2025 11:56:11 UTC] PHP Stack trace:
+[25-Sep-2025 11:56:11 UTC] PHP   1. {main}() /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php:0
+[25-Sep-2025 11:56:11 UTC] /home/franco/Projects/fault-reporter/backend/includes/email.php/30/ >>>> 
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #dc3545; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background-color: #f9f9f9; }
+                .button { display: inline-block; padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px; }
+                .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Password Reset Request</h1>
+                </div>
+                <div class='content'>
+                    <h2>Hello Franco,</h2>
+                    <p>You have requested to reset your password for the Snappy system. Click the button below to proceed with the password reset:</p>
+                    <p style='text-align: center;'>
+                        <a href='https://fault-reporter.local/reset-password?token=bcdee5d66ee4c867f254a78736519d288f7affff7d52f8ef76d57f2e47e8f435' class='button'>Reset Password</a>
+                    </p>
+                    <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+                    <p><a href='https://fault-reporter.local/reset-password?token=bcdee5d66ee4c867f254a78736519d288f7affff7d52f8ef76d57f2e47e8f435'>https://fault-reporter.local/reset-password?token=bcdee5d66ee4c867f254a78736519d288f7affff7d52f8ef76d57f2e47e8f435</a></p>
+                    <p>This link will expire in 1 hour for security reasons.</p>
+                    <p>If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
+                </div>
+                <div class='footer'>
+                    <p>This is an automated message from the Snappy system. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        
+[25-Sep-2025 11:56:11 UTC] PHP Warning:  error_log(/home/franco/Projects/fault-reporter/backend/includes/../public/all-logs/mail.log): Failed to open stream: No such file or directory in /home/franco/Projects/fault-reporter/backend/includes/email.php on line 73
+[25-Sep-2025 11:56:11 UTC] PHP Stack trace:
+[25-Sep-2025 11:56:11 UTC] PHP   1. {main}() /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php:0
+[25-Sep-2025 11:56:11 UTC] PHP   2. EmailService::sendVerificationEmail($toEmail = NULL, $username = 'Franco', $verificationToken = 'bcdee5d66ee4c867f254a78736519d288f7affff7d52f8ef76d57f2e47e8f435', $isPasswordReset = TRUE) /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php:70
+[25-Sep-2025 11:56:11 UTC] PHP   3. EmailService::sendEmail($to = NULL, $subject = 'Password Reset Verification', $body = '\n        <html>\n        <head>\n            <style>\n                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n                .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n                .header { background-color: #dc3545; color: white; padding: 20px; text-align: center; }\n                .content { padding: 20px; background-color: #f9f9f9; }\n                .button { display: inline-block; padding: 10px 20px; background-color: #dc3545; color: white; text-dec'...) /home/franco/Projects/fault-reporter/backend/includes/email.php:31
+[25-Sep-2025 11:56:11 UTC] PHP   4. error_log($message = 'EMAIL TO: \nSUBJECT: Password Reset Verification\nHEADERS:\nMIME-Version: 1.0\r\nContent-type: text/html; charset=UTF-8\r\nFrom: Snappy System <noreply@fault-reporter.local>\r\nReply-To: noreply@fault-reporter.local\r\nX-Mailer: PHP/8.3.25\nBODY:\n\n        <html>\n        <head>\n            <style>\n                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n                .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n                .header { background-color: #dc3545; color'..., $message_type = 3, $destination = '/home/franco/Projects/fault-reporter/backend/includes/../public/all-logs/mail.log') /home/franco/Projects/fault-reporter/backend/includes/email.php:73
+[25-Sep-2025 11:56:12 UTC] /home/franco/Projects/fault-reporter/backend/includes/email.php/77/ >>>> false
+[25-Sep-2025 11:56:12 UTC] /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php/72/ >>>> false
+[25-Sep-2025 11:58:51 UTC] /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php/44/ >>>> {"id":2,"username":"Franco","email":"franco+pizza@benedetti.co.za","email_verified":1}
+[25-Sep-2025 11:58:51 UTC] /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php/61/ >>>> 69a9d705faf6cc3f6912f94c743db7cb8b13a987d751cd59d5fdc16870f3694a
+[25-Sep-2025 11:58:51 UTC] /home/franco/Projects/fault-reporter/backend/includes/email.php/30/ >>>> 
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #dc3545; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background-color: #f9f9f9; }
+                .button { display: inline-block; padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px; }
+                .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Password Reset Request</h1>
+                </div>
+                <div class='content'>
+                    <h2>Hello Franco,</h2>
+                    <p>You have requested to reset your password for the Snappy system. Click the button below to proceed with the password reset:</p>
+                    <p style='text-align: center;'>
+                        <a href='https://fault-reporter.local/reset-password?token=69a9d705faf6cc3f6912f94c743db7cb8b13a987d751cd59d5fdc16870f3694a' class='button'>Reset Password</a>
+                    </p>
+                    <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+                    <p><a href='https://fault-reporter.local/reset-password?token=69a9d705faf6cc3f6912f94c743db7cb8b13a987d751cd59d5fdc16870f3694a'>https://fault-reporter.local/reset-password?token=69a9d705faf6cc3f6912f94c743db7cb8b13a987d751cd59d5fdc16870f3694a</a></p>
+                    <p>This link will expire in 1 hour for security reasons.</p>
+                    <p>If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
+                </div>
+                <div class='footer'>
+                    <p>This is an automated message from the Snappy system. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        
+EMAIL TO: franco+pizza@benedetti.co.za
+SUBJECT: Password Reset Verification
+HEADERS:
+MIME-Version: 1.0
+Content-type: text/html; charset=UTF-8
+From: Snappy System <noreply@fault-reporter.local>
+Reply-To: noreply@fault-reporter.local
+X-Mailer: PHP/8.3.25
+BODY:
+
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #dc3545; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background-color: #f9f9f9; }
+                .button { display: inline-block; padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px; }
+                .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Password Reset Request</h1>
+                </div>
+                <div class='content'>
+                    <h2>Hello Franco,</h2>
+                    <p>You have requested to reset your password for the Snappy system. Click the button below to proceed with the password reset:</p>
+                    <p style='text-align: center;'>
+                        <a href='https://fault-reporter.local/reset-password?token=69a9d705faf6cc3f6912f94c743db7cb8b13a987d751cd59d5fdc16870f3694a' class='button'>Reset Password</a>
+                    </p>
+                    <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+                    <p><a href='https://fault-reporter.local/reset-password?token=69a9d705faf6cc3f6912f94c743db7cb8b13a987d751cd59d5fdc16870f3694a'>https://fault-reporter.local/reset-password?token=69a9d705faf6cc3f6912f94c743db7cb8b13a987d751cd59d5fdc16870f3694a</a></p>
+                    <p>This link will expire in 1 hour for security reasons.</p>
+                    <p>If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
+                </div>
+                <div class='footer'>
+                    <p>This is an automated message from the Snappy system. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        
+==================================================
+[25-Sep-2025 11:58:51 UTC] /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php/72/ >>>> true
+[25-Sep-2025 12:02:54 UTC] /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php/44/ >>>> {"id":1,"username":"benita","email":"franco@benedetti.co.za","email_verified":1}
+[25-Sep-2025 12:02:54 UTC] /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php/61/ >>>> f41a717d43580cb2f0b3a99e803aaf9429832e070748a1d8bb164e5a38335449
+[25-Sep-2025 12:02:54 UTC] /home/franco/Projects/fault-reporter/backend/includes/email.php/30/ >>>> 
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #dc3545; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background-color: #f9f9f9; }
+                .button { display: inline-block; padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px; }
+                .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Password Reset Request</h1>
+                </div>
+                <div class='content'>
+                    <h2>Hello benita,</h2>
+                    <p>You have requested to reset your password for the Snappy system. Click the button below to proceed with the password reset:</p>
+                    <p style='text-align: center;'>
+                        <a href='https://fault-reporter.local/reset-password?token=f41a717d43580cb2f0b3a99e803aaf9429832e070748a1d8bb164e5a38335449' class='button'>Reset Password</a>
+                    </p>
+                    <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+                    <p><a href='https://fault-reporter.local/reset-password?token=f41a717d43580cb2f0b3a99e803aaf9429832e070748a1d8bb164e5a38335449'>https://fault-reporter.local/reset-password?token=f41a717d43580cb2f0b3a99e803aaf9429832e070748a1d8bb164e5a38335449</a></p>
+                    <p>This link will expire in 1 hour for security reasons.</p>
+                    <p>If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
+                </div>
+                <div class='footer'>
+                    <p>This is an automated message from the Snappy system. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        
+EMAIL TO: franco@benedetti.co.za
+SUBJECT: Password Reset Verification
+HEADERS:
+MIME-Version: 1.0
+Content-type: text/html; charset=UTF-8
+From: Snappy System <noreply@fault-reporter.local>
+Reply-To: noreply@fault-reporter.local
+X-Mailer: PHP/8.3.25
+BODY:
+
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #dc3545; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background-color: #f9f9f9; }
+                .button { display: inline-block; padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px; }
+                .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Password Reset Request</h1>
+                </div>
+                <div class='content'>
+                    <h2>Hello benita,</h2>
+                    <p>You have requested to reset your password for the Snappy system. Click the button below to proceed with the password reset:</p>
+                    <p style='text-align: center;'>
+                        <a href='https://fault-reporter.local/reset-password?token=f41a717d43580cb2f0b3a99e803aaf9429832e070748a1d8bb164e5a38335449' class='button'>Reset Password</a>
+                    </p>
+                    <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+                    <p><a href='https://fault-reporter.local/reset-password?token=f41a717d43580cb2f0b3a99e803aaf9429832e070748a1d8bb164e5a38335449'>https://fault-reporter.local/reset-password?token=f41a717d43580cb2f0b3a99e803aaf9429832e070748a1d8bb164e5a38335449</a></p>
+                    <p>This link will expire in 1 hour for security reasons.</p>
+                    <p>If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
+                </div>
+                <div class='footer'>
+                    <p>This is an automated message from the Snappy system. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        
+==================================================
+[25-Sep-2025 12:02:54 UTC] /home/franco/Projects/fault-reporter/backend/api/request-password-reset.php/72/ >>>> true
+[26-Sep-2025 09:52:47 UTC] /home/franco/Projects/fault-reporter/backend/includes/email.php/45/ >>>> 
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #28a745; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background-color: #f9f9f9; }
+                .button { display: inline-block; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; }
+                .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Welcome to Snappy</h1>
+                </div>
+                <div class='content'>
+                    <h2>Hello test-reporter-2,</h2>
+                    <p>You have been added to the Snappy system. To activate your account and set your password, please click the button below:</p>
+                    <p style='text-align: center;'>
+                        <a href='https://fault-reporter.local/verify-email?token=a85169121272137fcbdaf28235b0da4bef3c436f3fe37e50bd62e6aaaa5842da&action=set_password' class='button'>Set Your Password</a>
+                    </p>
+                    <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+                    <p><a href='https://fault-reporter.local/verify-email?token=a85169121272137fcbdaf28235b0da4bef3c436f3fe37e50bd62e6aaaa5842da&action=set_password'>https://fault-reporter.local/verify-email?token=a85169121272137fcbdaf28235b0da4bef3c436f3fe37e50bd62e6aaaa5842da&action=set_password</a></p>
+                    <p>This link will expire in 24 hours for security reasons.</p>
+                    <p>If you didn't expect this invitation, please ignore this email.</p>
+                </div>
+                <div class='footer'>
+                    <p>This is an automated message from the Snappy system. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        
+EMAIL TO: test222@gsggs.co.za
+SUBJECT: Account Setup - Set Your Password
+HEADERS:
+MIME-Version: 1.0
+Content-type: text/html; charset=UTF-8
+From: Snappy System <noreply@fault-reporter.local>
+Reply-To: noreply@fault-reporter.local
+X-Mailer: PHP/8.3.25
+BODY:
+
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #28a745; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background-color: #f9f9f9; }
+                .button { display: inline-block; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; }
+                .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Welcome to Snappy</h1>
+                </div>
+                <div class='content'>
+                    <h2>Hello test-reporter-2,</h2>
+                    <p>You have been added to the Snappy system. To activate your account and set your password, please click the button below:</p>
+                    <p style='text-align: center;'>
+                        <a href='https://fault-reporter.local/verify-email?token=a85169121272137fcbdaf28235b0da4bef3c436f3fe37e50bd62e6aaaa5842da&action=set_password' class='button'>Set Your Password</a>
+                    </p>
+                    <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+                    <p><a href='https://fault-reporter.local/verify-email?token=a85169121272137fcbdaf28235b0da4bef3c436f3fe37e50bd62e6aaaa5842da&action=set_password'>https://fault-reporter.local/verify-email?token=a85169121272137fcbdaf28235b0da4bef3c436f3fe37e50bd62e6aaaa5842da&action=set_password</a></p>
+                    <p>This link will expire in 24 hours for security reasons.</p>
+                    <p>If you didn't expect this invitation, please ignore this email.</p>
+                </div>
+                <div class='footer'>
+                    <p>This is an automated message from the Snappy system. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        
+==================================================
