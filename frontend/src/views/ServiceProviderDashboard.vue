@@ -12,331 +12,15 @@
             <span class="completeness-text text-lg font-medium text-gray-900">{{ profileCompleteness }}% Complete</span>
           </div>
         </div>
-        <div class="header-right">
+        <div class="header-right flex gap-3">
+          <button @click="$router.push('/create-invitation')" class="btn-filled flex items-center gap-2">
+            <span class="material-icon-sm">person_add</span>
+            Create Invitation
+          </button>
           <button @click="signOut" class="btn-filled flex items-center gap-2">
             <span class="material-icon-sm">logout</span>
             Sign Out
           </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Profile Overview -->
-      <div v-if="userRole === 3" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('profile')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.profile }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-              <span class="material-icon text-blue-600">business</span>
-              Profile Overview
-            </h2>
-          </div>
-          <button v-if="userRole === 3" @click.stop="showProfileModal = true" class="btn-filled flex items-center gap-2">
-            <span class="material-icon-sm">edit</span>
-            Edit Profile
-          </button>
-        </div>
-
-        <div v-show="sectionsExpanded.profile" class="section-content transition-all duration-300 ease-in-out">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="space-y-4">
-              <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                  <span class="material-icon text-white">{{ profile.name?.charAt(0) || 'B' }}</span>
-                </div>
-                <div>
-                  <h3 class="text-xl font-semibold text-gray-900">{{ profile.name }}</h3>
-                  <p class="text-gray-600 flex items-center gap-2">
-                    <span class="material-icon-sm">location_on</span>
-                    {{ profile.address }}
-                  </p>
-                </div>
-              </div>
-
-              <div v-if="profile.description" class="bg-gray-50 rounded-lg p-4">
-                <p class="text-gray-700">{{ profile.description }}</p>
-              </div>
-            </div>
-
-            <div class="space-y-4">
-              <div v-if="profile.manager_name || profile.website" class="bg-blue-50 rounded-lg p-4">
-                <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <span class="material-icon-sm text-blue-600">contact_mail</span>
-                  Contact Information
-                </h4>
-                <div class="space-y-2">
-                  <p v-if="profile.manager_name" class="text-gray-700 flex items-center gap-2">
-                    <span class="material-icon-sm text-gray-500">person</span>
-                    <strong>Manager:</strong> {{ profile.manager_name }}
-                  </p>
-                  <p v-if="profile.website" class="text-gray-700 flex items-center gap-2">
-                    <span class="material-icon-sm text-gray-500">link</span>
-                    <strong>Website:</strong>
-                    <a :href="profile.website" target="_blank" class="text-blue-600 hover:text-blue-800 underline">{{ profile.website }}</a>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Services Section -->
-      <div v-if="userRole === 3" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('services')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.services }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-              <span class="material-icon text-blue-600">build</span>
-              Services Offered
-            </h2>
-          </div>
-          <button v-if="userRole === 3" @click.stop="showServicesModal = true" class="btn-filled flex items-center gap-2">
-            <span class="material-icon-sm">add</span>
-            Manage Services
-          </button>
-        </div>
-
-        <div v-show="sectionsExpanded.services" class="section-content transition-all duration-300 ease-in-out">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div v-for="service in services" :key="service.id" class="relative bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                    <span class="material-icon-sm text-white">build</span>
-                  </div>
-                  <div>
-                    <h3 class="font-semibold text-gray-900">{{ service.name }}</h3>
-                    <p class="text-sm text-gray-600">{{ service.category }}</p>
-                  </div>
-                </div>
-                <span v-if="service.is_primary" class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
-                  Primary
-                </span>
-              </div>
-            </div>
-
-            <!-- Add Service Button -->
-            <button @click="showServicesModal = true" class="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-blue-600">
-              <span class="material-icon text-2xl">add_circle</span>
-              <span class="font-medium">Add Service</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Regions Section -->
-      <div v-if="userRole === 3" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('regions')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.regions }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-              <span class="material-icon text-blue-600">location_on</span>
-              Service Regions
-            </h2>
-          </div>
-          <button v-if="userRole === 3" @click.stop="showRegionsModal = true" class="btn-filled flex items-center gap-2">
-            <span class="material-icon-sm">add</span>
-            Manage Regions
-          </button>
-        </div>
-
-        <div v-show="sectionsExpanded.regions" class="section-content transition-all duration-300 ease-in-out">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div v-for="region in regions" :key="region.id" class="relative bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
-                  <span class="material-icon-sm text-white">location_on</span>
-                </div>
-                <div>
-                  <h3 class="font-semibold text-gray-900">{{ region.name }}</h3>
-                  <p class="text-sm text-gray-600">{{ region.code }}</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Add Region Button -->
-            <button @click="showRegionsModal = true" class="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-green-400 hover:bg-green-50 transition-colors flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-green-600">
-              <span class="material-icon text-2xl">add_location</span>
-              <span class="font-medium">Add Region</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Technicians Section -->
-      <div v-if="userRole === 3" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('technicians')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.technicians }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-              <span class="material-icon text-blue-600">engineering</span>
-              Technicians
-            </h2>
-          </div>
-          <button v-if="userRole === 3" @click.stop="openAddTechnicianModal" class="btn-filled flex items-center gap-2">
-            <span class="material-icon-sm">person_add</span>
-            Add Technician
-          </button>
-        </div>
-
-        <div v-show="sectionsExpanded.technicians" class="section-content transition-all duration-300 ease-in-out">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div v-for="technician in technicians" :key="technician.id" class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-              <div class="flex justify-between items-center p-4 bg-gray-50 border-b border-gray-200">
-                <div class="flex items-center gap-3">
-                  <div class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
-                    <span class="material-icon text-white">{{ technician.full_name.charAt(0) }}</span>
-                  </div>
-                  <div>
-                    <h3 class="font-semibold text-gray-900">{{ technician.full_name }}</h3>
-                    <span :class="[
-                      'px-2 py-1 rounded-full text-xs font-medium',
-                      technician.is_active
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    ]">
-                      {{ technician.is_active ? 'Active' : 'Inactive' }}
-                    </span>
-                  </div>
-                </div>
-                <div class="flex gap-2">
-                  <button @click="viewTechnicianJobs(technician)" class="btn-round" title="View Jobs">
-                    <span class="material-icon-sm">work</span>
-                  </button>
-                  <button @click="editTechnician(technician)" class="btn-round" title="Edit Technician">
-                    <span class="material-icon-sm">edit</span>
-                  </button>
-                  <button @click="deleteTechnician(technician)" class="btn-round-filled" title="Delete Technician">
-                    <span class="material-icon-sm">delete</span>
-                  </button>
-                </div>
-              </div>
-
-              <div class="p-4">
-                <p class="text-sm text-gray-600 flex items-center gap-1 mb-2">
-                  <span class="material-icon-sm">email</span>
-                  {{ technician.email }}
-                </p>
-                <p v-if="technician.phone" class="text-sm text-gray-600 flex items-center gap-1">
-                  <span class="material-icon-sm">phone</span>
-                  {{ technician.phone }}
-                </p>
-              </div>
-
-              <div class="px-4 pb-4">
-                <p class="text-xs text-gray-500">
-                  Added {{ formatDate(technician.created_at) }}
-                </p>
-              </div>
-            </div>
-
-            <!-- Add Technician Card -->
-            <button @click="openAddTechnicianModal" class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-purple-400 hover:bg-purple-50 transition-colors flex flex-col items-center justify-center gap-3 text-gray-500 hover:text-purple-600">
-              <span class="material-icon text-3xl">person_add</span>
-              <div class="text-center">
-                <div class="font-medium">Add Technician</div>
-                <div class="text-sm">Create a new technician account</div>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- Empty State -->
-        <div v-if="technicians.length === 0" class="text-center py-16">
-          <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-6">
-            <span class="material-icon text-gray-400">engineering</span>
-          </div>
-          <h3 class="text-xl font-semibold text-gray-900 mb-2">No Technicians Yet</h3>
-          <p class="text-gray-600 mb-6">Add technicians to help manage your jobs and assignments.</p>
-          <button @click="openAddTechnicianModal" class="btn-filled flex items-center gap-2 mx-auto">
-            <span class="material-icon-sm">person_add</span>
-            Add Your First Technician
-          </button>
-        </div>
-      </div>
-
-      <!-- Approved Clients Section -->
-      <div v-if="userRole === 3" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('clients')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.clients }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-              <span class="material-icon text-blue-600">group</span>
-              Approved Clients
-            </h2>
-          </div>
-        </div>
-
-        <div v-show="sectionsExpanded.clients" class="section-content transition-all duration-300 ease-in-out">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div v-for="client in approvedClients" :key="client.id" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div class="flex items-start justify-between mb-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center">
-                    <span class="material-icon text-white">{{ client.name.charAt(0) }}</span>
-                  </div>
-                  <div>
-                    <h3 class="font-semibold text-gray-900">{{ client.name }}</h3>
-                    <p class="text-sm text-gray-600 flex items-center gap-1">
-                      <span class="material-icon-sm">location_on</span>
-                      {{ client.address }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Job Statistics -->
-              <div class="grid grid-cols-3 gap-2 mb-4">
-                <div class="text-center">
-                  <div class="text-lg font-bold text-blue-600">{{ client.total_jobs }}</div>
-                  <div class="text-xs text-gray-600">Total Jobs</div>
-                </div>
-                <div class="text-center">
-                  <div class="text-lg font-bold text-green-600">{{ client.active_jobs }}</div>
-                  <div class="text-xs text-gray-600">Active</div>
-                </div>
-                <div class="text-center">
-                  <div class="text-lg font-bold text-gray-600">{{ client.completed_jobs }}</div>
-                  <div class="text-xs text-gray-600">Completed</div>
-                </div>
-              </div>
-
-              <div class="flex gap-2">
-                <button @click="viewClientJobs(client.id)" class="btn-filled btn-small flex items-center gap-1 flex-1">
-                  <span class="material-icon-sm">work</span>
-                  View Jobs
-                </button>
-              </div>
-
-              <div class="mt-3 pt-3 border-t border-gray-200">
-                <p class="text-xs text-gray-500 flex items-center gap-1">
-                  <span class="material-icon-sm">event_available</span>
-                  Approved {{ formatDate(client.approved_at) }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Empty State -->
-          <div v-if="approvedClients.length === 0" class="text-center py-16">
-            <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-6">
-              <span class="material-icon text-gray-400">group</span>
-            </div>
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">No Approved Clients Yet</h3>
-            <p class="text-gray-600">Clients will appear here once they approve your services.</p>
-          </div>
         </div>
       </div>
 
@@ -475,7 +159,453 @@
       </div>
     </div>
 
-    <!-- Profile Edit Modal -->
+    <!-- Business Profile Section - Only for service provider admins -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" v-if="userRole === 3">
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('profile')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.profile }">
+              <span class="material-icon-sm">expand_more</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+              <span class="material-icon text-blue-600">business</span>
+              Business Profile
+            </h2>
+            <div class="profile-completeness-badge">
+              <span class="completeness-percentage">{{ profileCompleteness }}%</span>
+              <span class="completeness-label">Complete</span>
+            </div>
+          </div>
+          <button @click.stop="showProfileModal = true" class="btn-filled flex items-center gap-2">
+            <span class="material-icon-sm">edit</span>
+            Edit Profile
+          </button>
+        </div>
+
+        <div v-show="sectionsExpanded.profile" class="section-content transition-all duration-300 ease-in-out">
+          <!-- Loading state -->
+          <div v-if="!profile" class="loading-state text-center py-16">
+            <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-body-large text-on-surface-variant">Loading profile...</p>
+          </div>
+
+          <!-- Profile content -->
+          <div v-else-if="profile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Basic Information Card -->
+            <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div class="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
+                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span class="material-icon-sm text-white">business_center</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">Basic Information</h3>
+              </div>
+              <div class="space-y-3">
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">store</span>
+                    Business Name:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ profile.name || 'Not specified' }}</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">location_on</span>
+                    Address:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ profile.address || 'Not specified' }}</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">link</span>
+                    Website:
+                  </span>
+                  <span class="text-sm text-right">
+                    <span v-if="profile.website">
+                      <a :href="profile.website"
+                         target="_blank"
+                         class="text-blue-600 hover:text-blue-800 underline break-all">
+                        {{ profile.website }}
+                      </a>
+                    </span>
+                    <span v-else class="text-gray-900">Not specified</span>
+                  </span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">description</span>
+                    Description:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ profile.description || 'Not specified' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Manager Contact Card -->
+            <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div class="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
+                <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span class="material-icon-sm text-white">contact_phone</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">Manager Contact</h3>
+              </div>
+              <div class="space-y-3">
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">person</span>
+                    Manager Name:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ profile.manager_name || 'Not specified' }}</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">email</span>
+                    Manager Email:
+                  </span>
+                  <span class="text-sm text-right">
+                    <span v-if="profile.manager_email">
+                      <a :href="`mailto:${profile.manager_email}`"
+                         class="text-blue-600 hover:text-blue-800 underline break-all">
+                        {{ profile.manager_email }}
+                      </a>
+                    </span>
+                    <span v-else class="text-gray-900">Not specified</span>
+                  </span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">phone</span>
+                    Manager Phone:
+                  </span>
+                  <span class="text-sm text-right">
+                    <span v-if="profile.manager_phone">
+                      <a :href="`tel:${profile.manager_phone}`"
+                         class="text-blue-600 hover:text-blue-800 underline">
+                        {{ profile.manager_phone }}
+                      </a>
+                    </span>
+                    <span v-else class="text-gray-900">Not specified</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Business Details Card -->
+            <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div class="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
+                <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span class="material-icon-sm text-white">assignment</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">Business Details</h3>
+              </div>
+              <div class="space-y-3">
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">receipt</span>
+                    VAT Number:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ profile.vat_number || 'Not specified' }}</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">business</span>
+                    Registration:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ profile.business_registration_number || 'Not specified' }}</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">toggle_on</span>
+                    Status:
+                  </span>
+                  <span class="px-2 py-1 rounded-full text-xs font-medium text-right"
+                        :class="profile.is_active
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'">
+                    {{ profile.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">event_available</span>
+                    Member Since:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ formatDate(profile.created_at) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- No profile state -->
+          <div v-else class="no-profile text-center py-16">
+            <div class="no-profile-icon material-icon-xl text-neutral-400 mb-4">business</div>
+            <h3 class="text-title-large text-on-surface mb-2">Profile Not Set Up</h3>
+            <p class="text-body-large text-on-surface-variant mb-4">Complete your business profile to help clients understand your services better.</p>
+            <button @click="showProfileModal = true" class="btn-filled">
+              <span class="material-icon-sm mr-2">edit</span>
+              Set Up Profile
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Services Section -->
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('services')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.services }">
+              <span class="material-icon-sm">expand_more</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+              <span class="material-icon text-blue-600">build</span>
+              Services Offered
+            </h2>
+          </div>
+          <button @click.stop="showServicesModal = true" class="btn-filled flex items-center gap-2">
+            <span class="material-icon-sm">add</span>
+            Manage Services
+          </button>
+        </div>
+
+        <div v-show="sectionsExpanded.services" class="section-content transition-all duration-300 ease-in-out">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div v-for="service in services" :key="service.id" class="relative bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                    <span class="material-icon-sm text-white">build</span>
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-gray-900">{{ service.name }}</h3>
+                    <p class="text-sm text-gray-600">{{ service.category }}</p>
+                  </div>
+                </div>
+                <span v-if="service.is_primary" class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
+                  Primary
+                </span>
+              </div>
+            </div>
+
+            <!-- Add Service Button -->
+            <button @click="showServicesModal = true" class="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-blue-600">
+              <span class="material-icon text-2xl">add_circle</span>
+              <span class="font-medium">Add Service</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Regions Section -->
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('regions')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.regions }">
+              <span class="material-icon-sm">expand_more</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+              <span class="material-icon text-blue-600">location_on</span>
+              Service Regions
+            </h2>
+          </div>
+          <button @click.stop="showRegionsModal = true" class="btn-filled flex items-center gap-2">
+            <span class="material-icon-sm">add</span>
+            Manage Regions
+          </button>
+        </div>
+
+        <div v-show="sectionsExpanded.regions" class="section-content transition-all duration-300 ease-in-out">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div v-for="region in regions" :key="region.id" class="relative bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
+                  <span class="material-icon-sm text-white">location_on</span>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-gray-900">{{ region.name }}</h3>
+                  <p class="text-sm text-gray-600">{{ region.code }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Add Region Button -->
+            <button @click="showRegionsModal = true" class="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-green-400 hover:bg-green-50 transition-colors flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-green-600">
+              <span class="material-icon text-2xl">add_location</span>
+              <span class="font-medium">Add Region</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Technicians Section -->
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('technicians')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.technicians }">
+              <span class="material-icon-sm">expand_more</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+              <span class="material-icon text-blue-600">engineering</span>
+              Technicians
+            </h2>
+          </div>
+          <button @click.stop="openAddTechnicianModal" class="btn-filled flex items-center gap-2">
+            <span class="material-icon-sm">person_add</span>
+            Add Technician
+          </button>
+        </div>
+
+        <div v-show="sectionsExpanded.technicians" class="section-content transition-all duration-300 ease-in-out">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div v-for="technician in technicians" :key="technician.id" class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+              <div class="flex justify-between items-center p-4 bg-gray-50 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
+                    <span class="material-icon text-white">{{ technician.full_name.charAt(0) }}</span>
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-gray-900">{{ technician.full_name }}</h3>
+                    <span :class="[
+                      'px-2 py-1 rounded-full text-xs font-medium',
+                      technician.is_active
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    ]">
+                      {{ technician.is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <button @click="viewTechnicianJobs(technician)" class="btn-round" title="View Jobs">
+                    <span class="material-icon-sm">work</span>
+                  </button>
+                  <button @click="editTechnician(technician)" class="btn-round" title="Edit Technician">
+                    <span class="material-icon-sm">edit</span>
+                  </button>
+                  <button @click="deleteTechnician(technician)" class="btn-round-filled" title="Delete Technician">
+                    <span class="material-icon-sm">delete</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="p-4">
+                <p class="text-sm text-gray-600 flex items-center gap-1 mb-2">
+                  <span class="material-icon-sm">email</span>
+                  {{ technician.email }}
+                </p>
+                <p v-if="technician.phone" class="text-sm text-gray-600 flex items-center gap-1">
+                  <span class="material-icon-sm">phone</span>
+                  {{ technician.phone }}
+                </p>
+              </div>
+
+              <div class="px-4 pb-4">
+                <p class="text-xs text-gray-500">
+                  Added {{ formatDate(technician.created_at) }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Add Technician Card -->
+            <button @click="openAddTechnicianModal" class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-purple-400 hover:bg-purple-50 transition-colors flex flex-col items-center justify-center gap-3 text-gray-500 hover:text-purple-600">
+              <span class="material-icon text-3xl">person_add</span>
+              <div class="text-center">
+                <div class="font-medium">Add Technician</div>
+                <div class="text-sm">Create a new technician account</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-if="technicians.length === 0" class="text-center py-16">
+          <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-6">
+            <span class="material-icon text-gray-400">engineering</span>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">No Technicians Yet</h3>
+          <p class="text-gray-600 mb-6">Add technicians to help manage your jobs and assignments.</p>
+          <button @click="openAddTechnicianModal" class="btn-filled flex items-center gap-2 mx-auto">
+            <span class="material-icon-sm">person_add</span>
+            Add Your First Technician
+          </button>
+        </div>
+      </div>
+
+      <!-- Approved Clients Section -->
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('clients')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.clients }">
+              <span class="material-icon-sm">expand_more</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+              <span class="material-icon text-blue-600">group</span>
+              Approved Clients
+            </h2>
+          </div>
+        </div>
+
+        <div v-show="sectionsExpanded.clients" class="section-content transition-all duration-300 ease-in-out">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div v-for="client in approvedClients" :key="client.id" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center">
+                    <span class="material-icon text-white">{{ client.name.charAt(0) }}</span>
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-gray-900">{{ client.name }}</h3>
+                    <p class="text-sm text-gray-600 flex items-center gap-1">
+                      <span class="material-icon-sm">location_on</span>
+                      {{ client.address }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Job Statistics -->
+              <div class="grid grid-cols-3 gap-2 mb-4">
+                <div class="text-center">
+                  <div class="text-lg font-bold text-blue-600">{{ client.total_jobs }}</div>
+                  <div class="text-xs text-gray-600">Total Jobs</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-lg font-bold text-green-600">{{ client.active_jobs }}</div>
+                  <div class="text-xs text-gray-600">Active</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-lg font-bold text-gray-600">{{ client.completed_jobs }}</div>
+                  <div class="text-xs text-gray-600">Completed</div>
+                </div>
+              </div>
+
+              <div class="flex gap-2">
+                <button @click="viewClientJobs(client.id)" class="btn-filled btn-small flex items-center gap-1 flex-1">
+                  <span class="material-icon-sm">work</span>
+                  View Jobs
+                </button>
+              </div>
+
+              <div class="mt-3 pt-3 border-t border-gray-200">
+                <p class="text-xs text-gray-500 flex items-center gap-1">
+                  <span class="material-icon-sm">event_available</span>
+                  Approved {{ formatDate(client.approved_at) }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div v-if="approvedClients.length === 0" class="text-center py-16">
+            <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-6">
+              <span class="material-icon text-gray-400">group</span>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">No Approved Clients Yet</h3>
+            <p class="text-gray-600">Clients will appear here once they approve your services.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Business Profile Modal -->
     <div v-if="showProfileModal" class="fixed inset-0 z-50 flex items-center justify-center">
       <!-- Overlay -->
       <div class="absolute inset-0 bg-black/50" @click="showProfileModal = false"></div>
@@ -485,153 +615,185 @@
         <!-- Header -->
         <div class="flex justify-between items-center p-6 border-b border-gray-200">
           <h3 class="text-xl font-semibold text-gray-900 flex items-center gap-3">
-            <span class="material-icon text-blue-600">edit</span>
-            Edit Profile
+            <span class="material-icon text-blue-600">business</span>
+            Edit Business Profile
           </h3>
           <button @click="showProfileModal = false" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
         </div>
 
         <!-- Form -->
-        <form @submit.prevent="updateProfile" class="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          <!-- Company Name and Website Row -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label for="name" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">business</span>
-                Company Name *
-              </label>
-              <input
-                type="text"
-                id="name"
-                v-model="editForm.name"
-                required
-                class="form-input"
-                placeholder="Enter company name"
-              >
-            </div>
-            <div>
-              <label for="website" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">link</span>
-                Website
-              </label>
-              <input
-                type="url"
-                id="website"
-                v-model="editForm.website"
-                class="form-input"
-                placeholder="https://example.com"
-              >
-            </div>
-          </div>
+        <form @submit.prevent="updateProfile" class="p-6 space-y-8 overflow-y-auto max-h-[calc(90vh-140px)]">
+          <!-- Basic Information -->
+          <div class="bg-gray-50 rounded-lg p-6 space-y-6">
+            <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
+              <span class="material-icon-sm text-blue-600">business_center</span>
+              Basic Information
+            </h4>
 
-          <!-- Address -->
-          <div>
-            <label for="address" class="form-label flex items-center gap-2">
-              <span class="material-icon-sm text-gray-500">location_on</span>
-              Address *
-            </label>
-            <textarea
-              id="address"
-              v-model="editForm.address"
-              required
-              rows="3"
-              class="form-input resize-none"
-              placeholder="Enter company address"
-            ></textarea>
-          </div>
-
-          <!-- Description -->
-          <div>
-            <label for="description" class="form-label flex items-center gap-2">
-              <span class="material-icon-sm text-gray-500">description</span>
-              Description
-            </label>
-            <textarea
-              id="description"
-              v-model="editForm.description"
-              rows="3"
-              class="form-input resize-none"
-              placeholder="Describe your company and services"
-            ></textarea>
-          </div>
-
-          <!-- Manager Name and Email Row -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label for="manager_name" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">person</span>
-                Manager Name
-              </label>
-              <input
-                type="text"
-                id="manager_name"
-                v-model="editForm.manager_name"
-                class="form-input"
-                placeholder="Enter manager name"
-              >
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-2">
+                <label for="business-name" class="form-label flex items-center gap-2">
+                  <span class="material-icon-sm text-gray-500">store</span>
+                  Business Name *
+                </label>
+                <input
+                  type="text"
+                  id="business-name"
+                  v-model="editForm.name"
+                  required
+                  class="form-input"
+                  placeholder="Your business name"
+                >
+              </div>
+              <div class="space-y-2">
+                <label for="business-website" class="form-label flex items-center gap-2">
+                  <span class="material-icon-sm text-gray-500">link</span>
+                  Website
+                </label>
+                <input
+                  type="url"
+                  id="business-website"
+                  v-model="editForm.website"
+                  class="form-input"
+                  placeholder="https://yourbusiness.com"
+                >
+              </div>
             </div>
-            <div>
-              <label for="manager_email" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">email</span>
-                Manager Email
+
+            <div class="space-y-2">
+              <label for="business-address" class="form-label flex items-center gap-2">
+                <span class="material-icon-sm text-gray-500">location_on</span>
+                Business Address
               </label>
-              <input
-                type="email"
-                id="manager_email"
-                v-model="editForm.manager_email"
+              <textarea
+                id="business-address"
+                v-model="editForm.address"
+                rows="3"
                 class="form-input"
-                placeholder="Enter manager email"
-              >
+                placeholder="Business address"
+              ></textarea>
+            </div>
+
+            <div class="space-y-2">
+              <label for="business-description" class="form-label flex items-center gap-2">
+                <span class="material-icon-sm text-gray-500">description</span>
+                Business Description
+              </label>
+              <textarea
+                id="business-description"
+                v-model="editForm.description"
+                rows="4"
+                class="form-input"
+                placeholder="Brief description of your business and services"
+              ></textarea>
             </div>
           </div>
 
-          <!-- Manager Phone and VAT Number Row -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label for="manager_phone" class="form-label flex items-center gap-2">
+          <!-- Manager Contact -->
+          <div class="bg-gray-50 rounded-lg p-6 space-y-6">
+            <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
+              <span class="material-icon-sm text-green-600">contact_phone</span>
+              Manager Contact Information
+            </h4>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-2">
+                <label for="manager-name" class="form-label flex items-center gap-2">
+                  <span class="material-icon-sm text-gray-500">person</span>
+                  Manager Name
+                </label>
+                <input
+                  type="text"
+                  id="manager-name"
+                  v-model="editForm.manager_name"
+                  class="form-input"
+                  placeholder="Primary contact person"
+                >
+              </div>
+              <div class="space-y-2">
+                <label for="manager-email" class="form-label flex items-center gap-2">
+                  <span class="material-icon-sm text-gray-500">email</span>
+                  Manager Email
+                </label>
+                <input
+                  type="email"
+                  id="manager-email"
+                  v-model="editForm.manager_email"
+                  class="form-input"
+                  placeholder="manager@yourbusiness.com"
+                >
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label for="manager-phone" class="form-label flex items-center gap-2">
                 <span class="material-icon-sm text-gray-500">phone</span>
                 Manager Phone
               </label>
               <input
                 type="tel"
-                id="manager_phone"
+                id="manager-phone"
                 v-model="editForm.manager_phone"
                 class="form-input"
-                placeholder="Enter manager phone"
-              >
-            </div>
-            <div>
-              <label for="vat_number" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">receipt</span>
-                VAT Number
-              </label>
-              <input
-                type="text"
-                id="vat_number"
-                v-model="editForm.vat_number"
-                class="form-input"
-                placeholder="Enter VAT number"
+                placeholder="+27 12 345 6789"
               >
             </div>
           </div>
 
-          <!-- Business Registration Number -->
-          <div>
-            <label for="business_registration_number" class="form-label flex items-center gap-2">
-              <span class="material-icon-sm text-gray-500">badge</span>
-              Business Registration Number
-            </label>
-            <input
-              type="text"
-              id="business_registration_number"
-              v-model="editForm.business_registration_number"
-              class="form-input"
-              placeholder="Enter business registration number"
-            >
+          <!-- Business Details -->
+          <div class="bg-gray-50 rounded-lg p-6 space-y-6">
+            <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
+              <span class="material-icon-sm text-purple-600">assignment</span>
+              Business Registration Details
+            </h4>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-2">
+                <label for="vat-number" class="form-label flex items-center gap-2">
+                  <span class="material-icon-sm text-gray-500">receipt</span>
+                  VAT Number
+                </label>
+                <input
+                  type="text"
+                  id="vat-number"
+                  v-model="editForm.vat_number"
+                  class="form-input"
+                  placeholder="VAT registration number"
+                >
+              </div>
+              <div class="space-y-2">
+                <label for="business-registration" class="form-label flex items-center gap-2">
+                  <span class="material-icon-sm text-gray-500">business</span>
+                  Business Registration Number
+                </label>
+                <input
+                  type="text"
+                  id="business-registration"
+                  v-model="editForm.business_registration_number"
+                  class="form-input"
+                  placeholder="Company registration number"
+                >
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label for="business-status" class="form-label flex items-center gap-2">
+                <span class="material-icon-sm text-gray-500">toggle_on</span>
+                Status
+              </label>
+              <select
+                id="business-status"
+                v-model="editForm.is_active"
+                class="form-input"
+              >
+                <option :value="true">Active</option>
+                <option :value="false">Inactive</option>
+              </select>
+            </div>
           </div>
 
           <!-- Form Actions -->
-          <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
             <button
               type="button"
               @click="showProfileModal = false"
@@ -640,7 +802,7 @@
             >
               <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
               <span v-else class="material-icon-sm">close</span>
-              {{ loading ? 'Saving...' : 'Cancel' }}
+              {{ loading ? 'Canceling...' : 'Cancel' }}
             </button>
             <button
               type="submit"
@@ -649,7 +811,7 @@
             >
               <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
               <span v-else class="material-icon-sm">save</span>
-              {{ loading ? 'Saving...' : 'Save Changes' }}
+              {{ loading ? 'Updating...' : 'Update Profile' }}
             </button>
           </div>
         </form>
@@ -1184,8 +1346,6 @@
               </div>
             </div>
           </div>
-
-
 
           <!-- Technician Notes (visible to service providers only) -->
           <div v-if="(userRole === 3 || userRole === 4) && selectedJob.technician_notes" class="technician-notes-section">
@@ -1766,7 +1926,6 @@ export default {
       this.editingTechnician = null
       this.technicianForm = {
         username: '',
-        password: '',
         email: '',
         first_name: '',
         last_name: '',
@@ -2139,622 +2298,6 @@ export default {
   transition: all 0.3s ease-in-out;
 }
 
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 90vh;
-  overflow-y: auto;
-  padding: 5px 10px;
-}
-
-.large-modal .modal-content {
-  max-width: 900px;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #333;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #666;
-}
-
-/* Form Styles */
-.job-form {
-  padding: 20px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin-bottom: 15px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-  color: #333;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.form-group textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.form-help {
-  display: block;
-  margin-top: 3px;
-  font-size: 0.8em;
-  color: #666;
-}
-
-.readonly-field {
-  padding: 10px;
-  background: #f8f9fa;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  color: #666;
-  font-style: italic;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #e0e0e0;
-}
-
-.btn-primary, .btn-secondary {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.btn-primary {
-  background: #007bff;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #0056b3;
-}
-
-.btn-primary:disabled {
-  background: #6c757d;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: #6c757d;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background: #545b62;
-}
-
-/* Job Details Modal Styles */
-.job-details-content {
-  padding: 20px;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-.job-info-section {
-  margin-bottom: 30px;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.info-item label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.info-item span {
-  font-size: 14px;
-  color: #333;
-  font-weight: 500;
-}
-
-.description-section {
-  margin-bottom: 20px;
-}
-
-.description-section label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.fault-description {
-  background: #f8f9fa;
-  padding: 15px;
-  border-radius: 6px;
-  line-height: 1.5;
-  color: #333;
-}
-
-.contact-section {
-  margin-bottom: 20px;
-}
-
-.contact-section label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-  display: block;
-}
-
-/* Images Gallery */
-.images-section h4 {
-  margin-bottom: 15px;
-  color: #333;
-  font-size: 16px;
-}
-
-.no-images {
-  text-align: center;
-  padding: 40px 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  color: #666;
-}
-
-.no-images-icon {
-  font-size: 3em;
-  margin-bottom: 10px;
-}
-
-.images-gallery {
-  margin-top: 15px;
-}
-
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 15px;
-}
-
-.gallery-item {
-  position: relative;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #f8f9fa;
-  border: 1px solid #e0e0e0;
-  transition: transform 0.2s, box-shadow 0.2s;
-  cursor: pointer;
-}
-
-.gallery-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.gallery-image {
-  width: 100%;
-  height: 120px;
-  object-fit: cover;
-  display: block;
-}
-
-.image-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0,0,0,0.7);
-  color: white;
-  padding: 8px;
-  font-size: 11px;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.image-filename {
-  font-weight: 500;
-}
-
-/* Image Modal */
-.image-modal-content {
-  background: white;
-  border-radius: 8px;
-  max-width: 90vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.image-modal-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid #e0e0e0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.image-modal-body {
-  padding: 20px;
-  text-align: center;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.full-size-image {
-  max-width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  border-radius: 4px;
-}
-
-/* Edit Job Modal Styles */
-.edit-details-section {
-  margin-bottom: 20px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-}
-
-.edit-details-section h4 {
-  margin: 0 0 15px 0;
-  color: #333;
-  font-size: 16px;
-}
-
-.readonly-details-section {
-  margin-bottom: 20px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-}
-
-.readonly-details-section h4 {
-  margin: 0 0 15px 0;
-  color: #333;
-  font-size: 16px;
-}
-
-.readonly-info {
-  display: grid;
-  gap: 10px;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.info-row label {
-  font-weight: 600;
-  color: #666;
-  font-size: 14px;
-}
-
-.info-row span {
-  color: #333;
-  font-size: 14px;
-}
-
-/* Location Details Section */
-.location-details-section {
-  margin-bottom: 20px;
-  padding: 20px;
-  background: #f0f9ff;
-  border-radius: 8px;
-  border: 1px solid #0ea5e9;
-  border-left: 4px solid #0ea5e9;
-}
-
-.location-details-section h4 {
-  margin: 0 0 15px 0;
-  color: #1e40af;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.location-info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-}
-
-.location-info-grid .info-item.full-width {
-  grid-column: 1 / -1;
-}
-
-.access-instructions-content {
-  background: white;
-  padding: 12px;
-  border-radius: 6px;
-  line-height: 1.5;
-  color: #374151;
-  border: 1px solid #d1d5db;
-  white-space: pre-wrap;
-}
-
-/* Technician Notes Section */
-.technician-notes-section {
-  margin-bottom: 20px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-}
-
-.technician-notes-section h4 {
-  margin: 0 0 15px 0;
-  color: #333;
-  font-size: 16px;
-}
-
-.technician-notes-content {
-  background: white;
-  padding: 15px;
-  border-radius: 6px;
-  line-height: 1.5;
-  color: #333;
-  border: 1px solid #e0e0e0;
-  white-space: pre-wrap;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .modal-content {
-    width: 95%;
-    margin: 10px;
-    padding: 5px 10px;
-  }
-
-  .large-modal .modal-content {
-    max-width: 95vw;
-  }
-
-  .info-grid {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-
-  .gallery-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
-
-<style scoped>
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.large-modal .modal-content {
-  max-width: 900px;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #333;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #666;
-}
-
-/* Form Styles */
-.job-form {
-  padding: 20px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin-bottom: 15px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-  color: #333;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.form-group textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.form-help {
-  display: block;
-  margin-top: 3px;
-  font-size: 0.8em;
-  color: #666;
-}
-
-.readonly-field {
-  padding: 10px;
-  background: #f8f9fa;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  color: #666;
-  font-style: italic;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #e0e0e0;
-}
-
-.btn-primary, .btn-secondary {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.btn-primary {
-  background: #007bff;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #0056b3;
-}
-
-.btn-primary:disabled {
-  background: #6c757d;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: #6c757d;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background: #545b62;
-}
-
 /* Job Details Modal Styles */
 .job-details-content {
   padding: 20px;
@@ -2936,16 +2479,6 @@ export default {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .modal-content {
-    width: 95%;
-    margin: 10px;
-    padding: 5px 10px;
-  }
-
-  .large-modal .modal-content {
-    max-width: 95vw;
-  }
-
   .info-grid {
     grid-template-columns: 1fr;
     gap: 15px;
@@ -2954,10 +2487,6 @@ export default {
   .gallery-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 10px;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -20,10 +20,25 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $data = json_decode(file_get_contents('php://input'), true);
 
-if (!$data || !isset($data['providerName']) || !isset($data['address']) || !isset($data['username']) || !isset($data['email']) || !isset($data['password'])) {
-    http_response_code(400);
-    echo json_encode(['error' => 'All fields are required: providerName, address, username, email, password']);
-    exit;
+// Check for invitation token
+$invitationToken = isset($data['invitationToken']) ? trim($data['invitationToken']) : null;
+
+$requiredFields = ['providerName', 'address', 'username', 'email', 'password'];
+if (!$invitationToken) {
+    // Regular registration requires all fields
+    if (!$data || count(array_intersect_key(array_flip($requiredFields), $data)) !== count($requiredFields)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'All fields are required: providerName, address, username, email, password']);
+        exit;
+    }
+} else {
+    // Invitation-based registration - some fields may be pre-filled
+    $requiredFieldsForInvitation = ['username', 'email', 'password'];
+    if (!$data || count(array_intersect_key(array_flip($requiredFieldsForInvitation), $data)) !== count($requiredFieldsForInvitation)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Username, email, and password are required for invitation-based registration']);
+        exit;
+    }
 }
 
 $providerName = trim($data['providerName']);
@@ -89,6 +104,37 @@ try {
     // Insert user
     $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, email, role_id, entity_type, entity_id, is_active, email_verified, verification_token, token_expires) VALUES (?, ?, ?, ?, 'service_provider', ?, FALSE, FALSE, ?, ?)");
     $stmt->execute([$username, $passwordHash, $email, $role['id'], $providerId, $verificationToken, $tokenExpires]);
+
+    $userId = $pdo->lastInsertId();
+
+    // Handle invitation-based registration
+    if ($invitationToken) {
+        // Validate invitation token and get invitation details
+        $stmt = $pdo->prepare("
+            SELECT i.*, u.entity_id as inviter_entity_id
+            FROM invitations i
+            JOIN users u ON i.inviter_user_id = u.id
+            WHERE i.invitation_token = ? AND i.invitation_status = 'accessed'
+        ");
+        $stmt->execute([$invitationToken]);
+        $invitation = $stmt->fetch();
+
+        if ($invitation) {
+            // Mark invitation as completed
+            $stmt = $pdo->prepare("UPDATE invitations SET invitation_status = 'completed', completed_at = NOW() WHERE id = ?");
+            $stmt->execute([$invitation['id']]);
+
+            // If invited by a client, auto-approve this service provider for that client
+            if ($invitation['inviter_entity_type'] === 'client') {
+                $stmt = $pdo->prepare("
+                    INSERT INTO client_approved_providers (client_id, service_provider_id)
+                    VALUES (?, ?)
+                    ON DUPLICATE KEY UPDATE client_id = client_id
+                ");
+                $stmt->execute([$invitation['inviter_entity_id'], $providerId]);
+            }
+        }
+    }
 
     $pdo->commit();
 

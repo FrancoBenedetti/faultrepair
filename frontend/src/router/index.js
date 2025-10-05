@@ -7,6 +7,7 @@ import ServiceProviderDashboard from '../views/ServiceProviderDashboard.vue'
 import ServiceProviderClientJobs from '../views/ServiceProviderClientJobs.vue'
 import ServiceProviderTechnicianJobs from '../views/ServiceProviderTechnicianJobs.vue'
 import ClientServiceProviderBrowser from '../views/ClientServiceProviderBrowser.vue'
+import CreateInvitation from '../views/CreateInvitation.vue'
 import ForgotPassword from '../views/ForgotPassword.vue'
 import ResetPassword from '../views/ResetPassword.vue'
 
@@ -72,6 +73,22 @@ const routes = [
     path: '/verify-email',
     name: 'VerifyEmail',
     component: () => import('../views/VerifyEmail.vue')
+  },
+  {
+    path: '/create-invitation',
+    name: 'CreateInvitation',
+    component: CreateInvitation,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/register-client',
+    name: 'ClientRegistrationInvited',
+    component: ClientRegistration
+  },
+  {
+    path: '/register-service-provider',
+    name: 'ServiceProviderRegistrationInvited',
+    component: ServiceProviderRegistration
   }
 ]
 

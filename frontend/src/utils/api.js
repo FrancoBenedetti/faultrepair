@@ -10,10 +10,6 @@ export const apiFetch = async (endpoint, options = {}) => {
   const url = apiUrl(endpoint);
   const token = localStorage.getItem('token');
 
-  const defaultHeaders = {
-    'Content-Type': 'application/json',
-  };
-
   // For live server compatibility, pass token as query parameter instead of Authorization header
   let finalUrl = url;
   if (token) {
@@ -24,7 +20,7 @@ export const apiFetch = async (endpoint, options = {}) => {
   const config = {
     ...options,
     headers: {
-      ...defaultHeaders,
+      'Content-Type': 'application/json',
       ...options.headers,
     },
   };

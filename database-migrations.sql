@@ -114,5 +114,17 @@ INSERT INTO service_provider_regions (service_provider_id, region_id) VALUES
 (2, 2), -- Premium Plumbing - Western Cape
 (3, 3); -- TechSupport Pro - KwaZulu-Natal
 
+-- Phase 9: Extend clients table with business profile fields (similar to service_providers)
+ALTER TABLE clients ADD COLUMN website VARCHAR(255);
+ALTER TABLE clients ADD COLUMN manager_name VARCHAR(100);
+ALTER TABLE clients ADD COLUMN manager_email VARCHAR(100);
+ALTER TABLE clients ADD COLUMN manager_phone VARCHAR(20);
+ALTER TABLE clients ADD COLUMN vat_number VARCHAR(50);
+ALTER TABLE clients ADD COLUMN business_registration_number VARCHAR(50);
+ALTER TABLE clients ADD COLUMN description TEXT;
+ALTER TABLE clients ADD COLUMN logo_url VARCHAR(255);
+ALTER TABLE clients ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
+ALTER TABLE clients ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+
 -- Display completion message
 SELECT 'Database migration completed successfully!' as status;

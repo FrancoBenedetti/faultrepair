@@ -15,7 +15,15 @@
             <span class="completeness-text text-lg font-medium text-gray-900">{{ profileCompleteness }}% Complete</span>
           </div>
         </div>
-        <div class="header-right">
+        <div class="header-right flex gap-3">
+          <button v-if="isAdmin" @click="showEditProfileModal = true" class="btn-outline flex items-center gap-2">
+            <span class="material-icon-sm">business</span>
+            Edit Business Profile
+          </button>
+          <button @click="$router.push('/create-invitation')" class="btn-filled flex items-center gap-2">
+            <span class="material-icon-sm">person_add</span>
+            Create Invitation
+          </button>
           <button @click="signOut" class="btn-filled flex items-center gap-2">
             <span class="material-icon-sm">logout</span>
             Sign Out
@@ -24,6 +32,194 @@
       </div>
 
     <div class="dashboard-content grid gap-8">
+      <!-- Business Profile Section - Only for budget controllers -->
+      <div v-if="userRole === 2" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('profile')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.profile }">
+              <span class="material-icon-sm">expand_more</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+              <span class="material-icon text-blue-600">business</span>
+              Business Profile
+            </h2>
+            <div class="profile-completeness-badge">
+              <span class="completeness-percentage">{{ clientProfileCompleteness }}%</span>
+              <span class="completeness-label">Complete</span>
+            </div>
+          </div>
+          <button v-if="isAdmin" @click.stop="showEditProfileModal = true" class="btn-filled flex items-center gap-2">
+            <span class="material-icon-sm">edit</span>
+            Edit Profile
+          </button>
+        </div>
+
+        <div v-show="sectionsExpanded.profile" class="section-content transition-all duration-300 ease-in-out">
+          <!-- Loading state -->
+          <div v-if="clientProfile === null" class="loading-state text-center py-16">
+            <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-body-large text-on-surface-variant">Loading profile...</p>
+          </div>
+
+          <!-- Profile content -->
+          <div v-else-if="clientProfile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Basic Information Card -->
+            <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div class="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
+                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span class="material-icon-sm text-white">business_center</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">Basic Information</h3>
+              </div>
+              <div class="space-y-3">
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">store</span>
+                    Business Name:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ clientProfile.name || 'Not specified' }}</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">location_on</span>
+                    Address:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ clientProfile.address || 'Not specified' }}</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">link</span>
+                    Website:
+                  </span>
+                  <span class="text-sm text-right">
+                    <span v-if="clientProfile.website">
+                      <a :href="clientProfile.website"
+                         target="_blank"
+                         class="text-blue-600 hover:text-blue-800 underline break-all">
+                        {{ clientProfile.website }}
+                      </a>
+                    </span>
+                    <span v-else class="text-gray-900">Not specified</span>
+                  </span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">description</span>
+                    Description:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ clientProfile.description || 'Not specified' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Manager Contact Card -->
+            <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div class="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
+                <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span class="material-icon-sm text-white">contact_phone</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">Manager Contact</h3>
+              </div>
+              <div class="space-y-3">
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">person</span>
+                    Manager Name:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ clientProfile.manager_name || 'Not specified' }}</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">email</span>
+                    Manager Email:
+                  </span>
+                  <span class="text-sm text-right">
+                    <span v-if="clientProfile.manager_email">
+                      <a :href="`mailto:${clientProfile.manager_email}`"
+                         class="text-blue-600 hover:text-blue-800 underline break-all">
+                        {{ clientProfile.manager_email }}
+                      </a>
+                    </span>
+                    <span v-else class="text-gray-900">Not specified</span>
+                  </span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">phone</span>
+                    Manager Phone:
+                  </span>
+                  <span class="text-sm text-right">
+                    <span v-if="clientProfile.manager_phone">
+                      <a :href="`tel:${clientProfile.manager_phone}`"
+                         class="text-blue-600 hover:text-blue-800 underline">
+                        {{ clientProfile.manager_phone }}
+                      </a>
+                    </span>
+                    <span v-else class="text-gray-900">Not specified</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Business Details Card -->
+            <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div class="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
+                <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span class="material-icon-sm text-white">assignment</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">Business Details</h3>
+              </div>
+              <div class="space-y-3">
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">receipt</span>
+                    VAT Number:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ clientProfile.vat_number || 'Not specified' }}</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">business</span>
+                    Registration:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ clientProfile.business_registration_number || 'Not specified' }}</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">toggle_on</span>
+                    Status:
+                  </span>
+                  <span class="px-2 py-1 rounded-full text-xs font-medium text-right"
+                        :class="clientProfile.is_active
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'">
+                    {{ clientProfile.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">event_available</span>
+                    Member Since:
+                  </span>
+                  <span class="text-sm text-gray-900 text-right">{{ formatDate(clientProfile.created_at) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- No profile state -->
+          <div v-else class="no-profile text-center py-16">
+            <div class="no-profile-icon material-icon-xl text-neutral-400 mb-4">business</div>
+            <h3 class="text-title-large text-on-surface mb-2">Profile Not Set Up</h3>
+            <p class="text-body-large text-on-surface-variant mb-4">Complete your business profile to help service providers understand your organization better.</p>
+            <button @click="showEditProfileModal = true" class="btn-filled">
+              <span class="material-icon-sm mr-2">edit</span>
+              Set Up Profile
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- User Management Section - Hidden for reporting employees -->
       <div v-if="userRole === 2" class="users-section card p-6">
         <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('users')" style="cursor: pointer;">
@@ -988,6 +1184,102 @@
 
 
 
+    <!-- Edit Business Profile Modal -->
+    <div v-if="showEditProfileModal" class="modal-overlay" @click="showEditProfileModal = false">
+      <div class="modal-content large-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Edit Business Profile</h3>
+          <button @click="showEditProfileModal = false" class="close-btn">&times;</button>
+        </div>
+
+        <form @submit.prevent="updateClientProfile" class="profile-form">
+          <!-- Basic Information -->
+          <div class="form-section">
+            <h4 class="section-title">Basic Information</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="business-name">Business Name *</label>
+                <input type="text" id="business-name" v-model="editingProfile.name" required
+                       placeholder="Your business name">
+              </div>
+              <div class="form-group">
+                <label for="business-website">Website</label>
+                <input type="url" id="business-website" v-model="editingProfile.website"
+                       placeholder="https://yourbusiness.com">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="business-address">Address</label>
+              <textarea id="business-address" v-model="editingProfile.address" rows="3"
+                        placeholder="Business address"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="business-description">Description</label>
+              <textarea id="business-description" v-model="editingProfile.description" rows="4"
+                        placeholder="Brief description of your business"></textarea>
+            </div>
+          </div>
+
+          <!-- Manager Contact -->
+          <div class="form-section">
+            <h4 class="section-title">Manager Contact Information</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="manager-name">Manager Name</label>
+                <input type="text" id="manager-name" v-model="editingProfile.manager_name"
+                       placeholder="Primary contact person">
+              </div>
+              <div class="form-group">
+                <label for="manager-email">Manager Email</label>
+                <input type="email" id="manager-email" v-model="editingProfile.manager_email"
+                       placeholder="manager@yourbusiness.com">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="manager-phone">Manager Phone</label>
+              <input type="tel" id="manager-phone" v-model="editingProfile.manager_phone"
+                     placeholder="+27 12 345 6789">
+            </div>
+          </div>
+
+          <!-- Business Details -->
+          <div class="form-section">
+            <h4 class="section-title">Business Registration Details</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="vat-number">VAT Number</label>
+                <input type="text" id="vat-number" v-model="editingProfile.vat_number"
+                       placeholder="VAT registration number">
+              </div>
+              <div class="form-group">
+                <label for="business-registration">Business Registration Number</label>
+                <input type="text" id="business-registration" v-model="editingProfile.business_registration_number"
+                       placeholder="Company registration number">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="business-status">Status</label>
+              <select id="business-status" v-model="editingProfile.is_active">
+                <option :value="true">Active</option>
+                <option :value="false">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" @click="showEditProfileModal = false" class="btn-secondary">Cancel</button>
+            <button type="submit" class="btn-primary" :disabled="updatingProfile">
+              {{ updatingProfile ? 'Updating Profile...' : 'Update Profile' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Image Modal for Full Size View -->
     <div v-if="selectedImage" class="modal-overlay" @click="selectedImage = null">
       <div class="image-modal-content" @click.stop>
@@ -1028,12 +1320,15 @@ export default {
       isAdmin: false, // Whether user can manage users/providers
       loading: true,
       profileCompleteness: 0,
+      clientProfile: null, // Client profile data
+      clientProfileCompleteness: 0, // Client profile completeness percentage
       showAddUserModal: false,
       showEditUserModal: false,
       showCreateJobModal: false,
       showAssignModal: false,
       showAddLocationModal: false,
       showEditLocationModal: false,
+      showEditProfileModal: false, // Client profile editing modal
       editingLocation: {
         id: null,
         name: '',
@@ -1042,11 +1337,24 @@ export default {
         access_rules: '',
         access_instructions: ''
       },
+      editingProfile: { // Client profile editing data
+        name: '',
+        address: '',
+        website: '',
+        description: '',
+        manager_name: '',
+        manager_email: '',
+        manager_phone: '',
+        vat_number: '',
+        business_registration_number: '',
+        is_active: true
+      },
       showJobDetailsModal: false,
       showEditJobModal: false,
       addingUser: false,
       updatingUser: false,
       creatingJob: false,
+      updatingProfile: false, // Client profile update loading state
       jobFilters: {
         status: '',
         location_id: '',
@@ -1094,6 +1402,7 @@ export default {
       editingImages: [], // Array to store additional images for editing
       // Section collapse/expand state
       sectionsExpanded: {
+        profile: false, // Profile section collapsed by default
         users: false,
         locations: false,
         providers: false,
@@ -1103,6 +1412,7 @@ export default {
   },
   mounted() {
     this.checkUserPermissions()
+    this.loadClientProfile()
     this.loadUsers()
     this.loadApprovedProviders()
     this.loadAvailableRoles()
@@ -1118,30 +1428,36 @@ export default {
     },
     locations() {
       this.calculateProfileCompleteness()
+    },
+    clientProfile() {
+      this.calculateClientProfileCompleteness()
+    },
+    showEditProfileModal(newValue) {
+      // Populate form fields with current profile data when modal opens
+      if (newValue) {
+        this.resetEditProfileForm()
+      }
     }
   },
   methods: {
     checkUserPermissions() {
       try {
         const token = localStorage.getItem('token')
-        console.log('Token found:', !!token)
 
         if (token) {
-          const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-          console.log('JWT Payload:', payload)
-          console.log('User Role ID:', payload.role_id)
-          console.log('User ID:', payload.user_id)
-
-          this.userRole = payload.role_id
-          this.userId = payload.user_id
-          // Site Budget Controller (role_id = 2) can manage users/providers
-          // Reporting Employee (role_id = 1) cannot
-          this.isAdmin = payload.role_id === 2
-
-          console.log('isAdmin set to:', this.isAdmin)
-          console.log('userId set to:', this.userId)
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+            this.userRole = payload.role_id
+            this.userId = payload.user_id
+            // Site Budget Controller (role_id = 2) can manage users/providers
+            // Reporting Employee (role_id = 1) cannot
+            this.isAdmin = payload.role_id === 2
+          } catch (decodeError) {
+            console.error('Failed to decode JWT payload:', decodeError)
+            this.isAdmin = false
+            this.userId = null
+          }
         } else {
-          console.log('No token found, setting isAdmin to false')
           this.isAdmin = false
           this.userId = null
         }
@@ -1821,7 +2137,7 @@ export default {
 
     calculateProfileCompleteness() {
       let completeness = 0
-      const totalCriteria = 3
+      const totalCriteria = 4
 
       // Check if users exist
       if (this.users && this.users.length > 0) {
@@ -1838,7 +2154,119 @@ export default {
         completeness += 1
       }
 
+      // Check if client profile is complete (25% weight)
+      if (this.clientProfileCompleteness >= 70) {
+        completeness += 1
+      }
+
       this.profileCompleteness = Math.round((completeness / totalCriteria) * 100)
+    },
+
+    calculateClientProfileCompleteness() {
+      if (!this.clientProfile) {
+        this.clientProfileCompleteness = 0
+        return
+      }
+
+      let score = 0
+      const total = 100
+
+      // Basic information (40 points)
+      const basicFields = ['name', 'address', 'description']
+      basicFields.forEach(field => {
+        if (this.clientProfile[field]) score += 13
+      })
+
+      // Website (10 points)
+      if (this.clientProfile.website) score += 10
+
+      // Manager contact (30 points)
+      const managerFields = ['manager_name', 'manager_email', 'manager_phone']
+      managerFields.forEach(field => {
+        if (this.clientProfile[field]) score += 10
+      })
+
+      // Business details (20 points)
+      const businessFields = ['vat_number', 'business_registration_number']
+      businessFields.forEach(field => {
+        if (this.clientProfile[field]) score += 10
+      })
+
+      this.clientProfileCompleteness = Math.min(score, total)
+    },
+
+    async loadClientProfile() {
+      try {
+        const response = await apiFetch('/backend/api/client-profile.php')
+
+        if (response.ok) {
+          const data = await response.json()
+          this.clientProfile = data.profile
+          this.clientProfileCompleteness = data.profile_completeness
+        } else {
+          console.error('Failed to load client profile')
+          this.clientProfile = null
+        }
+      } catch (error) {
+        console.error('Failed to load client profile:', error)
+        this.clientProfile = null
+      }
+    },
+
+    async updateClientProfile() {
+      this.updatingProfile = true
+      try {
+        const response = await apiFetch('/backend/api/client-profile.php', {
+          method: 'PUT',
+          body: JSON.stringify(this.editingProfile)
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          this.clientProfile = data.profile
+          this.clientProfileCompleteness = data.profile_completeness
+          this.showEditProfileModal = false
+          this.resetEditProfileForm()
+          alert('Business profile updated successfully!')
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert('Failed to update business profile')
+      } finally {
+        this.updatingProfile = false
+      }
+    },
+
+    resetEditProfileForm() {
+      if (this.clientProfile) {
+        this.editingProfile = {
+          name: this.clientProfile.name || '',
+          address: this.clientProfile.address || '',
+          website: this.clientProfile.website || '',
+          description: this.clientProfile.description || '',
+          manager_name: this.clientProfile.manager_name || '',
+          manager_email: this.clientProfile.manager_email || '',
+          manager_phone: this.clientProfile.manager_phone || '',
+          vat_number: this.clientProfile.vat_number || '',
+          business_registration_number: this.clientProfile.business_registration_number || '',
+          is_active: this.clientProfile.is_active !== false
+        }
+      } else {
+        this.editingProfile = {
+          name: '',
+          address: '',
+          website: '',
+          description: '',
+          manager_name: '',
+          manager_email: '',
+          manager_phone: '',
+          vat_number: '',
+          business_registration_number: '',
+          is_active: true
+        }
+      }
     },
 
     // QR Scanner methods
@@ -2944,6 +3372,151 @@ export default {
   font-size: 14px;
 }
 
+/* Profile Section Styles */
+.profile-section {
+  background: white;
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.profile-content {
+  margin-top: 15px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.profile-card {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  transition: box-shadow 0.2s;
+}
+
+.profile-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.profile-card-title {
+  color: #333;
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0 0 15px 0;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 8px;
+}
+
+.profile-field {
+  margin-bottom: 12px;
+}
+
+.profile-field label {
+  display: block;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.profile-field span {
+  color: #333;
+  font-size: 0.95em;
+  line-height: 1.4;
+}
+
+.profile-completeness-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #e3f2fd;
+  border: 1px solid #2196f3;
+  border-radius: 12px;
+  padding: 8px 12px;
+  min-width: 60px;
+}
+
+.completeness-percentage {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #1976d2;
+  line-height: 1;
+}
+
+.completeness-label {
+  font-size: 0.7em;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.active {
+  background: #28a745;
+  color: white;
+}
+
+.status-badge.inactive {
+  background: #dc3545;
+  color: white;
+}
+
+/* Profile Form Styles */
+.profile-form {
+  padding: 20px;
+}
+
+.form-section {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.form-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.section-title {
+  color: #333;
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0 0 20px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #007bff;
+}
+
+.form-section .form-row {
+  margin-bottom: 15px;
+}
+
+.form-section .form-group {
+  margin-bottom: 15px;
+}
+
+/* No Profile State */
+.no-profile {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.no-profile-icon {
+  font-size: 4em;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.no-profile h3 {
+  margin-bottom: 10px;
+  color: #333;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .client-dashboard {
@@ -2969,7 +3542,7 @@ export default {
     order: -1;
   }
 
-  .users-grid, .providers-grid, .locations-grid {
+  .users-grid, .providers-grid, .locations-grid, .profile-grid {
     grid-template-columns: 1fr;
   }
 
@@ -3024,6 +3597,15 @@ export default {
     flex-direction: column;
     align-items: flex-start;
     gap: 5px;
+  }
+
+  .profile-completeness-badge {
+    min-width: 50px;
+    padding: 6px 10px;
+  }
+
+  .completeness-percentage {
+    font-size: 1em;
   }
 }
 

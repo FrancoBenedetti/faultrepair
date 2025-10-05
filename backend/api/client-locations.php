@@ -22,9 +22,9 @@ if (!$token) {
 try {
     $payload = JWT::decode($token);
     $user_id = $payload['user_id'];
+    $role_id = $payload['role_id'];
     $entity_type = $payload['entity_type'];
     $entity_id = $payload['entity_id'];
-    $role_id = $payload['role_id'];
 } catch (Exception $e) {
     http_response_code(401);
     echo json_encode(['error' => 'Invalid token']);
