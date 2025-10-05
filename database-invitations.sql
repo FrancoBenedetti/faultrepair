@@ -53,6 +53,16 @@ CREATE TABLE invitation_access_log (
     INDEX idx_invitation_access (invitation_id, accessed_at)
 );
 
+-- Add columns for handling existing user scenarios
+ALTER TABLE invitations ADD COLUMN invitee_user_id INT NULL AFTER invitee_phone;
+ALTER TABLE invitations ADD COLUMN invitee_entity_type ENUM('client', 'service_provider') NULL AFTER invitee_user_id;
+ALTER TABLE invitations ADD COLUMN invitee_entity_id INT NULL AFTER invitee_entity_type;
+ALTER TABLE invitations ADD COLUMN auto_approval_applied BOOLEAN DEFAULT FALSE AFTER invitee_entity_id;
+ALTER TABLE invitations ADD COLUMN access_message TEXT NULL AFTER auto_approval_applied;
+
+-- Add foreign key for existing user detection
+ALTER TABLE invitations ADD CONSTRAINT fk_invitee_user FOREIGN KEY (invitee_user_id) REFERENCES users(id);
+
 -- Create site_settings table for configurable values (if it doesn't exist)
 CREATE TABLE IF NOT EXISTS site_settings (
     id INT AUTO_INCREMENT PRIMARY KEY,

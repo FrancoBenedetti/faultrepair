@@ -2,8 +2,29 @@
   <div class="registration">
     <h2>Service Provider Registration</h2>
 
-    <!-- Invitation Info -->
-    <div v-if="invitationData" class="invitation-info" style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+    <!-- Existing User - Auto Approved -->
+    <div v-if="invitationData && invitationData.auto_approval_applied && invitationData.access_message" class="invitation-info" style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #4caf50;">
+      <h3 style="margin-top: 0; color: #2e7d32;">✓ Auto-Approved!</h3>
+      <p>{{ invitationData.access_message }}</p>
+      <p><small>Invitation expires on {{ new Date(invitationData.expires_at).toLocaleDateString() }}</small></p>
+    </div>
+
+    <!-- Existing User - Requires Authorization -->
+    <div v-if="invitationData && invitationData.invitation_status === 'requires_authorization' && invitationData.access_message" class="invitation-info" style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ff9800;">
+      <h3 style="margin-top: 0; color: #e65100;">Authorization Required</h3>
+      <p>{{ invitationData.access_message }}</p>
+      <p><small>Invitation expires on {{ new Date(invitationData.expires_at).toLocaleDateString() }}</small></p>
+    </div>
+
+    <!-- Existing User - Completed/Informational -->
+    <div v-if="invitationData && (invitationData.invitation_status === 'informational' || invitationData.invitation_status === 'completed') && invitationData.access_message" class="invitation-info" style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #4caf50;">
+      <h3 style="margin-top: 0; color: #2e7d32;">Notice</h3>
+      <p>{{ invitationData.access_message }}</p>
+      <p><small>Invitation expires on {{ new Date(invitationData.expires_at).toLocaleDateString() }}</small></p>
+    </div>
+
+    <!-- New User Invitation -->
+    <div v-if="invitationData && !invitationData.access_message" class="invitation-info" style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
       <h3 style="margin-top: 0; color: #1976d2;">You've been invited!</h3>
       <p><strong>{{ invitationData.inviter_details.name }}</strong> from <strong>{{ invitationData.inviter_details.entity_name }}</strong> has invited you to join the platform.</p>
       <p><small>This invitation expires on {{ new Date(invitationData.expires_at).toLocaleDateString() }}</small></p>

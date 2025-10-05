@@ -25,7 +25,7 @@ if (empty($token)) {
 }
 
 try {
-    // Get invitation details
+    // Get invitation details with enhanced fields for existing user scenarios
     $stmt = $pdo->prepare("
         SELECT i.*, u.first_name, u.last_name, u.email as inviter_email,
                u.phone as inviter_phone,
@@ -37,7 +37,7 @@ try {
         JOIN users u ON i.inviter_user_id = u.id
         LEFT JOIN clients c ON i.inviter_entity_type = 'client' AND i.inviter_entity_id = c.id
         LEFT JOIN service_providers sp ON i.inviter_entity_type = 'service_provider' AND i.inviter_entity_id = sp.id
-        WHERE i.invitation_token = ? AND i.invitation_status NOT IN ('completed', 'cancelled', 'expired')
+        WHERE i.invitation_token = ?
     ");
     $stmt->execute([$token]);
     $invitation = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -91,7 +91,10 @@ try {
             'invitee_email' => $invitation['invitee_email'],
             'invitee_phone' => $invitation['invitee_phone'],
             'invitation_type' => determineInvitationType($invitation),
+            'invitation_status' => $invitation['invitation_status'],
             'expires_at' => $invitation['expires_at'],
+            'auto_approval_applied' => (bool)$invitation['auto_approval_applied'],
+            'access_message' => $invitation['access_message'],
             'inviter_details' => [
                 'name' => $invitation['first_name'] . ' ' . $invitation['last_name'],
                 'email' => $invitation['inviter_email'],

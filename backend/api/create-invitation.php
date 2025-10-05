@@ -105,11 +105,70 @@ if (in_array($communicationMethod, ['whatsapp', 'telegram', 'sms']) && empty($in
 try {
     $pdo->beginTransaction();
 
+    // Check if invitee already exists as a user
+    $existingUser = null;
+    if ($inviteeEmail) {
+        $stmt = $pdo->prepare("
+            SELECT u.id, u.first_name, u.last_name, u.entity_type, u.entity_id, r.name as role_name
+            FROM users u
+            JOIN roles r ON u.role_id = r.id
+            WHERE u.email = ?
+        ");
+        $stmt->execute([$inviteeEmail]);
+        $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     // Get default expiry days from settings
     $stmt = $pdo->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'invitation_expiry_days'");
     $stmt->execute();
     $expirySetting = $stmt->fetch();
     $expiryDays = $expirySetting ? (int)$expirySetting['setting_value'] : 7;
+
+    // Apply business rules based on invitation type and existing user status
+    $inviteeUserId = null;
+    $inviteeEntityType = null;
+    $inviteeEntityId = null;
+    $invitationStatus = 'pending';
+    $accessMessage = null;
+    $autoApprovalApplied = false;
+
+    if ($existingUser) {
+        $inviteeUserId = $existingUser['id'];
+        $inviteeEntityType = $existingUser['entity_type'];
+        $inviteeEntityId = $existingUser['entity_id'];
+
+        // Business Rule Application
+        if ($invitationType === 'client' && $user_data['entity_type'] === 'service_provider') {
+            // Service Provider inviting existing client
+            if ($existingUser['role_name'] === 'Site Budget Controller') {
+                // Rule 1: Ask for approval to add service provider
+                $accessMessage = "A Service Provider Administrator has invited you to allow access to {$user_data['first_name']} {$user_data['last_name']}. Please review and approve or decline this request.";
+                $invitationStatus = 'pending_approval';
+            } else {
+                // Rule 1: Inform user lacks authorization - needs budget controller
+                $accessMessage = "You have been invited by {$user_data['first_name']} {$user_data['last_name']}. However, you don't have authorization to approve service provider access. Please contact your organization's budget controller to complete this invitation.";
+                $invitationStatus = 'requires_authorization';
+            }
+        } elseif ($invitationType === 'service_provider' && $user_data['entity_type'] === 'client') {
+            // Client inviting existing service provider
+            // Rule 2 & Rule 4: Auto-approve if inviting user is budget controller
+            if ($user_data['role_name'] === 'Site Budget Controller') {
+                $stmt = $pdo->prepare("
+                    INSERT INTO client_approved_providers (client_id, service_provider_id)
+                    VALUES (?, ?)
+                    ON DUPLICATE KEY UPDATE client_id = client_id
+                ");
+                $stmt->execute([$user_data['entity_id'], $existingUser['entity_id']]);
+                $autoApprovalApplied = true;
+                $invitationStatus = 'completed';
+                $accessMessage = "You have been added as an approved service provider for " . getClientName($pdo, $user_data['entity_id']) . ". No further action is required.";
+            } else {
+                // Rule 2: Inform that client needs to use dashboard to approve
+                $accessMessage = "No registration action was needed. However, " . getClientName($pdo, $user_data['entity_id']) . " should use their dashboard to formally approve you as a service provider.";
+                $invitationStatus = 'informational';
+            }
+        }
+    }
 
     // Generate unique invitation token
     $invitationToken = bin2hex(random_bytes(32));
@@ -131,14 +190,15 @@ try {
         ]
     ];
 
-    // Insert invitation
+    // Insert invitation with enhanced fields
     $stmt = $pdo->prepare("
         INSERT INTO invitations (
             invitation_token, inviter_user_id, inviter_entity_type, inviter_entity_id,
             invitee_first_name, invitee_last_name, invitee_email, invitee_phone,
+            invitee_user_id, invitee_entity_type, invitee_entity_id, auto_approval_applied, access_message,
             communication_method, invitation_status, initial_expiry_days, expires_at,
             registration_data, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
     $stmt->execute([
@@ -150,7 +210,13 @@ try {
         $inviteeLastName,
         $inviteeEmail,
         $inviteePhone,
+        $inviteeUserId,
+        $inviteeEntityType,
+        $inviteeEntityId,
+        $autoApprovalApplied,
+        $accessMessage,
         $communicationMethod,
+        $invitationStatus,
         $expiryDays,
         $expiresAt,
         json_encode($registrationData),
