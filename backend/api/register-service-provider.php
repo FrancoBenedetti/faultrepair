@@ -69,7 +69,7 @@ try {
     $pdo->beginTransaction();
 
     // Check if username or email already exists
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
+    $stmt = $pdo->prepare("SELECT userId FROM users WHERE username = ? OR email = ?");
     $stmt->execute([$username, $email]);
     if ($stmt->fetch()) {
         $pdo->rollBack();
@@ -85,6 +85,10 @@ try {
 
     // Add participant type
     $stmt = $pdo->prepare("INSERT INTO participant_type (participantId, participantType) VALUES (?, 'S')");
+    $stmt->execute([$providerId]);
+
+    // Set up default free subscription for the service provider
+    $stmt = $pdo->prepare("INSERT INTO subscriptions (participantId, subscription_tier, status, monthly_job_limit) VALUES (?, 'free', 'active', 4)");
     $stmt->execute([$providerId]);
 
     // Get default role for service providers (Service Provider Admin)
@@ -106,7 +110,7 @@ try {
     $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
     // Insert user
-    $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, email, role_id, entity_type, entity_id, is_active, email_verified, verification_token, token_expires) VALUES (?, ?, ?, ?, 'service_provider', ?, FALSE, FALSE, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, email, role_id, entity_id, is_active, email_verified, verification_token, token_expires) VALUES (?, ?, ?, ?, ?, FALSE, FALSE, ?, ?)");
     $stmt->execute([$username, $passwordHash, $email, $role['id'], $providerId, $verificationToken, $tokenExpires]);
 
     $userId = $pdo->lastInsertId();

@@ -261,7 +261,7 @@
                 <div v-for="image in jobImages[selectedJob.id]" :key="image.id" class="relative group">
                   <div class="aspect-w-16 aspect-h-12 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
                     <img
-                      :src="image.url"
+                      :src="generateImageUrl(image)"
                       :alt="image.original_filename"
                       class="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
                       @click="openImageModal(image)"
@@ -436,6 +436,12 @@ export default {
     }
   },
   methods: {
+    // Generate authenticated image URL
+    generateImageUrl(image) {
+      const token = localStorage.getItem('token')
+      return `/backend/api/serve-image.php?filename=${encodeURIComponent(image.filename)}&token=${encodeURIComponent(token)}`
+    },
+
     async loadClientJobs(clientId) {
       this.loading = true
       try {
@@ -580,9 +586,9 @@ export default {
     },
 
     openImageModal(image) {
-      // For now, just open the image in a new tab
+      // For now, just open the image in a new tab with authenticated URL
       // In a real application, you might want a modal with zoom functionality
-      window.open(image.url, '_blank')
+      window.open(this.generateImageUrl(image), '_blank')
     },
 
     handleError(error) {

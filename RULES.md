@@ -5,6 +5,8 @@
  * Place all test php scripts in /backend/public unless there is a good, reportable reason to place these elsewhere.
  * After making changes to the front end, and before testing using the virtualhost http://fault-reporter.local,run the rebuild-dev.sh script.
  * An ngrok service is used to test behaviour on smartphones. The ngrok service is used to tunnel to fault-reporter.local. Do not mess with this.
+ * To keep the code uncluttered, test scripts for php must all be placed in the folder /backend/test/
+
 
  ## Implementation rules
 

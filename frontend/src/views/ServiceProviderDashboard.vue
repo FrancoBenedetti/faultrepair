@@ -1,10 +1,44 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- User Identity Bar -->
+      <div class="user-identity-bar bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6 shadow-sm">
+        <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div class="user-info flex items-center gap-4">
+            <div class="user-avatar flex-shrink-0">
+              <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                <span class="material-icon text-white">{{ getCurrentUserName().charAt(0).toUpperCase() }}</span>
+              </div>
+            </div>
+            <div class="identity-details">
+              <div class="signed-in-user flex items-center gap-2 mb-1">
+                <span class="material-icon-sm text-blue-600">person</span>
+                <span class="text-sm font-medium text-gray-700">Signed in as:</span>
+                <span class="text-sm font-semibold text-gray-900">{{ getCurrentUserName() }}</span>
+                <span class="user-role-badge" :class="getRoleBadgeClass(userRole)">
+                  {{ getRoleDisplayName(userRole) }}
+                </span>
+              </div>
+              <div class="organization-info flex items-center gap-2">
+                <span class="material-icon-sm text-indigo-600">business</span>
+                <span class="text-sm font-medium text-gray-700">Organization:</span>
+                <span class="text-sm font-semibold text-gray-900">{{ getOrganizationName() }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="subscription-info flex items-center gap-4">
+            <div class="subscription-badge flex items-center gap-2 px-3 py-1 bg-white border border-gray-300 rounded-full">
+              <span class="material-icon-sm text-green-600">workspace_premium</span>
+              <span class="text-xs font-medium text-gray-700">Premium Plan</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Dashboard Header -->
       <div class="dashboard-header flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6 mb-8 p-6 bg-white rounded-xl border border-gray-200">
         <div class="header-left">
-          <h1 class="text-3xl font-bold text-gray-900 mb-4">Service Provider Dashboard</h1>
+          <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ getOrganizationName() }} - Service Provider Dashboard</h1>
           <div class="profile-completeness flex items-center gap-4">
             <div class="completeness-bar w-64 h-3 bg-gray-200 rounded-full overflow-hidden">
               <div class="completeness-fill h-full bg-blue-600 transition-all duration-500 ease-out" :style="{ width: profileCompleteness + '%' }"></div>
@@ -1364,19 +1398,19 @@
               <p>No images attached to this job</p>
             </div>
 
-            <div v-else class="images-gallery">
-              <div class="gallery-grid">
-                <div v-for="image in selectedJob.images" :key="image.id" class="gallery-item">
-                  <img :src="`/backend/uploads/job_images/${image.filename}`"
-                       :alt="image.original_filename"
-                       class="gallery-image"
-                       @click="openImageModal(image)">
-                  <div class="image-overlay">
-                    <span class="image-filename">{{ image.original_filename }}</span>
+              <div v-else class="images-gallery">
+                <div class="gallery-grid">
+                  <div v-for="image in selectedJob.images" :key="image.id" class="gallery-item">
+                    <img :src="generateImageUrl(image)"
+                         :alt="image.original_filename"
+                         class="gallery-image"
+                         @click="openImageModal(image)">
+                    <div class="image-overlay">
+                      <span class="image-filename">{{ image.original_filename }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
           </div>
         </div>
       </div>
@@ -1519,7 +1553,7 @@
             <div v-else class="images-gallery">
               <div class="gallery-grid">
                 <div v-for="image in editingJob.images" :key="image.id" class="gallery-item">
-                  <img :src="`/backend/uploads/job_images/${image.filename}`"
+                  <img :src="generateImageUrl(image)"
                        :alt="image.original_filename"
                        class="gallery-image"
                        @click="openImageModal(image)">
@@ -1549,7 +1583,7 @@
           <button @click="selectedImage = null" class="close-btn">&times;</button>
         </div>
         <div class="image-modal-body">
-          <img :src="`/backend/uploads/job_images/${selectedImage.filename}`"
+          <img :src="generateImageUrl(selectedImage)"
                :alt="selectedImage.original_filename"
                class="full-size-image">
         </div>
@@ -1639,6 +1673,16 @@ export default {
     }
   },
   methods: {
+    // Generate authenticated image URL
+    generateImageUrl(image) {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        console.warn('No JWT token found for image access')
+        return ''
+      }
+      return `/backend/api/serve-image.php?filename=${image.filename}&token=${encodeURIComponent(token)}`
+    },
+
     async loadProfile() {
       try {
         const response = await apiFetch('/backend/api/service-provider-profile.php')
@@ -1706,6 +1750,48 @@ export default {
         alert('Failed to update profile')
       } finally {
         this.loading = false
+      }
+    },
+
+    openImageModal(image) {
+      this.selectedImage = image
+    },
+
+    getOrganizationName() {
+      return this.profile?.name || 'Service Provider'
+    },
+
+    getRoleDisplayName(role) {
+      const roleNames = {
+        3: 'Admin',
+        4: 'Technician'
+      }
+      return roleNames[role] || 'Service Provider'
+    },
+
+    getRoleBadgeClass(role) {
+      return role === 3 ? 'role-admin' : 'role-technician'
+    },
+
+    getCurrentUserName() {
+      // Get current user name from localStorage or technicians array
+      try {
+        const userData = localStorage.getItem('user')
+        if (userData) {
+          const user = JSON.parse(userData)
+          return user.username || 'User'
+        }
+
+        // Fallback: find current user in technicians array for technicians
+        if (this.userRole === 4 && this.technicians) {
+          const currentUserId = JSON.parse(atob(localStorage.getItem('token').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).user_id
+          const currentUser = this.technicians.find(t => t.id == currentUserId)
+          return currentUser ? currentUser.full_name || currentUser.username : 'User'
+        }
+
+        return 'User'
+      } catch (error) {
+        return 'User'
       }
     },
 

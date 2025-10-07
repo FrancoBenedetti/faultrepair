@@ -54,8 +54,8 @@ if (!$client_id) {
 
 // Verify that this client has approved this service provider
 $stmt = $pdo->prepare("
-    SELECT id FROM client_approved_providers
-    WHERE client_id = ? AND service_provider_id = ?
+    SELECT id FROM participant_approvals
+    WHERE client_participant_id = ? AND provider_participant_id = ?
 ");
 $stmt->execute([$client_id, $entity_id]);
 $approval = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -81,15 +81,15 @@ try {
                 j.archived_by_service_provider,
                 l.name as location_name,
                 l.address as location_address,
-                c.name as client_name,
+                p.name as client_name,
                 u.username as reporting_user,
                 tu.username as assigned_technician
             FROM jobs j
             JOIN locations l ON j.client_location_id = l.id
-            JOIN clients c ON l.client_id = c.id
+            JOIN participants p ON l.participant_id = p.participantId
             LEFT JOIN users u ON j.reporting_user_id = u.id
             LEFT JOIN users tu ON j.assigned_technician_id = tu.id
-            WHERE j.assigned_provider_id = ? AND l.client_id = ?
+            WHERE j.assigned_provider_participant_id = ? AND l.participant_id = ?
             ORDER BY j.created_at DESC
         ");
 
@@ -114,9 +114,9 @@ try {
 
         // Get client information
         $stmt = $pdo->prepare("
-            SELECT id, name, address
-            FROM clients
-            WHERE id = ?
+            SELECT participantId as id, name, address
+            FROM participants
+            WHERE participantId = ?
         ");
         $stmt->execute([$client_id]);
         $client = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -142,7 +142,7 @@ try {
         $stmt = $pdo->prepare("
             SELECT j.id FROM jobs j
             JOIN locations l ON j.client_location_id = l.id
-            WHERE j.id = ? AND j.assigned_provider_id = ? AND l.client_id = ?
+            WHERE j.id = ? AND j.assigned_provider_participant_id = ? AND l.participant_id = ?
         ");
         $stmt->execute([$job_id, $entity_id, $client_id]);
         if (!$stmt->fetch()) {

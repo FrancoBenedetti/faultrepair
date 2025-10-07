@@ -148,9 +148,9 @@ function addClientUser($client_id) {
     try {
         $pdo->beginTransaction();
 
-        // Check if username or email already exists
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
-        $stmt->execute([$username, $email]);
+    // Check if username or email already exists
+    $stmt = $pdo->prepare("SELECT userId FROM users WHERE username = ? OR email = ?");
+    $stmt->execute([$username, $email]);
         if ($stmt->fetch()) {
             $pdo->rollBack();
             http_response_code(409);
@@ -273,7 +273,7 @@ function updateClientUser($client_id) {
             }
 
             // Check if email is already taken by another user
-            $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+            $stmt = $pdo->prepare("SELECT userId FROM users WHERE email = ? AND userId != ?");
             $stmt->execute([$email, $user_id]);
             if ($stmt->fetch()) {
                 $pdo->rollBack();

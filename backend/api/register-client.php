@@ -54,7 +54,7 @@ try {
     $pdo->beginTransaction();
 
     // Check if username or email already exists
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
+    $stmt = $pdo->prepare("SELECT userId FROM users WHERE username = ? OR email = ?");
     $stmt->execute([$username, $email]);
     if ($stmt->fetch()) {
         $pdo->rollBack();
@@ -63,13 +63,21 @@ try {
         exit;
     }
 
-    // Insert client
-    $stmt = $pdo->prepare("INSERT INTO clients (name, address) VALUES (?, ?)");
+    // Insert client into participants table
+    $stmt = $pdo->prepare("INSERT INTO participants (name, address) VALUES (?, ?)");
     $stmt->execute([$clientName, $address]);
     $clientId = $pdo->lastInsertId();
 
-    // Get default role for clients (Site Budget Controller)
-    $stmt = $pdo->prepare("SELECT id FROM roles WHERE name = 'Site Budget Controller'");
+    // Set participant type as client
+    $stmt = $pdo->prepare("INSERT INTO participant_type (participantId, participantType) VALUES (?, 'C')");
+    $stmt->execute([$clientId]);
+
+    // Set up default free subscription for the client
+    $stmt = $pdo->prepare("INSERT INTO subscriptions (participantId, subscription_tier, status, monthly_job_limit) VALUES (?, 'free', 'active', 3)");
+    $stmt->execute([$clientId]);
+
+    // Get default role for clients (Client Admin - roleId = 2)
+    $stmt = $pdo->prepare("SELECT roleId as id FROM user_roles WHERE name = 'Client Admin'");
     $stmt->execute();
     $role = $stmt->fetch();
     if (!$role) {
@@ -87,7 +95,7 @@ try {
     $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
     // Insert user
-    $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, email, role_id, entity_type, entity_id, is_active, email_verified, verification_token, token_expires) VALUES (?, ?, ?, ?, 'client', ?, FALSE, FALSE, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, email, role_id, entity_id, is_active, email_verified, verification_token, token_expires) VALUES (?, ?, ?, ?, ?, FALSE, FALSE, ?, ?)");
     $stmt->execute([$username, $passwordHash, $email, $role['id'], $clientId, $verificationToken, $tokenExpires]);
 
     $pdo->commit();

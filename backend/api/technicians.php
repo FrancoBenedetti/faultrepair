@@ -137,9 +137,9 @@ function createTechnician($provider_id) {
     try {
         $pdo->beginTransaction();
 
-        // Check if username or email already exists
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
-        $stmt->execute([$username, $email]);
+    // Check if username or email already exists
+    $stmt = $pdo->prepare("SELECT userId FROM users WHERE username = ? OR email = ?");
+    $stmt->execute([$username, $email]);
         if ($stmt->fetch()) {
             $pdo->rollBack();
             http_response_code(409);

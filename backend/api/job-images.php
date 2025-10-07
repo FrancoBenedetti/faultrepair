@@ -98,10 +98,10 @@ try {
         $stmt->execute([$job_id]);
         $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Convert file paths to web-accessible URLs
+        // Convert file paths to authenticated image serving URLs
         foreach ($images as &$image) {
-            // Assuming images are served from /backend/uploads/job_images/
-            $image['url'] = '/backend/uploads/job_images/' . $image['filename'];
+            // Use authenticated image serving endpoint
+            $image['url'] = '/backend/api/serve-image.php?filename=' . urlencode($image['filename']) . '&token=' . urlencode($token);
         }
 
         header('Content-Type: application/json');
