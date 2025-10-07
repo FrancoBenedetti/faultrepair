@@ -55,13 +55,13 @@ try {
             $stmt = $pdo->prepare("
                 SELECT j.id FROM jobs j
                 JOIN locations l ON j.client_location_id = l.id
-                WHERE j.id = ? AND l.client_id = ?
+                WHERE j.id = ? AND l.participant_id = ?
             ");
             $stmt->execute([$job_id, $entity_id]);
         } else {
             // Service Provider: verify job is assigned to their company
-            // First, let's check what the assigned_provider_id is for this job
-            $stmt = $pdo->prepare("SELECT assigned_provider_id FROM jobs WHERE id = ?");
+            // First, let's check what the assigned_provider_participant_id is for this job
+            $stmt = $pdo->prepare("SELECT assigned_provider_participant_id FROM jobs WHERE id = ?");
             $stmt->execute([$job_id]);
             $job_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -72,8 +72,8 @@ try {
             }
 
             // Check if this service provider is assigned to the job
-            if ($job_info['assigned_provider_id'] !== $entity_id) {
-                error_log(__FILE__.'/'.__LINE__.'/ >>>> Job '.$job_id.' assigned to provider '.($job_info['assigned_provider_id'] ?? 'NULL').', but user belongs to provider '.$entity_id);
+            if ($job_info['assigned_provider_participant_id'] !== $entity_id) {
+                error_log(__FILE__.'/'.__LINE__.'/ >>>> Job '.$job_id.' assigned to provider '.($job_info['assigned_provider_participant_id'] ?? 'NULL').', but user belongs to provider '.$entity_id);
                 http_response_code(403);
                 echo json_encode(['error' => 'Access denied. Job not assigned to your service provider.']);
                 exit;
@@ -124,7 +124,7 @@ try {
                 SELECT ji.file_path, ji.job_id FROM job_images ji
                 JOIN jobs j ON ji.job_id = j.id
                 JOIN locations l ON j.client_location_id = l.id
-                WHERE ji.id = ? AND l.client_id = ?
+                WHERE ji.id = ? AND l.participant_id = ?
             ");
             $stmt->execute([$image_id, $entity_id]);
         } else {
@@ -132,7 +132,7 @@ try {
             $stmt = $pdo->prepare("
                 SELECT ji.file_path, ji.job_id FROM job_images ji
                 JOIN jobs j ON ji.job_id = j.id
-                WHERE ji.id = ? AND j.assigned_provider_id = ?
+                WHERE ji.id = ? AND j.assigned_provider_participant_id = ?
             ");
             $stmt->execute([$image_id, $entity_id]);
         }

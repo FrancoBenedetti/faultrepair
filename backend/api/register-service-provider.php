@@ -78,13 +78,17 @@ try {
         exit;
     }
 
-    // Insert service provider
-    $stmt = $pdo->prepare("INSERT INTO service_providers (name, address) VALUES (?, ?)");
+    // Insert service provider into participants
+    $stmt = $pdo->prepare("INSERT INTO participants (name, address) VALUES (?, ?)");
     $stmt->execute([$providerName, $address]);
     $providerId = $pdo->lastInsertId();
 
+    // Add participant type
+    $stmt = $pdo->prepare("INSERT INTO participant_type (participantId, participantType) VALUES (?, 'S')");
+    $stmt->execute([$providerId]);
+
     // Get default role for service providers (Service Provider Admin)
-    $stmt = $pdo->prepare("SELECT id FROM roles WHERE name = 'Service Provider Admin'");
+    $stmt = $pdo->prepare("SELECT roleId as id FROM user_roles WHERE name = 'Service Provider Admin'");
     $stmt->execute();
     $role = $stmt->fetch();
     if (!$role) {
@@ -127,9 +131,9 @@ try {
             // If invited by a client, auto-approve this service provider for that client
             if ($invitation['inviter_entity_type'] === 'client') {
                 $stmt = $pdo->prepare("
-                    INSERT INTO client_approved_providers (client_id, service_provider_id)
+                    INSERT INTO participant_approvals (client_participant_id, provider_participant_id)
                     VALUES (?, ?)
-                    ON DUPLICATE KEY UPDATE client_id = client_id
+                    ON DUPLICATE KEY UPDATE client_participant_id = client_participant_id
                 ");
                 $stmt->execute([$invitation['inviter_entity_id'], $providerId]);
             }

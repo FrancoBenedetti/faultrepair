@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../includes/JWT.php';
+require_once '../includes/subscription.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: PUT, OPTIONS');
@@ -91,6 +92,27 @@ try {
         http_response_code(403);
         echo json_encode(['error' => 'Access denied. Job does not belong to your service provider.']);
         exit;
+    }
+
+    // Check subscription limits for job acceptance
+    if ($new_status === 'In Progress' && $job['job_status'] !== 'In Progress') {
+        // This is a job acceptance - check if service provider can accept more jobs
+        if (!canPerformAction($user_id, 'jobs_accepted')) {
+            $limits = getUsageLimits();
+            $current_usage = getMonthlyUsage($user_id, 'jobs_accepted');
+
+            http_response_code(429); // Rate limit exceeded
+            echo json_encode([
+                'error' => 'Job acceptance limit reached for this month',
+                'current_usage' => $current_usage,
+                'monthly_limit' => $limits['sp_free_jobs'],
+                'message' => 'Upgrade to Basic subscription for unlimited job acceptances or wait until next month.'
+            ]);
+            exit;
+        }
+
+        // Track job acceptance usage
+        incrementUsage($user_id, 'jobs_accepted');
     }
     // Update job status, technician assignment, and technician notes if provided
     if ($technician_id) {

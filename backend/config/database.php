@@ -1,6 +1,6 @@
 <?php
 $host = 'localhost';
-$db = 'faultreporter';
+$db = 'snappy';
 $user = 'root';
 $pass = '';
 $charset = 'utf8mb4';
@@ -21,6 +21,8 @@ $options = [
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
 } catch (\PDOException $e) {
-    throw new \PDOException($e->getMessage(), (int)$e->getCode());
+    // Log the error but don't throw exception - prevents fatal errors during includes
+    error_log("Database connection failed: " . $e->getMessage());
+    $pdo = null; // Set to null so dependent code can handle the failure gracefully
 }
 ?>

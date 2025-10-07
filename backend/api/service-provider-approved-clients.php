@@ -47,22 +47,22 @@ try {
     // Get approved clients for this service provider
     $stmt = $pdo->prepare("
         SELECT
-            c.id,
-            c.name,
-            c.address,
-            cap.approved_at,
-            cap.notes,
+            p.participantId as id,
+            p.name,
+            p.address,
+            pa.created_at as approved_at,
+            NULL as notes,
             COUNT(j.id) as total_jobs,
             COUNT(CASE WHEN j.job_status IN ('Reported', 'Assigned', 'In Progress') THEN 1 END) as active_jobs,
             COUNT(CASE WHEN j.job_status = 'Completed' THEN 1 END) as completed_jobs
-        FROM client_approved_providers cap
-        JOIN clients c ON cap.client_id = c.id
+        FROM participant_approvals pa
+        JOIN participants p ON pa.client_participant_id = p.participantId
         LEFT JOIN jobs j ON j.client_location_id IN (
-            SELECT id FROM locations WHERE client_id = c.id
-        ) AND j.assigned_provider_id = ?
-        WHERE cap.service_provider_id = ?
-        GROUP BY c.id, c.name, c.address, cap.approved_at, cap.notes
-        ORDER BY cap.approved_at DESC
+            SELECT id FROM locations WHERE participant_id = p.participantId
+        ) AND j.assigned_provider_participant_id = ?
+        WHERE pa.provider_participant_id = ?
+        GROUP BY p.participantId, p.name, p.address, pa.created_at
+        ORDER BY pa.created_at DESC
     ");
 
     $stmt->execute([$entity_id, $entity_id]);

@@ -130,19 +130,23 @@ export default {
           body: JSON.stringify(this.form)
         });
         const data = await response.json();
-        if (response.ok) {
+
+        if (response.ok && data.token) {
           localStorage.setItem('token', data.token);
-          const payload = JSON.parse(atob(data.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+
+          const payload = JSON.parse(atob(data.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
           if (payload.entity_type === 'client') {
             this.$router.push('/client-dashboard');
           } else if (payload.entity_type === 'service_provider') {
             this.$router.push('/service-provider-dashboard');
+          } else {
+            alert('Login successful but unable to determine user type. Please contact support.');
           }
         } else {
-          alert(data.error);
+          alert(data.error || 'Sign in failed');
         }
       } catch (error) {
-        alert('Sign in failed');
+        alert('Network error. Please check your connection and try again.');
       } finally {
         this.loading = false
       }

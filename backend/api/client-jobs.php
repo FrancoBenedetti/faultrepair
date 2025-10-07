@@ -3,6 +3,7 @@ ini_set('log_errors', true);
 ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/client-jobs.log');
 require_once '../config/database.php';
 require_once '../includes/JWT.php';
+require_once '../includes/subscription.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS');
@@ -70,10 +71,10 @@ try {
                 (SELECT COUNT(*) FROM job_images WHERE job_id = j.id) as image_count
             FROM jobs j
             JOIN locations l ON j.client_location_id = l.id
-            LEFT JOIN service_providers sp ON j.assigned_provider_id = sp.id
-            LEFT JOIN users u ON j.reporting_user_id = u.id
-            LEFT JOIN users tu ON j.assigned_technician_id = tu.id
-            WHERE l.client_id = ?
+            LEFT JOIN participants sp ON j.assigned_provider_participant_id = sp.participantId
+            LEFT JOIN users u ON j.reporting_user_id = u.userId
+            LEFT JOIN users tu ON j.assigned_technician_user_id = tu.userId
+            WHERE l.participant_id = ?
         ";
 
         $params = [$entity_id];
@@ -89,7 +90,7 @@ try {
         }
 
         if ($provider_filter) {
-            $query .= " AND j.assigned_provider_id = ?";
+            $query .= " AND j.assigned_provider_participant_id = ?";
             $params[] = $provider_filter;
         }
 
@@ -112,7 +113,7 @@ try {
                     jsh.changed_at,
                     u.username as changed_by
                 FROM job_status_history jsh
-                LEFT JOIN users u ON jsh.changed_by_user_id = u.id
+                LEFT JOIN users u ON jsh.changed_by_user_id = u.userId
                 WHERE jsh.job_id = ?
                 ORDER BY jsh.changed_at DESC
             ");
@@ -133,7 +134,7 @@ try {
         }
 
         // Check if client has any locations defined
-        $stmt = $pdo->prepare("SELECT COUNT(*) as location_count FROM locations WHERE client_id = ?");
+        $stmt = $pdo->prepare("SELECT COUNT(*) as location_count FROM locations WHERE participant_id = ?");
         $stmt->execute([$entity_id]);
         $location_result = $stmt->fetch();
         $has_locations = $location_result['location_count'] > 0;
@@ -142,6 +143,21 @@ try {
         if (!isset($input['fault_description']) || empty($input['fault_description'])) {
             http_response_code(400);
             echo json_encode(['error' => "Field 'fault_description' is required"]);
+            exit;
+        }
+
+        // Check subscription limits before creating job
+        if (!canPerformAction($user_id, 'jobs_created')) {
+            $limits = getUsageLimits();
+            $current_usage = getMonthlyUsage($user_id, 'jobs_created');
+
+            http_response_code(429); // Rate limit exceeded
+            echo json_encode([
+                'error' => 'Job creation limit reached for this month',
+                'current_usage' => $current_usage,
+                'monthly_limit' => $limits['client_free_jobs'],
+                'message' => 'Upgrade to Basic subscription for unlimited jobs or wait until next month.'
+            ]);
             exit;
         }
 
@@ -159,7 +175,7 @@ try {
             $client_location_id = $input['client_location_id'];
 
             // Verify location belongs to this client
-            $stmt = $pdo->prepare("SELECT id FROM locations WHERE id = ? AND client_id = ?");
+            $stmt = $pdo->prepare("SELECT id FROM locations WHERE id = ? AND participant_id = ?");
             $stmt->execute([$client_location_id, $entity_id]);
             if (!$stmt->fetch()) {
                 http_response_code(400);
@@ -170,7 +186,7 @@ try {
             // No locations defined - create a default location entry
             // Insert default location for this client
             $stmt = $pdo->prepare("
-                INSERT INTO locations (client_id, name, address)
+                INSERT INTO locations (participant_id, name, address)
                 VALUES (?, 'Default Location', 'Client premises')
             ");
             $stmt->execute([$entity_id]);
@@ -206,6 +222,12 @@ try {
         ");
         $stmt->execute([$job_id, $user_id]);
 
+        // Track job creation usage
+        $subscription = getUserSubscription($user_id);
+        if ($subscription) {
+            incrementSubscriptionUsage($subscription['id'], 'jobs_created');
+        }
+
         echo json_encode([
             'success' => true,
             'message' => 'Job created successfully',
@@ -230,7 +252,7 @@ try {
         $stmt = $pdo->prepare("
             SELECT j.id FROM jobs j
             JOIN locations l ON j.client_location_id = l.id
-            WHERE j.id = ? AND l.client_id = ?
+            WHERE j.id = ? AND l.participant_id = ?
         ");
         $stmt->execute([$job_id, $entity_id]);
         if (!$stmt->fetch()) {
@@ -298,16 +320,16 @@ try {
         // Handle fields that can be edited by budget controllers (including provider assignment and archiving)
         if ($role_id === 2) {
             if (isset($input['assigned_provider_id'])) {
-                $updates[] = "assigned_provider_id = ?";
+                $updates[] = "assigned_provider_participant_id = ?";
                 $params[] = $input['assigned_provider_id'];
 
                 error_log(__FILE__.'/'.__LINE__.'/ >>>> '.json_encode([$entity_id, $input['assigned_provider_id']]));
-                error_log(__FILE__.'/'.__LINE__.'/ >>>> '."SELECT id FROM client_approved_providers WHERE client_id = ? AND service_provider_id = ?");
+                error_log(__FILE__.'/'.__LINE__.'/ >>>> '."SELECT id FROM participant_approvals WHERE client_participant_id = ? AND provider_participant_id = ?");
                 // Verify provider is approved for this client
                 if ($input['assigned_provider_id']) {
                     $stmt = $pdo->prepare("
-                        SELECT id FROM client_approved_providers
-                        WHERE client_id = ? AND service_provider_id = ?
+                        SELECT id FROM participant_approvals
+                        WHERE client_participant_id = ? AND provider_participant_id = ?
                     ");
                     $stmt->execute([$entity_id, $input['assigned_provider_id']]);
                     if (!$stmt->fetch()) {

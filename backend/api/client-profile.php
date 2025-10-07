@@ -65,19 +65,19 @@ switch ($method) {
         break;
 }
 
-function getClientProfile($client_id) {
+function getClientProfile($participant_id) {
     global $pdo;
 
     try {
-        // Get basic client info
+        // Get basic participant info
         $stmt = $pdo->prepare("
-            SELECT id, name, address, website, manager_name, manager_email,
+            SELECT participantId as id, name, address, website, manager_name, manager_email,
                    manager_phone, vat_number, business_registration_number,
                    description, logo_url, is_active, created_at, updated_at
-            FROM clients
-            WHERE id = ?
+            FROM participants
+            WHERE participantId = ?
         ");
-        $stmt->execute([$client_id]);
+        $stmt->execute([$participant_id]);
         $client = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$client) {
@@ -135,7 +135,7 @@ function updateClientProfile($client_id) {
 
         if (!empty($updateFields)) {
             $updateValues[] = $client_id;
-            $sql = "UPDATE clients SET " . implode(', ', $updateFields) . " WHERE id = ?";
+            $sql = "UPDATE participants SET " . implode(', ', $updateFields) . " WHERE participantId = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute($updateValues);
         }

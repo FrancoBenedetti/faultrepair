@@ -67,25 +67,28 @@ switch ($method) {
         break;
 }
 
-function getClientUsers($client_id) {
+function getClientUsers($participant_id) {
     global $pdo;
 
     try {
         $stmt = $pdo->prepare("
             SELECT
-                u.id,
+                u.userId as id,
                 u.username,
                 u.email,
+                u.first_name,
+                u.last_name,
+                u.phone,
                 u.created_at,
-                r.id as role_id,
-                r.name as role_name
+                ur.roleId as role_id,
+                ur.name as role_name
             FROM users u
-            JOIN roles r ON u.role_id = r.id
-            WHERE u.entity_type = 'client' AND u.entity_id = ?
+            JOIN user_roles ur ON u.role_id = ur.roleId
+            WHERE u.entity_id = ?
             ORDER BY u.created_at DESC
         ");
 
-        $stmt->execute([$client_id]);
+        $stmt->execute([$participant_id]);
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode(['users' => $users]);
@@ -155,8 +158,8 @@ function addClientUser($client_id) {
             exit;
         }
 
-        // Verify role exists and is appropriate for clients
-        $stmt = $pdo->prepare("SELECT id, name FROM roles WHERE id = ? AND name IN ('Reporting Employee', 'Site Budget Controller')");
+        // Verify role exists and is appropriate for clients (using new user_roles table)
+        $stmt = $pdo->prepare("SELECT roleId as id, name FROM user_roles WHERE roleId = ? AND name IN ('Client User', 'Client Admin')");
         $stmt->execute([$role_id]);
         $role = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$role) {
@@ -174,10 +177,10 @@ function addClientUser($client_id) {
         $tempPassword = bin2hex(random_bytes(16)); // Generate a random temporary password
         $tempPasswordHash = password_hash($tempPassword, PASSWORD_DEFAULT);
 
-        // Insert user
+        // Insert user (updated for new schema - no entity_type, entity_id becomes participant reference)
         $stmt = $pdo->prepare("
-            INSERT INTO users (username, password_hash, email, first_name, last_name, phone, role_id, entity_type, entity_id, is_active, email_verified, verification_token, token_expires)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'client', ?, FALSE, FALSE, ?, ?)
+            INSERT INTO users (username, password_hash, email, first_name, last_name, phone, role_id, entity_id, is_active, email_verified, verification_token, token_expires)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, FALSE, FALSE, ?, ?)
         ");
         $stmt->execute([$username, $tempPasswordHash, $email, $first_name, $last_name, $phone, $role_id, $client_id, $verificationToken, $tokenExpires]);
 
@@ -241,10 +244,10 @@ function updateClientUser($client_id) {
     try {
         $pdo->beginTransaction();
 
-        // Verify the user belongs to this client
+        // Verify the user belongs to this client (participant)
         $stmt = $pdo->prepare("
-            SELECT id FROM users
-            WHERE id = ? AND entity_type = 'client' AND entity_id = ?
+            SELECT userId as id FROM users
+            WHERE userId = ? AND entity_id = ?
         ");
         $stmt->execute([$user_id, $client_id]);
         if (!$stmt->fetch()) {
@@ -297,8 +300,8 @@ function updateClientUser($client_id) {
         if (isset($data['role_id'])) {
             $new_role_id = (int)$data['role_id'];
 
-            // Verify role exists and is appropriate for clients
-            $stmt = $pdo->prepare("SELECT id, name FROM roles WHERE id = ? AND name IN ('Reporting Employee', 'Site Budget Controller')");
+            // Verify role exists and is appropriate for clients (using new user_roles table)
+            $stmt = $pdo->prepare("SELECT roleId as id, name FROM user_roles WHERE roleId = ? AND name IN ('Client User', 'Client Admin')");
             $stmt->execute([$new_role_id]);
             $role = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$role) {
@@ -308,9 +311,9 @@ function updateClientUser($client_id) {
                 exit;
             }
 
-            // If promoting to Site Budget Controller, check email verification
-            if ($role['name'] === 'Site Budget Controller') {
-                $stmt = $pdo->prepare("SELECT email_verified, email, username FROM users WHERE id = ?");
+            // If promoting to Client Admin, check email verification
+            if ($role['name'] === 'Client Admin') {
+                $stmt = $pdo->prepare("SELECT email_verified, email, username FROM users WHERE userId = ?");
                 $stmt->execute([$user_id]);
                 $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -319,7 +322,7 @@ function updateClientUser($client_id) {
                     $verificationToken = EmailService::generateVerificationToken();
                     $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
-                    $stmt = $pdo->prepare("UPDATE users SET verification_token = ?, token_expires = ? WHERE id = ?");
+                    $stmt = $pdo->prepare("UPDATE users SET verification_token = ?, token_expires = ? WHERE userId = ?");
                     $stmt->execute([$verificationToken, $tokenExpires, $user_id]);
 
                     $pdo->rollBack(); // Don't commit the role change
@@ -415,10 +418,10 @@ function deleteClientUser($client_id) {
 
         // Verify the user belongs to this client and prevent deletion of the last admin
         $stmt = $pdo->prepare("
-            SELECT u.id, r.name as role_name
+            SELECT u.userId as id, ur.name as role_name
             FROM users u
-            JOIN roles r ON u.role_id = r.id
-            WHERE u.id = ? AND u.entity_type = 'client' AND u.entity_id = ?
+            JOIN user_roles ur ON u.role_id = ur.roleId
+            WHERE u.userId = ? AND u.entity_id = ?
         ");
         $stmt->execute([$user_id, $client_id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -431,12 +434,12 @@ function deleteClientUser($client_id) {
         }
 
         // Check if this is the last user with admin privileges
-        if ($user['role_name'] === 'Site Budget Controller') {
+        if ($user['role_name'] === 'Client Admin') {
             $stmt = $pdo->prepare("
                 SELECT COUNT(*) as admin_count
                 FROM users u
-                JOIN roles r ON u.role_id = r.id
-                WHERE u.entity_type = 'client' AND u.entity_id = ? AND r.name = 'Site Budget Controller' AND u.id != ?
+                JOIN user_roles ur ON u.role_id = ur.roleId
+                WHERE u.entity_id = ? AND ur.name = 'Client Admin' AND u.userId != ?
             ");
             $stmt->execute([$client_id, $user_id]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);

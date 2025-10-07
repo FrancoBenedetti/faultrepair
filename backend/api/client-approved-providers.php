@@ -61,47 +61,29 @@ switch ($method) {
         break;
 }
 
-function getApprovedProviders($client_id) {
+function getApprovedProviders($participant_id) {
     global $pdo;
 
     try {
-        // Build query dynamically to handle missing columns
-        $selectFields = "cap.id, cap.service_provider_id, sp.name, sp.address, sp.website, sp.description, sp.logo_url";
-
-        // Check if approved_at column exists
-        try {
-            $stmt = $pdo->prepare("SELECT approved_at FROM client_approved_providers LIMIT 1");
-            $stmt->execute();
-            $selectFields .= ", cap.approved_at";
-        } catch (Exception $e) {
-            $selectFields .= ", sp.created_at as approved_at";
-        }
-
-        // Check if notes column exists
-        try {
-            $stmt = $pdo->prepare("SELECT notes FROM client_approved_providers LIMIT 1");
-            $stmt->execute();
-            $selectFields .= ", cap.notes";
-        } catch (Exception $e) {
-            $selectFields .= ", NULL as notes";
-        }
-
         $query = "
             SELECT
-                {$selectFields},
+                pa.id,
+                pa.provider_participant_id as service_provider_id,
+                p.name, p.address, p.website, p.description, p.logo_url,
+                pa.created_at as approved_at,
                 COUNT(DISTINCT sps.service_id) as services_count,
                 COUNT(DISTINCT spr.region_id) as regions_count
-            FROM client_approved_providers cap
-            JOIN service_providers sp ON cap.service_provider_id = sp.id
-            LEFT JOIN service_provider_services sps ON sp.id = sps.service_provider_id
-            LEFT JOIN service_provider_regions spr ON sp.id = spr.service_provider_id
-            WHERE cap.client_id = ? AND sp.is_active = TRUE
-            GROUP BY cap.id, sp.id
-            ORDER BY sp.created_at DESC
+            FROM participant_approvals pa
+            JOIN participants p ON pa.provider_participant_id = p.participantId
+            LEFT JOIN service_provider_services sps ON p.participantId = sps.service_provider_id
+            LEFT JOIN service_provider_regions spr ON p.participantId = spr.service_provider_id
+            WHERE pa.client_participant_id = ? AND p.is_active = TRUE
+            GROUP BY pa.id, p.participantId
+            ORDER BY pa.created_at DESC
         ";
 
         $stmt = $pdo->prepare($query);
-        $stmt->execute([$client_id]);
+        $stmt->execute([$participant_id]);
         $approved_providers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Get detailed services and regions for each provider (if tables exist)
@@ -153,7 +135,7 @@ function getApprovedProviders($client_id) {
     }
 }
 
-function addApprovedProvider($client_id, $user_id) {
+function addApprovedProvider($participant_id, $user_id) {
     global $pdo;
 
     $data = json_decode(file_get_contents('php://input'), true);
@@ -168,8 +150,8 @@ function addApprovedProvider($client_id, $user_id) {
     $notes = isset($data['notes']) ? trim($data['notes']) : '';
 
     try {
-        // Verify provider exists and is active
-        $stmt = $pdo->prepare("SELECT id, name FROM service_providers WHERE id = ? AND is_active = TRUE");
+        // Verify provider exists and is active (now using participants table)
+        $stmt = $pdo->prepare("SELECT participantId as id, name FROM participants WHERE participantId = ? AND is_active = TRUE");
         $stmt->execute([$provider_id]);
         $provider = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -180,8 +162,8 @@ function addApprovedProvider($client_id, $user_id) {
         }
 
         // Check if already approved
-        $stmt = $pdo->prepare("SELECT id FROM client_approved_providers WHERE client_id = ? AND service_provider_id = ?");
-        $stmt->execute([$client_id, $provider_id]);
+        $stmt = $pdo->prepare("SELECT id FROM participant_approvals WHERE client_participant_id = ? AND provider_participant_id = ?");
+        $stmt->execute([$participant_id, $provider_id]);
 
         if ($stmt->fetch()) {
             http_response_code(409);
@@ -189,38 +171,12 @@ function addApprovedProvider($client_id, $user_id) {
             return;
         }
 
-        // Build INSERT query dynamically to handle missing columns
-        $insertFields = "client_id, service_provider_id";
-        $placeholders = "?, ?";
-        $params = [$client_id, $provider_id];
-
-        // Check if approved_by_user_id column exists
-        try {
-            $stmt = $pdo->prepare("SELECT approved_by_user_id FROM client_approved_providers LIMIT 1");
-            $stmt->execute();
-            $insertFields .= ", approved_by_user_id";
-            $placeholders .= ", ?";
-            $params[] = $user_id;
-        } catch (Exception $e) {
-            // Column doesn't exist - skip it
-        }
-
-        // Check if notes column exists
-        try {
-            $stmt = $pdo->prepare("SELECT notes FROM client_approved_providers LIMIT 1");
-            $stmt->execute();
-            $insertFields .= ", notes";
-            $placeholders .= ", ?";
-            $params[] = $notes;
-        } catch (Exception $e) {
-            // Column doesn't exist - skip it
-        }
-
+        // Insert into new participant_approvals table
         $stmt = $pdo->prepare("
-            INSERT INTO client_approved_providers ({$insertFields})
-            VALUES ({$placeholders})
+            INSERT INTO participant_approvals (client_participant_id, provider_participant_id)
+            VALUES (?, ?)
         ");
-        $stmt->execute($params);
+        $stmt->execute([$participant_id, $provider_id]);
 
         echo json_encode([
             'message' => 'Service provider added to approved list',
@@ -234,7 +190,7 @@ function addApprovedProvider($client_id, $user_id) {
     }
 }
 
-function removeApprovedProvider($client_id) {
+function removeApprovedProvider($participant_id) {
     global $pdo;
 
     // Get provider ID from URL or query parameter
@@ -260,12 +216,12 @@ function removeApprovedProvider($client_id) {
     try {
         // Verify the approval exists and belongs to this client
         $stmt = $pdo->prepare("
-            SELECT sp.name
-            FROM client_approved_providers cap
-            JOIN service_providers sp ON cap.service_provider_id = sp.id
-            WHERE cap.client_id = ? AND cap.service_provider_id = ?
+            SELECT p.name
+            FROM participant_approvals pa
+            JOIN participants p ON pa.provider_participant_id = p.participantId
+            WHERE pa.client_participant_id = ? AND pa.provider_participant_id = ?
         ");
-        $stmt->execute([$client_id, $provider_id]);
+        $stmt->execute([$participant_id, $provider_id]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$result) {
@@ -275,8 +231,8 @@ function removeApprovedProvider($client_id) {
         }
 
         // Remove from approved list
-        $stmt = $pdo->prepare("DELETE FROM client_approved_providers WHERE client_id = ? AND service_provider_id = ?");
-        $stmt->execute([$client_id, $provider_id]);
+        $stmt = $pdo->prepare("DELETE FROM participant_approvals WHERE client_participant_id = ? AND provider_participant_id = ?");
+        $stmt->execute([$participant_id, $provider_id]);
 
         echo json_encode([
             'message' => 'Service provider removed from approved list',

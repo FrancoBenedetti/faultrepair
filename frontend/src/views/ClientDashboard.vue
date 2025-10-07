@@ -857,7 +857,7 @@
           <div class="form-actions">
             <button type="button" @click="showCreateJobModal = false" class="btn-secondary">Cancel</button>
             <button type="submit" class="btn-primary" :disabled="creatingJob">
-              {{ creatingJob ? 'Reporting Fault...' : 'Report Fault' }}
+              {{ creatingJob ? 'Requesting Service...' : 'Request Service' }}
             </button>
           </div>
         </form>

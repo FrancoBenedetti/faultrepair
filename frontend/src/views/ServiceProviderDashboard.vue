@@ -160,7 +160,7 @@
     </div>
 
     <!-- Business Profile Section - Only for service provider admins -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" v-if="userRole === 3">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" v-if="userRole === 4">
       <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
         <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('profile')" style="cursor: pointer;">
           <div class="section-title flex items-center gap-3">
@@ -1634,7 +1634,7 @@ export default {
     this.loadAvailableOptions()
     this.loadApprovedClients()
     this.loadJobs()
-    if (this.userRole === 3) {
+    if (this.userRole === 4) {
       this.loadTechnicians()
     }
   },

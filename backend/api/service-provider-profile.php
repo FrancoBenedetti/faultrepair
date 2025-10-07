@@ -62,11 +62,11 @@ function getServiceProviderProfile($provider_id) {
     try {
         // Get basic provider info
         $stmt = $pdo->prepare("
-            SELECT id, name, address, website, manager_name, manager_email,
+            SELECT participantId as id, name, address, website, manager_name, manager_email,
                    manager_phone, vat_number, business_registration_number,
                    description, logo_url, is_active, created_at, updated_at
-            FROM service_providers
-            WHERE id = ?
+            FROM participants
+            WHERE participantId = ?
         ");
         $stmt->execute([$provider_id]);
         $provider = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -150,7 +150,7 @@ function updateServiceProviderProfile($provider_id) {
 
         if (!empty($updateFields)) {
             $updateValues[] = $provider_id;
-            $sql = "UPDATE service_providers SET " . implode(', ', $updateFields) . " WHERE id = ?";
+            $sql = "UPDATE participants SET " . implode(', ', $updateFields) . " WHERE participantId = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute($updateValues);
         }

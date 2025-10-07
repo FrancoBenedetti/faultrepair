@@ -61,7 +61,7 @@ if (!in_array($sort_by, $valid_sort_fields)) {
 
 try {
     // Build the main query
-    $where_conditions = ["sp.is_active = TRUE"];
+    $where_conditions = ["sp.is_active = TRUE AND pt.participantType = 'S' AND pt.isActive = 'Y'"];
     $params = [];
 
     // Search filter
@@ -76,7 +76,7 @@ try {
     // Service filter
     if (!empty($service_ids)) {
         $placeholders = str_repeat('?,', count($service_ids) - 1) . '?';
-        $where_conditions[] = "sp.id IN (
+        $where_conditions[] = "sp.participantId IN (
             SELECT DISTINCT sps.service_provider_id
             FROM service_provider_services sps
             WHERE sps.service_id IN ($placeholders)
@@ -87,7 +87,7 @@ try {
     // Region filter
     if (!empty($region_ids)) {
         $placeholders = str_repeat('?,', count($region_ids) - 1) . '?';
-        $where_conditions[] = "sp.id IN (
+        $where_conditions[] = "sp.participantId IN (
             SELECT DISTINCT spr.service_provider_id
             FROM service_provider_regions spr
             WHERE spr.region_id IN ($placeholders)
@@ -98,7 +98,7 @@ try {
     $where_clause = implode(' AND ', $where_conditions);
 
     // Get total count for pagination
-    $count_sql = "SELECT COUNT(DISTINCT sp.id) as total FROM service_providers sp WHERE $where_clause";
+    $count_sql = "SELECT COUNT(DISTINCT sp.participantId) as total FROM participants sp JOIN participant_type pt ON sp.participantId = pt.participantId WHERE $where_clause";
     $stmt = $pdo->prepare($count_sql);
     $stmt->execute($params);
     $total_count = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
@@ -110,7 +110,7 @@ try {
     // Main query to get service providers
     $sql = "
         SELECT
-            sp.id,
+            sp.participantId as id,
             sp.name,
             sp.address,
             sp.website,
@@ -120,11 +120,12 @@ try {
             sp.updated_at,
             COUNT(DISTINCT sps.service_id) as services_count,
             COUNT(DISTINCT spr.region_id) as regions_count
-        FROM service_providers sp
-        LEFT JOIN service_provider_services sps ON sp.id = sps.service_provider_id
-        LEFT JOIN service_provider_regions spr ON sp.id = spr.service_provider_id
+        FROM participants sp
+        JOIN participant_type pt ON sp.participantId = pt.participantId
+        LEFT JOIN service_provider_services sps ON sp.participantId = sps.service_provider_id
+        LEFT JOIN service_provider_regions spr ON sp.participantId = spr.service_provider_id
         WHERE $where_clause
-        GROUP BY sp.id
+        GROUP BY sp.participantId
         ORDER BY sp.$sort_by $sort_order
         LIMIT ? OFFSET ?
     ";
@@ -163,9 +164,9 @@ try {
         // Check if client has approved this provider
         if ($client_id) {
             $stmt = $pdo->prepare("
-                SELECT id, approved_at, notes
-                FROM client_approved_providers
-                WHERE client_id = ? AND service_provider_id = ?
+                SELECT id, created_at as approved_at, NULL as notes
+                FROM participant_approvals
+                WHERE client_participant_id = ? AND provider_participant_id = ?
             ");
             $stmt->execute([$client_id, $provider['id']]);
             $approval = $stmt->fetch(PDO::FETCH_ASSOC);

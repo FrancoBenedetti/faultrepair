@@ -1,6 +1,6 @@
 <?php
-require_once '../config/database.php';
-require_once '../includes/JWT.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/JWT.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -28,7 +28,23 @@ if (!$data || !isset($data['username']) || !isset($data['password'])) {
 $username = $data['username'];
 $password = $data['password'];
 
-$stmt = $pdo->prepare("SELECT id, password_hash, role_id, entity_type, entity_id, is_active, email_verified FROM users WHERE username = ?");
+$stmt = $pdo->prepare("
+    SELECT
+        u.userId as id,
+        u.password_hash,
+        u.role_id,
+        u.entity_id,
+        u.is_active,
+        u.email_verified,
+        CASE
+            WHEN pt.participantType = 'C' THEN 'client'
+            WHEN pt.participantType = 'S' THEN 'service_provider'
+            ELSE 'unknown'
+        END as entity_type
+    FROM users u
+    LEFT JOIN participant_type pt ON u.entity_id = pt.participantId
+    WHERE u.username = ?
+");
 $stmt->execute([$username]);
 $user = $stmt->fetch();
 

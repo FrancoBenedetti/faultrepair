@@ -55,7 +55,7 @@ try {
                     COUNT(j.id) as job_count
                 FROM locations l
                 LEFT JOIN jobs j ON l.id = j.client_location_id
-                WHERE l.client_id = ?
+                WHERE l.participant_id = ?
                 GROUP BY l.id, l.name, l.address, l.coordinates, l.access_rules, l.access_instructions
                 ORDER BY l.name ASC
             ");
@@ -117,7 +117,7 @@ try {
             }
 
             // Check if location name already exists for this client
-            $stmt = $pdo->prepare("SELECT id FROM locations WHERE client_id = ? AND name = ?");
+            $stmt = $pdo->prepare("SELECT id FROM locations WHERE participant_id = ? AND name = ?");
             $stmt->execute([$entity_id, $name]);
             if ($stmt->fetch()) {
                 http_response_code(409);
@@ -127,7 +127,7 @@ try {
 
             // Create new location
             $stmt = $pdo->prepare("
-                INSERT INTO locations (client_id, name, address, coordinates, access_rules, access_instructions)
+                INSERT INTO locations (participant_id, name, address, coordinates, access_rules, access_instructions)
                 VALUES (?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([$entity_id, $name, $address, $coordinates, $access_rules, $access_instructions]);
@@ -194,7 +194,7 @@ try {
             }
 
             // Verify location belongs to this client
-            $stmt = $pdo->prepare("SELECT id FROM locations WHERE id = ? AND client_id = ?");
+            $stmt = $pdo->prepare("SELECT id FROM locations WHERE id = ? AND participant_id = ?");
             $stmt->execute([$location_id, $entity_id]);
             if (!$stmt->fetch()) {
                 http_response_code(404);
@@ -203,7 +203,7 @@ try {
             }
 
             // Check if new name conflicts with existing location
-            $stmt = $pdo->prepare("SELECT id FROM locations WHERE client_id = ? AND name = ? AND id != ?");
+            $stmt = $pdo->prepare("SELECT id FROM locations WHERE participant_id = ? AND name = ? AND id != ?");
             $stmt->execute([$entity_id, $name, $location_id]);
             if ($stmt->fetch()) {
                 http_response_code(409);
@@ -215,7 +215,7 @@ try {
             $stmt = $pdo->prepare("
                 UPDATE locations
                 SET name = ?, address = ?, coordinates = ?, access_rules = ?, access_instructions = ?
-                WHERE id = ? AND client_id = ?
+                WHERE id = ? AND participant_id = ?
             ");
             $stmt->execute([$name, $address, $coordinates, $access_rules, $access_instructions, $location_id, $entity_id]);
 
@@ -250,7 +250,7 @@ try {
             }
 
             // Verify location belongs to this client
-            $stmt = $pdo->prepare("SELECT id FROM locations WHERE id = ? AND client_id = ?");
+            $stmt = $pdo->prepare("SELECT id FROM locations WHERE id = ? AND participant_id = ?");
             $stmt->execute([$location_id, $entity_id]);
             if (!$stmt->fetch()) {
                 http_response_code(404);
@@ -259,7 +259,7 @@ try {
             }
 
             // Delete location
-            $stmt = $pdo->prepare("DELETE FROM locations WHERE id = ? AND client_id = ?");
+            $stmt = $pdo->prepare("DELETE FROM locations WHERE id = ? AND participant_id = ?");
             $stmt->execute([$location_id, $entity_id]);
 
             echo json_encode(['message' => 'Location deleted successfully']);
