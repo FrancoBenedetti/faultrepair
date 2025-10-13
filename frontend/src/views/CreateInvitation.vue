@@ -9,12 +9,15 @@
         </p>
       </div>
 
-      <div class="card">
+      <div class="card p-8">
         <form @submit.prevent="createInvitation" class="space-y-6">
-          <!-- Invitation Type -->
-          <div>
-            <label class="form-label">Invitation Type</label>
-            <div class="mt-2">
+          <!-- Invitation Type Section -->
+          <div class="bg-gray-50 rounded-lg p-6 border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <span class="material-icon-sm text-blue-600">person_add</span>
+              Invitation Type
+            </h3>
+            <div class="space-y-3">
               <div class="flex gap-4">
                 <label class="flex items-center">
                   <input
@@ -40,83 +43,98 @@
             </div>
           </div>
 
-          <!-- Invitee Details -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label for="inviteeFirstName" class="form-label">First Name *</label>
-              <input
-                type="text"
-                id="inviteeFirstName"
-                v-model="form.inviteeFirstName"
-                required
-                class="form-input"
-                placeholder="Enter first name"
-                :disabled="loading"
-              >
-            </div>
-            <div>
-              <label for="inviteeLastName" class="form-label">Last Name *</label>
-              <input
-                type="text"
-                id="inviteeLastName"
-                v-model="form.inviteeLastName"
-                required
-                class="form-input"
-                placeholder="Enter last name"
-                :disabled="loading"
-              >
-            </div>
-          </div>
-
-          <!-- Contact Information -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label for="inviteeEmail" class="form-label">
-                Email Address
-                <span v-if="form.communicationMethod === 'email'">*</span>
-              </label>
-              <input
-                type="email"
-                id="inviteeEmail"
-                v-model="form.inviteeEmail"
-                class="form-input"
-                placeholder="Enter email address"
-                :disabled="loading"
-                :required="form.communicationMethod === 'email'"
-              >
-            </div>
-            <div>
-              <label for="inviteePhone" class="form-label">
-                Phone Number
-                <span v-if="['whatsapp', 'telegram', 'sms'].includes(form.communicationMethod)">*</span>
-              </label>
-              <input
-                type="tel"
-                id="inviteePhone"
-                v-model="form.inviteePhone"
-                class="form-input"
-                placeholder="Enter phone number"
-                :disabled="loading"
-                :required="['whatsapp', 'telegram', 'sms'].includes(form.communicationMethod)"
-              >
+          <!-- Invitee Details Section -->
+          <div class="bg-gray-50 rounded-lg p-6 border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <span class="material-icon-sm text-blue-600">person</span>
+              Invitee Details
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label for="inviteeFirstName" class="form-label">First Name *</label>
+                <input
+                  type="text"
+                  id="inviteeFirstName"
+                  v-model="form.inviteeFirstName"
+                  required
+                  class="form-input"
+                  placeholder="Enter first name"
+                  :disabled="loading"
+                >
+              </div>
+              <div>
+                <label for="inviteeLastName" class="form-label">Last Name *</label>
+                <input
+                  type="text"
+                  id="inviteeLastName"
+                  v-model="form.inviteeLastName"
+                  required
+                  class="form-input"
+                  placeholder="Enter last name"
+                  :disabled="loading"
+                >
+              </div>
             </div>
           </div>
 
-          <!-- Communication Method -->
-          <div>
-            <label class="form-label">Communication Method *</label>
-            <div class="mt-2 space-y-2">
+          <!-- Contact Information Section -->
+          <div class="bg-gray-50 rounded-lg p-6 border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <span class="material-icon-sm text-blue-600">contact_phone</span>
+              Contact Information
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label for="inviteeEmail" class="form-label">
+                  Email Address
+                  <span v-if="form.communicationMethod === 'email'">*</span>
+                </label>
+                <input
+                  type="email"
+                  id="inviteeEmail"
+                  v-model="form.inviteeEmail"
+                  class="form-input"
+                  placeholder="Enter email address"
+                  :disabled="loading"
+                  :required="form.communicationMethod === 'email'"
+                >
+              </div>
+              <div>
+                <label for="inviteePhone" class="form-label">
+                  Phone Number
+                  <span v-if="['whatsapp', 'telegram', 'sms'].includes(form.communicationMethod)">*</span>
+                </label>
+                <input
+                  type="tel"
+                  id="inviteePhone"
+                  v-model="form.inviteePhone"
+                  class="form-input"
+                  placeholder="Enter phone number"
+                  :disabled="loading"
+                  :required="['whatsapp', 'telegram', 'sms'].includes(form.communicationMethod)"
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Communication Method Section -->
+          <div class="bg-gray-50 rounded-lg p-6 border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <span class="material-icon-sm text-blue-600">message</span>
+              Communication Method
+            </h3>
+            <div class="space-y-3">
               <label class="flex items-center">
                 <input
                   type="radio"
                   v-model="form.communicationMethod"
                   value="whatsapp"
-                  class="mr-2"
+                  class="mr-3"
                   :disabled="loading"
                 >
                 <span class="text-sm flex items-center gap-2">
-                  <span class="w-4 h-4 bg-green-500 rounded-full"></span>
-                  WhatsApp (Recommended)
+                  <span class="w-5 h-5 bg-green-500 rounded-full flex-shrink-0"></span>
+                  <span class="font-medium">WhatsApp (Recommended)</span>
                 </span>
               </label>
               <label class="flex items-center">
@@ -124,12 +142,12 @@
                   type="radio"
                   v-model="form.communicationMethod"
                   value="email"
-                  class="mr-2"
+                  class="mr-3"
                   :disabled="loading"
                 >
                 <span class="text-sm flex items-center gap-2">
-                  <span class="w-4 h-4 bg-blue-500 rounded-full"></span>
-                  Email
+                  <span class="w-5 h-5 bg-blue-500 rounded-full flex-shrink-0"></span>
+                  <span class="font-medium">Email</span>
                 </span>
               </label>
               <label class="flex items-center">
@@ -137,12 +155,12 @@
                   type="radio"
                   v-model="form.communicationMethod"
                   value="telegram"
-                  class="mr-2"
+                  class="mr-3"
                   :disabled="loading"
                 >
                 <span class="text-sm flex items-center gap-2">
-                  <span class="w-4 h-4 bg-blue-600 rounded-full"></span>
-                  Telegram
+                  <span class="w-5 h-5 bg-blue-700 rounded-full flex-shrink-0"></span>
+                  <span class="font-medium">Telegram</span>
                 </span>
               </label>
               <label class="flex items-center">
@@ -150,28 +168,33 @@
                   type="radio"
                   v-model="form.communicationMethod"
                   value="sms"
-                  class="mr-2"
+                  class="mr-3"
                   :disabled="loading"
                 >
                 <span class="text-sm flex items-center gap-2">
-                  <span class="w-4 h-4 bg-gray-500 rounded-full"></span>
-                  SMS
+                  <span class="w-5 h-5 bg-gray-500 rounded-full flex-shrink-0"></span>
+                  <span class="font-medium">SMS</span>
                 </span>
               </label>
             </div>
           </div>
 
-          <!-- Notes -->
-          <div>
-            <label for="notes" class="form-label">Notes (Optional)</label>
-            <textarea
-              id="notes"
-              v-model="form.notes"
-              rows="3"
-              class="form-input resize-none"
-              placeholder="Add any additional notes or context"
-              :disabled="loading"
-            ></textarea>
+          <!-- Additional Notes Section -->
+          <div class="bg-gray-50 rounded-lg p-6 border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <span class="material-icon-sm text-blue-600">notes</span>
+              Additional Notes
+            </h3>
+            <div>
+              <textarea
+                id="notes"
+                v-model="form.notes"
+                rows="4"
+                class="form-input resize-none"
+                placeholder="Add any additional notes or context (optional)"
+                :disabled="loading"
+              ></textarea>
+            </div>
           </div>
 
           <!-- Submit Button -->
@@ -348,3 +371,49 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* Mobile responsiveness adjustments */
+@media (max-width: 640px) {
+  .card {
+    padding: 1rem; /* 16px instead of 32px */
+  }
+
+  /* Reduce section padding on mobile */
+  .card .bg-gray-50 {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Adjust section headers on mobile */
+  .card h3 {
+    font-size: 1rem; /* text-base */
+    margin-bottom: 0.75rem;
+  }
+
+  .card h3 .material-icon-sm {
+    font-size: 1rem;
+  }
+}
+
+/* Force single column layout on mobile for responsive grids */
+@media (max-width: 768px) {
+  .card .grid.grid-cols-1.md\\:grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
+
+/* Focus states for better accessibility */
+.form-input:focus {
+  @apply ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-50;
+}
+
+/* Hover effects for interactive elements */
+.form-input:hover:not(:disabled) {
+  @apply border-gray-400;
+}
+
+.card:hover {
+  @apply shadow-xl;
+}
+</style>

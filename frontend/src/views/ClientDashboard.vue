@@ -1551,6 +1551,12 @@ export default {
     },
 
     async addUser() {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('You are not logged in. Please refresh the page and log in again.')
+        return
+      }
+
       this.addingUser = true
       try {
         const response = await apiFetch('/backend/api/client-users.php', {
@@ -1594,6 +1600,12 @@ export default {
     },
 
     async updateUser() {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('You are not logged in. Please refresh the page and log in again.')
+        return
+      }
+
       this.updatingUser = true
       try {
         const updateData = {
@@ -1627,6 +1639,12 @@ export default {
     },
 
     async deleteUser(user) {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('You are not logged in. Please refresh the page and log in again.')
+        return
+      }
+
       if (!confirm(`Are you sure you want to delete user "${user.username}"? This action cannot be undone.`)) {
         return
       }
@@ -1852,6 +1870,12 @@ export default {
 
     // Job creation methods
     async createJob() {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('You are not logged in. Please refresh the page and log in again.')
+        return
+      }
+
       this.creatingJob = true
       try {
         // First create the job
@@ -1932,6 +1956,12 @@ export default {
 
     // Location management methods
     async addLocation() {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('You are not logged in. Please refresh the page and log in again.')
+        return
+      }
+
       this.addingLocation = true
       try {
         const response = await apiFetch('/backend/api/client-locations.php', {
@@ -1986,6 +2016,12 @@ export default {
     },
 
     async updateLocation() {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('You are not logged in. Please refresh the page and log in again.')
+        return
+      }
+
       try {
         const response = await apiFetch('/backend/api/client-locations.php', {
           method: 'PUT',
@@ -2338,23 +2374,116 @@ export default {
     handleQrDetected(qrData) {
       console.log('QR data detected:', qrData)
 
-      // Populate item_identifier (required field)
-      this.newJob.item_identifier = qrData.itemIdentifier
+      try {
+        // Initialize extracted data tracking
+        let extractedFields = {}
+        let extractionMethod = 'structured' // 'structured' or 'fallback'
 
-      // Auto-fill location if available in QR and matches existing locations
-      if (qrData.locationName && this.locations && this.locations.length > 0) {
-        const matchingLocation = this.locations.find(location =>
-          location.name.toLowerCase() === qrData.locationName.toLowerCase()
-        )
-        if (matchingLocation) {
-          this.newJob.client_location_id = matchingLocation.id
-          alert(`QR code scanned successfully! Item: ${qrData.itemIdentifier}, Location: ${qrData.locationName}`)
-        } else {
-          alert(`QR code scanned successfully! Item: ${qrData.itemIdentifier}. Location "${qrData.locationName}" not found in your locations.`)
+        // First, try to validate client ID if present
+        if (qrData.clientId && qrData.clientId !== this.getClientId()) {
+          alert(`QR code is for a different client (ID: ${qrData.clientId}). This QR code is not valid for your account.`)
+          return
         }
-      } else {
-        alert(`QR code scanned successfully! Item: ${qrData.itemIdentifier}`)
+
+        // Check if structured data was successfully parsed
+        if (qrData.itemIdentifier && qrData.itemIdentifier.trim()) {
+          // We have structured item data - use it
+          this.newJob.item_identifier = qrData.itemIdentifier.trim()
+          extractedFields.item = qrData.itemIdentifier.trim()
+        } else {
+          // No structured item data - check if we have any location data
+          if (qrData.locationName && qrData.locationName.trim()) {
+            // We have location data but no item identifier - use location as item identifier
+            this.newJob.item_identifier = qrData.locationName.trim()
+            extractedFields.item = qrData.locationName.trim()
+            extractedFields.note = 'location_used_as_item'
+          } else {
+            // No structured data at all - check if qrData is available as string
+            // This handles cases where parsing completely failed
+            const rawQrString = arguments[0] // Get the original QR data string
+            if (rawQrString && typeof rawQrString === 'string' && rawQrString.trim()) {
+              this.newJob.item_identifier = rawQrString.trim()
+              extractedFields.item = rawQrString.trim()
+              extractedFields.note = 'raw_qr_used_as_item'
+              extractionMethod = 'fallback'
+            } else {
+              // Complete failure - shouldn't happen but handle gracefully
+              alert('Could not extract any usable data from QR code. Please enter the item identifier manually.')
+              return
+            }
+          }
+        }
+
+        // Handle location matching (if location data is available)
+        if (qrData.locationName && qrData.locationName.trim() && this.locations && this.locations.length > 0) {
+          const matchingLocation = this.locations.find(location =>
+            location.name.toLowerCase() === qrData.locationName.toLowerCase()
+          )
+          if (matchingLocation) {
+            this.newJob.client_location_id = matchingLocation.id
+            extractedFields.location = qrData.locationName.trim()
+          } else {
+            extractedFields.location_attempted = qrData.locationName.trim()
+            extractedFields.location_note = 'location_not_found'
+          }
+        }
+
+        // Generate user-friendly success message
+        let message = 'QR code scanned successfully!'
+
+        if (extractionMethod === 'structured') {
+          message += ` Item: "${extractedFields.item}"`
+          if (extractedFields.location) {
+            message += `, Location: "${extractedFields.location}"`
+          } else if (extractedFields.location_attempted) {
+            message += `. Location "${extractedFields.location_attempted}" not found in your locations`
+          }
+        } else {
+          if (extractedFields.note === 'location_used_as_item') {
+            message += ` Used location "${extractedFields.item}" as item identifier`
+          } else if (extractedFields.note === 'raw_qr_used_as_item') {
+            message += ` Used QR code content as item identifier: "${extractedFields.item}"`
+          }
+        }
+
+        alert(message)
+
+      } catch (error) {
+        console.error('Error processing QR data:', error)
+        // Fallback: try to use raw QR data
+        const rawData = arguments[0]
+        if (rawData && typeof rawData === 'string' && rawData.trim()) {
+          this.newJob.item_identifier = rawData.trim()
+          alert(`QR code scanned! Used raw content as item identifier: "${rawData.trim()}"`)
+        } else {
+          alert('Error reading QR code. Please try again or enter the item identifier manually.')
+        }
       }
+    },
+
+    // Test method for QR handling logic (can be removed after testing)
+    testQrHandling() {
+      console.log('Testing QR handling logic...')
+
+      // Test cases for different QR scenarios
+      const testCases = [
+        // Full structured data
+        { clientId: 1, itemIdentifier: 'TEST-001', locationName: 'Main Office' },
+        // Item only
+        { clientId: 1, itemIdentifier: 'TEST-002' },
+        // Location only (will use location as item)
+        { clientId: 1, locationName: 'Warehouse' },
+        // No structured data (fallback to raw string)
+        'RAW-QR-DATA-123',
+        // Invalid client ID
+        { clientId: 999, itemIdentifier: 'INVALID-CLIENT' }
+      ]
+
+      testCases.forEach((testData, index) => {
+        console.log(`Test case ${index + 1}:`, testData)
+        // This would normally be called by the QR scanner
+        // For testing, we could modify the method to accept test data
+      })
     },
 
     getClientId() {

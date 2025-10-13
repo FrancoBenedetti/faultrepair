@@ -25,19 +25,18 @@ if (empty($token)) {
 }
 
 try {
-    // Get invitation details with enhanced fields for existing user scenarios
+    // Get invitation details with enhanced fields for existing user scenarios - NEW SCHEMA
     $stmt = $pdo->prepare("
         SELECT i.*, u.first_name, u.last_name, u.email as inviter_email,
                u.phone as inviter_phone,
                CASE
-                   WHEN i.inviter_entity_type = 'client' THEN c.name
-                   WHEN i.inviter_entity_type = 'service_provider' THEN sp.name
+                   WHEN i.inviter_entity_type = 'client' THEN p.name
+                   WHEN i.inviter_entity_type = 'service_provider' THEN p.name
                END as inviter_entity_name
         FROM invitations i
-        JOIN users u ON i.inviter_user_id = u.id
-        LEFT JOIN clients c ON i.inviter_entity_type = 'client' AND i.inviter_entity_id = c.id
-        LEFT JOIN service_providers sp ON i.inviter_entity_type = 'service_provider' AND i.inviter_entity_id = sp.id
-        WHERE i.invitation_token = ?
+        JOIN users u ON i.inviter_user_id = u.userId
+        JOIN participants p ON i.inviter_entity_id = p.participantId
+        WHERE i.invitation_token = ? AND i.invitation_status != 'expired'
     ");
     $stmt->execute([$token]);
     $invitation = $stmt->fetch(PDO::FETCH_ASSOC);

@@ -39,7 +39,21 @@ echo "Username: $username<br>";
 echo "Password: $password<br>";
 
 try {
-    $stmt = $pdo->prepare("SELECT id, password_hash, role_id, entity_type, entity_id FROM users WHERE username = ?");
+    $stmt = $pdo->prepare("
+    SELECT
+        u.userId as id,
+        u.password_hash,
+        u.role_id,
+        CASE
+            WHEN pt.participantType = 'C' THEN 'client'
+            WHEN pt.participantType = 'S' THEN 'service_provider'
+            ELSE 'unknown'
+        END as entity_type,
+        u.entity_id
+    FROM users u
+    LEFT JOIN participant_type pt ON u.entity_id = pt.participantId
+    WHERE u.username = ?
+");
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 

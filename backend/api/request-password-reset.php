@@ -37,7 +37,7 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
 try {
     // Find user by email
-    $stmt = $pdo->prepare("SELECT id, username, email, email_verified FROM users WHERE email = ?");
+    $stmt = $pdo->prepare("SELECT userId AS id, username, email, email_verified FROM users WHERE email = ?");
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -63,7 +63,7 @@ try {
     $tokenExpires = date('Y-m-d H:i:s', strtotime('+1 hour')); // Shorter for password reset
 
     // Update user with reset token
-    $stmt = $pdo->prepare("UPDATE users SET verification_token = ?, token_expires = ? WHERE id = ?");
+    $stmt = $pdo->prepare("UPDATE users SET verification_token = ?, token_expires = ? WHERE userId = ?");
     $stmt->execute([$resetToken, $tokenExpires, $user['id']]);
 
     // Send reset email

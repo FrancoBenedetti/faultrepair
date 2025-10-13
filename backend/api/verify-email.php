@@ -38,8 +38,13 @@ if (!$token) {
 
 try {
     // Find user by verification token
-    $stmt = $pdo->prepare("SELECT id, username, email, token_expires, email_verified FROM users WHERE verification_token = ?");
-    $stmt->execute([$token]);
+    $stmt = $pdo->prepare("SELECT userId AS id, username, email, token_expires, email_verified FROM users WHERE verification_token = ?");
+    $result = $stmt->execute([$token]);
+    if (!$result) {
+        // Log the error for debugging
+        error_log("SQL execution failed: " . implode(", ", $stmt->errorInfo()));
+        throw new Exception("Database query execution failed");
+    }
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$user) {
@@ -72,7 +77,7 @@ try {
         $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
 
         // Always ensure the account is active and verified after password reset
-        $stmt = $pdo->prepare("UPDATE users SET password_hash = ?, email_verified = TRUE, is_active = TRUE, verification_token = NULL, token_expires = NULL WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE users SET password_hash = ?, email_verified = TRUE, is_active = TRUE, verification_token = NULL, token_expires = NULL WHERE userId = ?");
         $stmt->execute([$passwordHash, $user['id']]);
 
         echo json_encode(['message' => 'Password reset successful. Your account is now active and you can log in with your new password.']);
@@ -89,7 +94,7 @@ try {
 
         $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
 
-        $stmt = $pdo->prepare("UPDATE users SET password_hash = ?, email_verified = TRUE, is_active = TRUE, verification_token = NULL, token_expires = NULL WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE users SET password_hash = ?, email_verified = TRUE, is_active = TRUE, verification_token = NULL, token_expires = NULL WHERE userId = ?");
         $stmt->execute([$passwordHash, $user['id']]);
 
         echo json_encode(['message' => 'Account activated successfully. You can now log in.']);
@@ -100,13 +105,15 @@ try {
             exit;
         }
 
-        $stmt = $pdo->prepare("UPDATE users SET email_verified = TRUE, is_active = TRUE, verification_token = NULL, token_expires = NULL WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE users SET email_verified = TRUE, is_active = TRUE, verification_token = NULL, token_expires = NULL WHERE userId = ?");
         $stmt->execute([$user['id']]);
 
         echo json_encode(['message' => 'Email verified successfully. Your account is now active.']);
     }
 
 } catch (Exception $e) {
+    // Log detailed error for debugging (remove in production)
+    error_log('Email verification error: ' . $e->getMessage() . ' - Token: ' . substr($token, 0, 10) . "...");
     http_response_code(500);
     echo json_encode(['error' => 'Verification failed: ' . $e->getMessage()]);
 }

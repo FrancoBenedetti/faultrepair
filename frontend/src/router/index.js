@@ -86,7 +86,7 @@ const routes = [
     component: ClientRegistration
   },
   {
-    path: '/register-service-provider',
+    path: '/register-service_provider',
     name: 'ServiceProviderRegistrationInvited',
     component: ServiceProviderRegistration
   }

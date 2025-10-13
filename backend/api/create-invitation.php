@@ -1,7 +1,33 @@
 <?php
+// Enable maximum error logging for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/create-invitation.log');
+
+error_log("Script started - error reporting enabled");
+
+// Log the start of the request
+error_log("=== Create Invitation Request Started ===");
+error_log("REQUEST_METHOD: " . $_SERVER['REQUEST_METHOD']);
+error_log("REQUEST_URI: " . $_SERVER['REQUEST_URI']);
+error_log("__DIR__: " . __DIR__);
+
+// Test: Try loading files one by one to find which one fails
+error_log("About to load database.php");
 require_once '../config/database.php';
+error_log("Database.php loaded successfully");
+
+error_log("About to load JWT.php");
 require_once '../includes/JWT.php';
+error_log("JWT.php loaded successfully");
+
+error_log("About to load email.php");
 require_once '../includes/email.php';
+error_log("Email.php loaded successfully");
+
+error_log("Includes loaded successfully");
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -18,29 +44,50 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// JWT Authentication - Read from query parameter for live server compatibility
-$token = $_GET['token'] ?? '';
+// JWT Authentication - Try Authorization header first, fallback to query parameter
+error_log("Starting JWT authentication...");
+$token = null;
+$headers = getallheaders();
+$auth_header = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+
+error_log("Headers available: " . (is_array($headers) ? count($headers) : 'none'));
+error_log("Authorization header: " . ($auth_header ? substr($auth_header, 0, 20) . '...' : 'none'));
+
+if ($auth_header && preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+    $token = $matches[1];
+    error_log("Token extracted from Bearer header");
+} else {
+    $token = $_GET['token'] ?? '';
+    error_log("Token from query parameter: " . ($token ? 'present' : 'missing'));
+}
 
 if (!$token) {
+    error_log("No token found - returning 401");
     http_response_code(401);
     echo json_encode(['error' => 'Authorization token missing']);
     exit;
 }
 
+error_log("Token length: " . strlen($token));
 $payload = JWT::decode($token);
 
 if (!$payload) {
+    error_log("JWT decode failed or token expired");
     http_response_code(401);
     echo json_encode(['error' => 'Invalid or expired token']);
     exit;
 }
 
-// Get user details including role information
+error_log("JWT decoded successfully, user_id: " . ($payload['user_id'] ?? 'missing'));
+
+// Get user details including role information - NEW SCHEMA
 $stmt = $pdo->prepare("
-    SELECT u.*, r.name as role_name
+    SELECT u.*, r.name as role_name, p.name as participant_name, pt.participantType as entity_type
     FROM users u
-    JOIN roles r ON u.role_id = r.id
-    WHERE u.id = ?
+    JOIN user_roles r ON u.role_id = r.roleId
+    JOIN participants p ON u.entity_id = p.participantId
+    JOIN participant_type pt ON p.participantId = pt.participantId
+    WHERE u.userId = ?
 ");
 $stmt->execute([$payload['user_id']]);
 $user_data = $stmt->fetch();
@@ -51,12 +98,15 @@ if (!$user_data) {
     exit;
 }
 
-// Check if user is admin (Site Budget Controller or Service Provider Admin)
-if (!in_array($user_data['role_name'], ['Site Budget Controller', 'Service Provider Admin'])) {
+// Check if user is admin (Client Admin or Service Provider Admin)
+error_log("User role check: " . $user_data['role_name']);
+if (!in_array($user_data['role_name'], ['Client Admin', 'Service Provider Admin'])) {
+    error_log("User is NOT an admin - denying access");
     http_response_code(403);
     echo json_encode(['error' => 'Only administrators can create invitations']);
     exit;
 }
+error_log("User is an admin - allowing invitation creation");
 
 $data = json_decode(file_get_contents('php://input'), true);
 
@@ -109,9 +159,9 @@ try {
     $existingUser = null;
     if ($inviteeEmail) {
         $stmt = $pdo->prepare("
-            SELECT u.id, u.first_name, u.last_name, u.entity_type, u.entity_id, r.name as role_name
+            SELECT u.userId, u.first_name, u.last_name, u.entity_id, r.name as role_name
             FROM users u
-            JOIN roles r ON u.role_id = r.id
+            JOIN user_roles r ON u.role_id = r.roleId
             WHERE u.email = ?
         ");
         $stmt->execute([$inviteeEmail]);
@@ -133,8 +183,7 @@ try {
     $autoApprovalApplied = false;
 
     if ($existingUser) {
-        $inviteeUserId = $existingUser['id'];
-        $inviteeEntityType = $existingUser['entity_type'];
+        $inviteeUserId = $existingUser['userId'];
         $inviteeEntityId = $existingUser['entity_id'];
 
         // Business Rule Application
@@ -190,6 +239,11 @@ try {
         ]
     ];
 
+    // Ensure proper data types for database insert
+    $autoApprovalApplied = $autoApprovalApplied ? 1 : 0;  // Convert boolean to int
+    $expiryDays = (int)$expiryDays;  // Ensure integer type
+    $inviteeUserId = $inviteeUserId ? (int)$inviteeUserId : null;  // Ensure integer or null
+
     // Insert invitation with enhanced fields
     $stmt = $pdo->prepare("
         INSERT INTO invitations (
@@ -203,8 +257,8 @@ try {
 
     $stmt->execute([
         $invitationToken,
-        $user_data['id'],
-        $user_data['entity_type'],
+        $user_data['userId'],
+        $user_data['entity_id'],
         $user_data['entity_id'],
         $inviteeFirstName,
         $inviteeLastName,
@@ -248,23 +302,38 @@ try {
     ]);
 
 } catch (Exception $e) {
+    error_log('Exception caught: ' . $e->getMessage());
+    error_log('Stack trace: ' . $e->getTraceAsString());
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
+        error_log('Transaction rolled back');
     }
     http_response_code(500);
     echo json_encode(['error' => 'Failed to create invitation: ' . $e->getMessage()]);
 }
 
-// Helper functions
+error_log("=== Create Invitation Request Completed ===");
+
+// Helper functions - UPDATED FOR NEW SCHEMA
 function getClientName($pdo, $clientId) {
-    $stmt = $pdo->prepare("SELECT name FROM clients WHERE id = ?");
+    // In new schema, clientId refers to participants.participantId
+    $stmt = $pdo->prepare("
+        SELECT p.name FROM participants p
+        JOIN participant_type pt ON p.participantId = pt.participantId
+        WHERE p.participantId = ? AND pt.participantType = 'C'
+    ");
     $stmt->execute([$clientId]);
     $client = $stmt->fetch();
     return $client ? $client['name'] : 'Unknown Client';
 }
 
 function getServiceProviderName($pdo, $providerId) {
-    $stmt = $pdo->prepare("SELECT name FROM service_providers WHERE id = ?");
+    // In new schema, providerId refers to participants.participantId
+    $stmt = $pdo->prepare("
+        SELECT p.name FROM participants p
+        JOIN participant_type pt ON p.participantId = pt.participantId
+        WHERE p.participantId = ? AND pt.participantType = 'S'
+    ");
     $stmt->execute([$providerId]);
     $provider = $stmt->fetch();
     return $provider ? $provider['name'] : 'Unknown Provider';

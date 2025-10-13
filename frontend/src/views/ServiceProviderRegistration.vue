@@ -2,6 +2,12 @@
   <div class="registration">
     <h2>Service Provider Registration</h2>
 
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state" style="text-align: center; padding: 50px;">
+      <div style="border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto 15px;"></div>
+      <p>Loading invitation details...</p>
+    </div>
+
     <!-- Existing User - Auto Approved -->
     <div v-if="invitationData && invitationData.auto_approval_applied && invitationData.access_message" class="invitation-info" style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #4caf50;">
       <h3 style="margin-top: 0; color: #2e7d32;">✓ Auto-Approved!</h3>
@@ -74,6 +80,9 @@ export default {
       }
     }
   },
+  created() {
+    console.log('ServiceProviderRegistration component created');
+  },
   async mounted() {
     // Check for invitation token in URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -86,25 +95,31 @@ export default {
   },
   methods: {
     async loadInvitationData(token) {
+      console.log('Loading invitation data for token:', token);
       this.loading = true;
       try {
         const response = await fetch(`/backend/api/validate-invitation.php?token=${encodeURIComponent(token)}`);
         const data = await response.json();
 
-        if (response.ok) {
-          this.invitationData = data.invitation;
+        console.log('API Response:', response.status, data);
 
-          // Pre-populate form with invitation data
-          if (this.invitationData.registration_data?.inviter_details) {
-            const inviter = this.invitationData.registration_data.inviter_details;
-            // Show invitation info but don't pre-populate user fields
-            // as they need to create their own account
+        if (response.ok && data.success) {
+          this.invitationData = data.invitation;
+          console.log('Invitation data loaded:', this.invitationData);
+
+          // Pre-populate form with invitation data if available
+          if (this.invitationData.invitee_email) {
+            this.form.email = this.invitationData.invitee_email;
+          }
+          if (this.invitationData.invitee_phone) {
+            // Could pre-populate phone if available, but usually not for new registrations
           }
         } else {
           alert(data.error || 'Invalid invitation link');
           this.$router.push('/');
         }
       } catch (error) {
+        console.error('Failed to load invitation data:', error);
         alert('Failed to load invitation data');
         this.$router.push('/');
       } finally {

@@ -283,7 +283,7 @@ function updateClientUser($client_id) {
             }
 
             // Check if email actually changed
-            $stmt = $pdo->prepare("SELECT email, username FROM users WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT email, username FROM users WHERE userId = ?");
             $stmt->execute([$user_id]);
             $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -362,7 +362,7 @@ function updateClientUser($client_id) {
         }
 
         $updateValues[] = $user_id;
-        $sql = "UPDATE users SET " . implode(', ', $updateFields) . " WHERE id = ?";
+        $sql = "UPDATE users SET " . implode(', ', $updateFields) . " WHERE userId = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($updateValues);
 
@@ -374,7 +374,7 @@ function updateClientUser($client_id) {
             $tokenExpires = date('Y-m-d H:i:s', strtotime('+1 hour')); // Password reset links expire in 1 hour
 
             // Update the verification token for password reset
-            $stmt = $pdo->prepare("UPDATE users SET verification_token = ?, token_expires = ? WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE users SET verification_token = ?, token_expires = ? WHERE userId = ?");
             $stmt->execute([$resetToken, $tokenExpires, $user_id]);
 
             $emailSent = EmailService::sendVerificationEmail($newEmail, $currentUser['username'], $resetToken, true);
@@ -453,7 +453,7 @@ function deleteClientUser($client_id) {
         }
 
         // Delete the user
-        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        $stmt = $pdo->prepare("DELETE FROM users WHERE userId = ?");
         $stmt->execute([$user_id]);
 
         $pdo->commit();

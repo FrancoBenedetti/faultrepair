@@ -1,4 +1,5 @@
 <?php
+// Temporarily disable problematic settings for debugging
 ini_set('log_errors', true);
 ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/mail.log');
 /**

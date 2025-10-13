@@ -278,3 +278,73 @@ INSERT INTO site_settings (setting_key, setting_value, setting_type, description
 ('job_image_retention_basic_days', '365', 'int', 'Image retention period for basic tier users');
 
 COMMIT;
+
+-- Proposed additions for future enhancements:
+CREATE TABLE `state` (
+	`state_id` INT(11) NOT NULL AUTO_INCREMENT,
+	`client_label` VARCHAR(50) NULL DEFAULT NULL COLLATE 'latin1_swedish_ci',
+	`sp_label` VARCHAR(50) NULL DEFAULT NULL COLLATE 'latin1_swedish_ci',
+	`description` VARCHAR(200) NULL DEFAULT NULL COLLATE 'latin1_swedish_ci',
+	PRIMARY KEY (`state_id`) USING BTREE
+)
+COLLATE='latin1_swedish_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=16
+;
+
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (0, 'None', 'None', 'No state set');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (1, 'Request', ' Initiated', 'The initial request for service');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (2, 'Issued', 'Received', 'The ticket has been assigned to a service provider');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (3, 'Accepted', 'Technician Allocated', 'The ticket has been accepted and allocated to a technician');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (4, 'Declined', 'Declined', 'The ticket has been declined');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (5, 'Unrepairable', 'Unrepairable', 'The item is no longer repairable');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (6, 'Completed', 'Completed', 'The technician has completed the ticket ');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (7, 'Confirmed', 'Confirmed', 'The client has confirmed completion');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (8, 'Payment Requested', 'Payment Requested', 'The srevice provider has request payment');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (9, 'Settled', 'Settled', 'Payment has been completed in full');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (10, 'Cancel', 'Cancelled by Client', 'The ticket has been cancelled by the client');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (11, 'Cancelled by Supplier', 'Cancel', 'The ticket has been cancelled by the service provider');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (12, 'Quotation Request', 'Quotation Inquiry', 'The client has requested a quotation');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (13, 'Quotation Received', 'Quotation Provided', 'The service provider has provided a quotation');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (14, 'Quotation Accepted', 'Quotation Accepted', 'The service provider has accepted the quotation');
+INSERT IGNORE INTO `state` (`state_id`, `client_label`, `sp_label`, `description`) VALUES (15, 'Rework Requested', 'Client Rejected', 'The client has rejected the ticket completion and requested that rework be doen. The ticket remains open.');
+
+CREATE TABLE `state_precedence` (
+	`id` INT(11) NOT NULL AUTO_INCREMENT,
+	`applicableTo` ENUM('Client','Service Provider') NOT NULL COLLATE 'latin1_swedish_ci',
+	`state_id` INT(11) NOT NULL,
+	`prec_id` INT(11) NOT NULL,
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `applicableTo_state_id_prec_id` (`applicableTo`, `state_id`, `prec_id`) USING BTREE,
+	INDEX `FK_state_precedence_state` (`state_id`) USING BTREE,
+	INDEX `FK_state_precedence_state_2` (`prec_id`) USING BTREE,
+	CONSTRAINT `FK_state_precedence_state` FOREIGN KEY (`state_id`) REFERENCES `state` (`state_id`) ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT `FK_state_precedence_state_2` FOREIGN KEY (`prec_id`) REFERENCES `state` (`state_id`) ON UPDATE NO ACTION ON DELETE NO ACTION
+)
+COLLATE='latin1_swedish_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=22
+;
+
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (1, 'Client', 1, 0);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (2, 'Client', 2, 1);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (11, 'Client', 2, 4);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (13, 'Client', 2, 5);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (15, 'Client', 7, 6);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (19, 'Client', 8, 9);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (4, 'Client', 10, 1);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (9, 'Client', 10, 4);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (14, 'Client', 10, 5);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (3, 'Client', 12, 1);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (10, 'Client', 12, 4);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (12, 'Client', 12, 5);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (17, 'Client', 15, 3);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (5, 'Service Provider', 3, 2);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (6, 'Service Provider', 4, 2);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (8, 'Service Provider', 5, 3);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (7, 'Service Provider', 6, 3);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (16, 'Service Provider', 6, 15);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (18, 'Service Provider', 7, 8);
+INSERT IGNORE INTO `state_precedence` (`id`, `applicableTo`, `state_id`, `prec_id`) VALUES (21, 'Service Provider', 11, 3);
+
+ALTER SQL SECURITY INVOKER VIEW `view_states` AS select `SP`.`applicableTo` AS `applicableTo`,`SP`.`prec_id` AS `currentState`,if(`SP`.`applicableTo` = 'Client',`L`.`sp_label`,`L`.`client_label`) AS `currentLabel`,if(`SP`.`applicableTo` = 'Client',`L`.`client_label`,`L`.`sp_label`) AS `partnerLabel`,`S`.`state_id` AS `optionId`,if(`SP`.`applicableTo` = 'Client',`S`.`client_label`,`S`.`sp_label`) AS `optionLabel` from ((`faultreporter`.`state_precedence` `SP` join `faultreporter`.`state` `S` on(`S`.`state_id` = `SP`.`state_id`)) join `faultreporter`.`state` `L` on(`L`.`state_id` = `SP`.`prec_id`)) order by `SP`.`prec_id` ;

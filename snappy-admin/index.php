@@ -1,14 +1,14 @@
 <?php
 ini_set('log_errors', true);
-ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/backend.admin.index.log');
+ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/snapy-admin.index.log');
 /**
  * Site Manager Dashboard
  * Admin interface for managing the fault reporter platform
  */
 error_log(__FILE__.'/'.__LINE__.'/ >>>>  LOGGER START <<<<');
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../includes/JWT.php';
-require_once __DIR__ . '/../../includes/subscription.php';
+require_once '../backend/config/database.php';
+require_once '../backend/includes/JWT.php';
+require_once '../backend/includes/subscription.php';
 
 // Authentication check
 $token = $_GET['token'] ?? '';
@@ -95,7 +95,7 @@ if (!$admin_user) {
 
                 // Authenticate with the main auth endpoint
                 try {
-                const response = await fetch('../../api/auth.php', {
+                const response = await fetch('../backend/api/auth.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
@@ -512,7 +512,7 @@ try {
             console.log('JS: Token available:', token ? 'YES (' + token.length + ' chars)' : 'NO');
 
             try {
-                const apiUrl = `../../api/admin.php?action=dashboard&token=${token}`;
+                const apiUrl = `../backend/api/admin.php?action=dashboard&token=${token}`;
                 console.log('JS: API URL:', apiUrl);
 
                 console.log('JS: Making fetch request...');
@@ -582,7 +582,7 @@ try {
             const month = document.getElementById('usage-month').value;
 
             try {
-                const response = await fetch(`../../api/admin.php?action=usage&user_type=${filter === 'all' ? '' : filter}&month=${month}&token=${token}`);
+                const response = await fetch(`../backend/api/admin.php?action=usage&user_type=${filter === 'all' ? '' : filter}&month=${month}&token=${token}`);
                 const data = await response.json();
 
                 const container = document.getElementById('usage-table-container');
@@ -624,7 +624,7 @@ try {
             const search = document.getElementById('user-search').value;
 
             try {
-                const response = await fetch(`../../api/admin.php?action=users&filter=${filter}&search=${encodeURIComponent(search)}&token=${token}`);
+                const response = await fetch(`../backend/api/admin.php?action=users&filter=${filter}&search=${encodeURIComponent(search)}&token=${token}`);
                 const data = await response.json();
 
                 console.log('User data received:', data); // Debug log
@@ -665,7 +665,7 @@ try {
 
         async function loadSettings() {
             try {
-                const response = await fetch(`../../api/admin.php?action=settings&token=${token}`);
+                const response = await fetch(`../backend/api/admin.php?action=settings&token=${token}`);
                 const data = await response.json();
 
                 console.log('Settings data:', data); // Debug log
@@ -702,7 +702,7 @@ try {
             const activeOnly = document.getElementById('region-active-filter').value;
 
             try {
-                let url = `../../api/admin.php?action=regions&token=${token}`;
+                let url = `../backend/api/admin.php?action=regions&token=${token}`;
                 if (search) url += `&search=${encodeURIComponent(search)}`;
                 if (activeOnly) url += `&active_only=${activeOnly}`;
 
@@ -753,7 +753,7 @@ try {
             const activeOnly = document.getElementById('service-active-filter').value;
 
             try {
-                let url = `../../api/admin.php?action=services&token=${token}`;
+                let url = `../backend/api/admin.php?action=services&token=${token}`;
                 if (search) url += `&search=${encodeURIComponent(search)}`;
                 if (category) url += `&category=${encodeURIComponent(category)}`;
                 if (activeOnly) url += `&active_only=${activeOnly}`;
@@ -814,7 +814,7 @@ try {
             const statusFilter = document.getElementById('participant-status-filter').value;
 
             try {
-                let url = `../../api/admin.php?action=participants&token=${token}`;
+                let url = `../backend/api/admin.php?action=participants&token=${token}`;
                 if (search) url += `&search=${encodeURIComponent(search)}`;
                 if (typeFilter && typeFilter !== 'all') url += `&type=${typeFilter}`;
                 if (statusFilter && statusFilter !== 'all') url += `&status=${statusFilter}`;
@@ -863,7 +863,7 @@ try {
 
         async function loadAuditLog() {
             try {
-                const response = await fetch(`../../api/admin.php?action=audit&token=${token}`);
+                const response = await fetch(`../backend/api/admin.php?action=audit&token=${token}`);
                 const data = await response.json();
 
                 const container = document.getElementById('audit-container');
@@ -931,7 +931,7 @@ try {
             const settingValue = document.getElementById('setting-value').value;
 
             try {
-                    const response = await fetch('../../api/admin.php?action=update_setting&token=' + token, {
+                    const response = await fetch('../backend/api/admin.php?action=update_setting&token=' + token, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ setting_key: settingKey, setting_value: settingValue })
@@ -961,7 +961,7 @@ try {
             const endpoint = action === 'enable' ? 'enable_' + entityType : 'disable_' + entityType;
 
             try {
-                const response = await fetch(`../../api/admin.php?action=${endpoint}&token=${token}`, {
+                const response = await fetch(`../backend/api/admin.php?action=${endpoint}&token=${token}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ entity_id: entityId, reason: reason })
@@ -994,7 +994,7 @@ try {
             const method = regionId ? 'PUT' : 'POST';
 
             try {
-                const response = await fetch(`../../api/admin.php?action=${action}&token=${token}`, {
+                const response = await fetch(`../backend/api/admin.php?action=${action}&token=${token}`, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1052,7 +1052,7 @@ try {
             }
 
             try {
-                const response = await fetch(`../../api/admin.php?id=${id}&token=${token}`, {
+                const response = await fetch(`../backend/api/admin.php?id=${id}&token=${token}`, {
                     method: 'DELETE'
                 });
 
@@ -1081,7 +1081,7 @@ try {
             console.log('View participant details called:', { entityId, name, entityType });
 
             try {
-                const response = await fetch(`../../api/admin.php?action=participant_details&id=${entityId}&token=${token}`);
+                const response = await fetch(`../backend/api/admin.php?action=participant_details&id=${entityId}&token=${token}`);
                 const data = await response.json();
 
                 if (data.success && data.participant) {
@@ -1252,7 +1252,7 @@ try {
             if (!confirm('Are you sure you want to reset this user\'s monthly usage counters?')) return;
 
             try {
-                const response = await fetch('../../api/admin.php?action=reset_usage&token=' + token, {
+                const response = await fetch('../backend/api/admin.php?action=reset_usage&token=' + token, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: userId })

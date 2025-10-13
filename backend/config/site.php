@@ -22,7 +22,11 @@ if (file_exists(__DIR__ . '/../../.env')) {
 // Site name - can be overridden by environment variable
 define('SITE_NAME', getenv('SITE_NAME') ?: 'Fault Reporter');
 
-// Domain - automatically from server
-define('DOMAIN', $_SERVER['SERVER_NAME'] ?: 'localhost');
+// Domain - automatically from server or environment fallback
+$domain = getenv('DOMAIN') ?: (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost');
+if (isset($_SERVER['SERVER_NAME']) && $_SERVER['SERVER_NAME']) {
+    $domain = $_SERVER['SERVER_NAME'];
+}
+define('DOMAIN', $domain);
 
 ?>

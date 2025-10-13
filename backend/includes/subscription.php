@@ -546,5 +546,23 @@ function updateUserSubscriptionTier($user_id, $new_tier, $expires = null, $admin
     return false;
 }
 
+/**
+ * Increment monthly usage for a user (backward compatibility)
+ */
+function incrementUsage($user_id, $usage_type) {
+    try {
+        // Get user's subscription first, then increment usage
+        $subscription = getUserSubscription($user_id);
+        if (!$subscription) {
+            error_log("No subscription found for user $user_id when trying to increment usage for '$usage_type'");
+            return false;
+        }
+        return incrementSubscriptionUsage($subscription['id'], $usage_type);
+    } catch (Exception $e) {
+        error_log("Error incrementing usage for user $user_id: " . $e->getMessage());
+        return false;
+    }
+}
+
 
 ?>

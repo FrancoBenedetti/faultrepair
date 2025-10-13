@@ -118,8 +118,10 @@ try {
     if ($technician_id) {
         // Verify the technician belongs to the same service provider
         $stmt = $pdo->prepare("
-            SELECT u.id FROM users u
-            WHERE u.id = ? AND u.role_id = 4 AND u.entity_type = 'service_provider' AND u.entity_id = ?
+            SELECT u.userId as id
+            FROM users u
+            LEFT JOIN participant_type pt ON u.entity_id = pt.participantId
+            WHERE u.userId = ? AND u.role_id = 4 AND pt.participantType = 'S' AND u.entity_id = ?
         ");
         $stmt->execute([$technician_id, $entity_id]);
         if (!$stmt->fetch()) {
