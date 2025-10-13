@@ -81,7 +81,7 @@
 </template>
 
 <script>
-import { apiFetch } from '@/utils/api.js'
+import { apiFetch, handleTokenExpiration } from '@/utils/api.js'
 
 export default {
   name: 'Home',
@@ -102,6 +102,9 @@ export default {
   mounted() {
     // Set dynamic page title
     document.title = this.siteName
+
+    // Handle expired token on login page
+    handleTokenExpiration()
 
     // Check if user is already authenticated
     const token = localStorage.getItem('token')

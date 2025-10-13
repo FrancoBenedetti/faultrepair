@@ -10,6 +10,7 @@ import ClientServiceProviderBrowser from '../views/ClientServiceProviderBrowser.
 import CreateInvitation from '../views/CreateInvitation.vue'
 import ForgotPassword from '../views/ForgotPassword.vue'
 import ResetPassword from '../views/ResetPassword.vue'
+import { handleTokenExpiration } from '../utils/api.js'
 
 const routes = [
   {
@@ -99,6 +100,12 @@ const router = createRouter({
 
 // Authentication guard
 router.beforeEach((to, from, next) => {
+  // Check for expired tokens first
+  if (handleTokenExpiration()) {
+    next('/')
+    return
+  }
+
   const token = localStorage.getItem('token')
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const userType = to.matched.find(record => record.meta.userType)?.meta.userType

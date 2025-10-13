@@ -339,6 +339,25 @@ function updateClientUser($client_id) {
             $updateValues[] = $new_role_id;
         }
 
+        // Handle phone/mobile update
+        if (isset($data['mobile'])) {
+            $mobile = trim($data['mobile']);
+            if ($mobile === '') {
+                $mobile = null;
+            }
+
+            // Validate phone number if provided
+            if ($mobile !== null && !preg_match('/^[0-9+\-\s()]+$/', $mobile)) {
+                $pdo->rollBack();
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid phone number format']);
+                exit;
+            }
+
+            $updateFields[] = "phone = ?";
+            $updateValues[] = $mobile;
+        }
+
         // Handle password update
         if (isset($data['password']) && !empty($data['password'])) {
             $password = $data['password'];

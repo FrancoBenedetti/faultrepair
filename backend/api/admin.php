@@ -322,7 +322,7 @@ try {
                 $where_clause = $where_conditions ? "AND " . implode(" AND ", $where_conditions) : "";
 
                 $stmt = $pdo->prepare("
-                    SELECT
+                    SELECT DISTINCT
                         p.participantId as entity_id,
                         p.name,
                         pt.participantType,
@@ -333,7 +333,7 @@ try {
                         p.manager_name,
                         COALESCE(p.manager_name, CONCAT(u.first_name, ' ', u.last_name)) as manager_name_display,
                         COALESCE(p.manager_email, u.email) as manager_email,
-                        u.email as user_email,
+                        MIN(u.email) as user_email,
                         p.is_enabled,
                         p.is_active,
                         s.subscription_tier,
@@ -348,7 +348,7 @@ try {
                     WHERE p.is_active = TRUE
                     {$where_clause}
                     GROUP BY p.participantId, p.name, pt.participantType, p.manager_name, p.manager_email,
-                             u.first_name, u.last_name, u.email, p.is_enabled, p.is_active, s.subscription_tier, p.created_at
+                             p.is_enabled, p.is_active, s.subscription_tier, p.created_at
                     ORDER BY pt.participantType, p.created_at DESC
                 ");
                 array_unshift($params, date('Y-m')); // Add current month as first parameter

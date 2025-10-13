@@ -1,6 +1,14 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Navigation Header -->
+      <div class="mb-8">
+        <button @click="$router.push('/client-dashboard')" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200 transition-colors">
+          <span class="material-icon-sm mr-2">arrow_back</span>
+          Back to Dashboard
+        </button>
+      </div>
+
       <div class="text-center mb-12">
         <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-blue-100 mb-6">
           <span class="material-icon text-blue-600">search</span>

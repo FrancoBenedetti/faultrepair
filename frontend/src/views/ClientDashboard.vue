@@ -584,19 +584,23 @@
 
       <!-- Jobs Section -->
       <div class="jobs-section card p-6">
-        <!-- Section header hidden for reporting employees -->
-        <div v-if="userRole === 2" class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
-          <h2 class="text-title-large text-on-surface mb-0">Job Management</h2>
-          <button @click="showCreateJobModal = true" class="btn-filled">
+        <!-- Jobs Section Header -->
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
+          <div class="flex-1">
+            <h2 class="text-title-large text-on-surface mb-0">Job Management</h2>
+            <div v-if="!clientProfile?.is_enabled" class="admin-disabled-warning mt-3">
+              <div class="disabled-banner">
+                <div class="disabled-icon">⚠️</div>
+                <div class="disabled-content">
+                  <h4>Account Administratively Disabled</h4>
+                  <p>Service request creation is restricted. {{ clientProfile?.disabled_reason || 'Please contact support for assistance.' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button @click="showCreateJobModal = true" class="btn-filled" :disabled="!clientProfile?.is_enabled">
             <span class="material-icon-sm mr-2">add</span>
             Service Request
-          </button>
-        </div>
-        <!-- Simplified header for reporting employees -->
-        <div v-else class="section-header flex justify-end mb-6 pb-4 border-b border-neutral-200">
-          <button @click="showCreateJobModal = true" class="btn-filled">
-            <span class="material-icon-sm mr-2">add</span>
-            Report New Fault
           </button>
         </div>
 
@@ -728,8 +732,8 @@
     <div v-if="showAddUserModal" class="modal-overlay" @click="showAddUserModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>Add New User</h3>
-          <button @click="showAddUserModal = false" class="close-btn">&times;</button>
+          <h3>Edit User: {{ editingUser.username }} (ID: {{ editingUser.id }})</h3>
+          <button @click="showEditUserModal" class="close-btn">&times;</button>
         </div>
 
         <form @submit.prevent="addUser" class="user-form">
@@ -1103,6 +1107,22 @@
         <form v-if="editingJob" @submit.prevent="updateJob" class="job-form">
           <!-- Status and Provider (provider assignment restricted to budget controllers) -->
           <div class="form-row">
+            <!-- Provider assignment only for budget controllers -->
+            <div class="form-group" v-if="userRole === 2">
+              <label for="edit-provider">Assigned Provider</label>
+              <select id="edit-provider" v-model="editingJob.assigned_provider_id" @change="onProviderSelected">
+                <option value="">No Provider Assigned</option>
+                <option v-for="provider in approvedProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
+                  {{ provider.name }}
+                </option>
+              </select>
+            </div>
+            <!-- Show current provider for reporting employees (read-only) -->
+            <div class="form-group" v-else-if="editingJob.assigned_provider_name">
+              <label>Assigned Provider</label>
+              <div class="readonly-field">{{ editingJob.assigned_provider_name }}</div>
+              <small class="form-help">Only Budget Controllers can change provider assignments</small>
+            </div>
             <div class="form-group">
               <label for="edit-status">Status *</label>
               <select id="edit-status" v-model="editingJob.job_status" required>
@@ -1116,22 +1136,6 @@
               <small v-if="!editingJob.assigned_provider_id && (editingJob.job_status === 'Assigned' || editingJob.job_status === 'Quote Requested')" class="form-help text-red-600">
                 A service provider must be selected to set this status
               </small>
-            </div>
-            <!-- Provider assignment only for budget controllers -->
-            <div class="form-group" v-if="userRole === 2">
-              <label for="edit-provider">Assigned Provider</label>
-              <select id="edit-provider" v-model="editingJob.assigned_provider_id">
-                <option value="">No Provider Assigned</option>
-                <option v-for="provider in approvedProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
-                  {{ provider.name }}
-                </option>
-              </select>
-            </div>
-            <!-- Show current provider for reporting employees (read-only) -->
-            <div class="form-group" v-else-if="editingJob.assigned_provider_name">
-              <label>Assigned Provider</label>
-              <div class="readonly-field">{{ editingJob.assigned_provider_name }}</div>
-              <small class="form-help">Only Budget Controllers can change provider assignments</small>
             </div>
           </div>
 
@@ -1218,7 +1222,7 @@
 
           <div class="form-actions">
             <button type="button" @click="showEditJobModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary">
+            <button type="submit" class="btn-primary" :disabled="!clientProfile?.is_enabled">
               Update Job
             </button>
           </div>
@@ -1234,6 +1238,17 @@
         <div class="modal-header">
           <h3>Edit Business Profile</h3>
           <button @click="showEditProfileModal = false" class="close-btn">&times;</button>
+        </div>
+
+        <!-- Admin Disabled Notice -->
+        <div v-if="editingProfile && !editingProfile.is_enabled" class="admin-disabled-notice">
+          <div class="disabled-banner">
+            <div class="disabled-icon">⚠️</div>
+            <div class="disabled-content">
+              <h4>Account Administratively Disabled</h4>
+              <p>{{ editingProfile.disabled_reason || 'This account has been disabled by an administrator. Business profile edits are restricted.' }}</p>
+            </div>
+          </div>
         </div>
 
         <form @submit.prevent="updateClientProfile" class="profile-form">
@@ -1307,16 +1322,19 @@
 
             <div class="form-group">
               <label for="business-status">Status</label>
-              <select id="business-status" v-model="editingProfile.is_active">
+              <select id="business-status" v-model="editingProfile.is_active" :disabled="!editingProfile.is_enabled">
                 <option :value="true">Active</option>
                 <option :value="false">Inactive</option>
               </select>
+              <small v-if="!editingProfile.is_enabled" class="form-help text-red-600">
+                Status changes are restricted when account is administratively disabled
+              </small>
             </div>
           </div>
 
           <div class="form-actions">
             <button type="button" @click="showEditProfileModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary" :disabled="updatingProfile">
+            <button type="submit" class="btn-primary" :disabled="updatingProfile || !editingProfile?.is_enabled">
               {{ updatingProfile ? 'Updating Profile...' : 'Update Profile' }}
             </button>
           </div>
@@ -1344,7 +1362,7 @@
 <script>
 import ImageUpload from '@/components/ImageUpload.vue'
 import QrScanner from '@/components/QrScanner.vue'
-import { apiFetch } from '@/utils/api.js'
+import { apiFetch, handleTokenExpiration } from '@/utils/api.js'
 
 export default {
   name: 'ClientDashboard',
@@ -1455,6 +1473,11 @@ export default {
     }
   },
   mounted() {
+    // Handle expired token on component mount
+    if (handleTokenExpiration()) {
+      return // Stop execution if token was expired and user was redirected
+    }
+
     this.checkUserPermissions()
     this.loadClientProfile()
     this.loadUsers()
@@ -1592,7 +1615,7 @@ export default {
         id: user.id,
         username: user.username,
         email: user.email,
-        mobile: user.mobile || '',
+        mobile: user.phone || '',  // Use user.phone, not user.mobile
         role_id: user.role_id,
         newPassword: ''
       }
@@ -1611,6 +1634,7 @@ export default {
         const updateData = {
           user_id: this.editingUser.id,
           email: this.editingUser.email,
+          mobile: this.editingUser.mobile || null,
           role_id: this.editingUser.role_id
         }
 
@@ -1846,6 +1870,12 @@ export default {
     },
 
     async assignJob(jobId, providerId) {
+      // Check if client account is administratively disabled
+      if (!this.clientProfile?.is_enabled) {
+        alert('Cannot assign jobs when account is administratively disabled. Please contact support.')
+        return
+      }
+
       try {
         const response = await apiFetch('/backend/api/client-jobs.php', {
           method: 'PUT',
@@ -2553,6 +2583,13 @@ export default {
     // Open image in modal for full-size view
     openImageModal(image) {
       this.selectedImage = image
+    },
+
+    // Handle provider selection change - automatically set status to 'Assigned'
+    onProviderSelected() {
+      if (this.editingJob.assigned_provider_id && this.editingJob.job_status !== 'Assigned' && this.editingJob.job_status !== 'Quote Requested') {
+        this.editingJob.job_status = 'Assigned'
+      }
     }
 
 
@@ -3673,6 +3710,41 @@ export default {
 .status-badge.inactive {
   background: #dc3545;
   color: white;
+}
+
+/* Admin Disabled Notice */
+.admin-disabled-notice {
+  background: #fff3cd;
+  border: 1px solid #ffeeba;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.disabled-banner {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.disabled-icon {
+  font-size: 24px;
+  color: #856404;
+  flex-shrink: 0;
+}
+
+.disabled-content h4 {
+  margin: 0 0 8px 0;
+  color: #856404;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.disabled-content p {
+  margin: 0;
+  color: #856404;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 /* Profile Form Styles */

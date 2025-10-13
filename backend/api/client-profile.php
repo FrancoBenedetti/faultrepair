@@ -39,23 +39,21 @@ if ($entity_type !== 'client') {
     exit;
 }
 
-// Only budget controllers can manage client profiles
-if ($role_id !== 2) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Access denied. Budget Controller role required to manage client profile.']);
-    exit;
-}
-
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        // Get client profile
+        // Get client profile (both roles can view)
         getClientProfile($entity_id);
         break;
 
     case 'PUT':
-        // Update client profile
+        // Only budget controllers can update client profiles
+        if ($role_id !== 2) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Access denied. Budget Controller role required to update client profile.']);
+            exit;
+        }
         updateClientProfile($entity_id);
         break;
 
@@ -73,7 +71,8 @@ function getClientProfile($participant_id) {
         $stmt = $pdo->prepare("
             SELECT participantId as id, name, address, website, manager_name, manager_email,
                    manager_phone, vat_number, business_registration_number,
-                   description, logo_url, is_active, created_at, updated_at
+                   description, logo_url, is_active, is_enabled, disabled_reason,
+                   created_at, updated_at
             FROM participants
             WHERE participantId = ?
         ");
@@ -114,6 +113,29 @@ function updateClientProfile($client_id) {
     }
 
     try {
+        // First check if account is administratively disabled
+        $stmt = $pdo->prepare("SELECT is_enabled, disabled_reason FROM participants WHERE participantId = ?");
+        $stmt->execute([$client_id]);
+        $participant = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$participant['is_enabled']) {
+            http_response_code(403);
+            echo json_encode([
+                'error' => 'Account is administratively disabled',
+                'disabled_reason' => $participant['disabled_reason'] ?? 'Account suspended by administrator'
+            ]);
+            return;
+        }
+
+        // Check if trying to modify is_active field when client is admin-disabled
+        if (isset($data['is_active']) && !$participant['is_enabled']) {
+            http_response_code(403);
+            echo json_encode([
+                'error' => 'Cannot modify status when account is administratively disabled'
+            ]);
+            return;
+        }
+
         $pdo->beginTransaction();
 
         // Update basic profile information

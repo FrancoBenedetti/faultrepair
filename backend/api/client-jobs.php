@@ -133,6 +133,20 @@ try {
             exit;
         }
 
+        // First check if client account is enabled
+        $stmt = $pdo->prepare("SELECT is_enabled, disabled_reason FROM participants WHERE participantId = ?");
+        $stmt->execute([$entity_id]);
+        $participant = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$participant['is_enabled']) {
+            http_response_code(403);
+            echo json_encode([
+                'error' => 'Account is administratively disabled',
+                'disabled_reason' => $participant['disabled_reason'] ?? 'Account suspended by administrator'
+            ]);
+            exit;
+        }
+
         // Check if client has any locations defined
         $stmt = $pdo->prepare("SELECT COUNT(*) as location_count FROM locations WHERE participant_id = ?");
         $stmt->execute([$entity_id]);
@@ -258,6 +272,20 @@ try {
         if (!$stmt->fetch()) {
             http_response_code(403);
             echo json_encode(['error' => 'Access denied. Job not found or does not belong to your organization.']);
+            exit;
+        }
+
+        // First check if client account is enabled
+        $stmt = $pdo->prepare("SELECT is_enabled, disabled_reason FROM participants WHERE participantId = ?");
+        $stmt->execute([$entity_id]);
+        $participant = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$participant['is_enabled']) {
+            http_response_code(403);
+            echo json_encode([
+                'error' => 'Account is administratively disabled',
+                'disabled_reason' => $participant['disabled_reason'] ?? 'Account suspended by administrator'
+            ]);
             exit;
         }
 
