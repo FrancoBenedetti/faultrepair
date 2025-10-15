@@ -958,7 +958,15 @@ try {
             const action = document.getElementById('user-action').value;
             const reason = document.getElementById('disable-reason').value;
 
-            const endpoint = action === 'enable' ? 'enable_' + entityType : 'disable_' + entityType;
+            // Map frontend entity types to backend endpoint types
+            let backendEntityType = entityType;
+            if (entityType === 'service_provider') {
+                backendEntityType = 'sp';
+            } else if (entityType === 'client') {
+                backendEntityType = 'client';
+            }
+
+            const endpoint = action + '_' + backendEntityType;
 
             try {
                 const response = await fetch(`../backend/api/admin.php?action=${endpoint}&token=${token}`, {

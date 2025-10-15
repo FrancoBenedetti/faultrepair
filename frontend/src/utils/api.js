@@ -43,6 +43,93 @@ export const handleTokenExpiration = () => {
   return false;
 };
 
+// Cache for role settings
+let roleSettingsCache = null;
+let roleSettingsCacheExpiry = null;
+
+export const loadRoleSettings = async () => {
+  console.log('🔧 loadRoleSettings: Starting role settings load');
+
+  // Check cache first
+  if (roleSettingsCache && roleSettingsCacheExpiry && Date.now() < roleSettingsCacheExpiry) {
+    console.log('🔧 loadRoleSettings: Returning cached role settings:', roleSettingsCache);
+    return roleSettingsCache;
+  }
+
+  // Get current user role for API access decisions - ADMIN USERS ONLY ACCESS SITE SETTINGS API
+  // ALL users get roles directly from user_roles table via site-settings API
+  const token = localStorage.getItem('token');
+  if (!token) {
+    console.log('🔧 loadRoleSettings: No token found, returning null');
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const roleId = payload.role_id;
+    const userId = payload.user_id;
+
+    console.log('🔧 loadRoleSettings: User role_id:', roleId, 'user_id:', userId);
+
+    // ALWAYS fetch from site-settings API for ALL authenticated users
+    // The API will return merged settings (user_roles table + site settings overrides)
+    console.log('🔧 loadRoleSettings: Fetching role settings from site-settings API for all authenticated users');
+
+    try {
+      const response = await apiFetch('/backend/api/site-settings.php');
+      console.log('🔧 loadRoleSettings: Site settings API response received, ok:', response.ok);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🔧 loadRoleSettings: Site settings API data:', data);
+
+        if (data.role_settings) {
+          // Cache the final role settings for 5 minutes
+          roleSettingsCache = data.role_settings;
+          roleSettingsCacheExpiry = Date.now() + (5 * 60 * 1000);
+          console.log('🔧 loadRoleSettings: Cached roleSettings from API:', roleSettingsCache);
+          console.log('🔧 loadRoleSettings: Returning final roleSettings:', roleSettingsCache);
+          return roleSettingsCache;
+        } else {
+          console.warn('🔧 loadRoleSettings: API response missing role_settings, using emergency defaults');
+        }
+      } else {
+        console.warn('🔧 loadRoleSettings: Site settings API response not ok:', response.status);
+      }
+    } catch (apiError) {
+      console.warn('🔧 loadRoleSettings: Failed to fetch site settings API:', apiError);
+    }
+
+  } catch (error) {
+    console.warn('🔧 loadRoleSettings: Failed to parse token:', error);
+  }
+
+  // Emergency fallback - use hardcoded defaults that match user_roles table
+  console.log('🔧 loadRoleSettings: Using emergency fallback defaults');
+  const emergencyDefaults = {
+    1: 'Client User',
+    2: 'Client Admin',
+    3: 'Service Provider Admin',
+    4: 'Service Provider Technician',
+    5: 'System Administrator'
+  };
+
+  // Cache emergency defaults for 1 minute only (shorter cache time)
+  roleSettingsCache = emergencyDefaults;
+  roleSettingsCacheExpiry = Date.now() + (1 * 60 * 1000); // 1 minute cache
+  console.log('🔧 loadRoleSettings: Returning emergency fallback:', emergencyDefaults);
+  return emergencyDefaults;
+};
+
+// Ensure no duplicate getRoleDisplayName functions exist
+export const getRoleDisplayName = async (roleId) => {
+  console.log('🔧 getRoleDisplayName called with roleId:', roleId);
+  const roleSettings = await loadRoleSettings();
+  const result = roleSettings[roleId] || `Role ${roleId}`;
+  console.log('🔧 getRoleDisplayName returning:', result, 'for roleId:', roleId);
+  return result;
+};
+
 export const apiFetch = async (endpoint, options = {}) => {
   // Check for expired token before making request
   if (handleTokenExpiration()) {

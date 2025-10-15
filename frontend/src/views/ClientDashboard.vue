@@ -15,7 +15,7 @@
                 <span class="text-sm font-medium text-gray-700">Signed in as:</span>
                 <span class="text-sm font-semibold text-gray-900">{{ getCurrentUserName() }}</span>
                 <span class="user-role-badge" :class="getRoleBadgeClass(userRole)">
-                  {{ getRoleDisplayName(userRole) }}
+                  {{ roleDisplayNames && roleDisplayNames[userRole] ? roleDisplayNames[userRole] : getFallbackRoleName(userRole) }}
                 </span>
               </div>
               <div class="organization-info flex items-center gap-2">
@@ -588,12 +588,12 @@
         <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
           <div class="flex-1">
             <h2 class="text-title-large text-on-surface mb-0">Job Management</h2>
-            <div v-if="!clientProfile?.is_enabled" class="admin-disabled-warning mt-3">
+            <div v-if="clientProfile && (clientProfile.is_enabled === false || clientProfile.is_enabled === 0 || clientProfile.is_enabled === '0')" class="admin-disabled-warning mt-3">
               <div class="disabled-banner">
                 <div class="disabled-icon">⚠️</div>
                 <div class="disabled-content">
                   <h4>Account Administratively Disabled</h4>
-                  <p>Service request creation is restricted. {{ clientProfile?.disabled_reason || 'Please contact support for assistance.' }}</p>
+                  <p>Service request creation is restricted. {{ clientProfile.disabled_reason || 'Please contact support for assistance.' }}</p>
                 </div>
               </div>
             </div>
@@ -1362,7 +1362,7 @@
 <script>
 import ImageUpload from '@/components/ImageUpload.vue'
 import QrScanner from '@/components/QrScanner.vue'
-import { apiFetch, handleTokenExpiration } from '@/utils/api.js'
+import { apiFetch, handleTokenExpiration, loadRoleSettings } from '@/utils/api.js'
 
 export default {
   name: 'ClientDashboard',
@@ -1372,6 +1372,7 @@ export default {
   },
   data() {
     return {
+      roleDisplayNames: {}, // Store role names loaded from site settings
       users: null, // Start as null to show loading state
       approvedProviders: null, // Start as null to show loading state
       jobs: null, // Start as null to show loading state
@@ -1384,6 +1385,7 @@ export default {
       profileCompleteness: 0,
       clientProfile: null, // Client profile data
       clientProfileCompleteness: 0, // Client profile completeness percentage
+      wasEnabled: true, // Track if account was previously enabled
       showAddUserModal: false,
       showEditUserModal: false,
       showCreateJobModal: false,
@@ -1472,19 +1474,34 @@ export default {
       }
     }
   },
-  mounted() {
+  async mounted() {
     // Handle expired token on component mount
     if (handleTokenExpiration()) {
       return // Stop execution if token was expired and user was redirected
     }
 
     this.checkUserPermissions()
+
+    // Load role settings first so they're available for role display
+    try {
+      const settings = await loadRoleSettings()
+      this.roleDisplayNames = settings || {}
+    } catch (error) {
+      console.warn('Failed to load role settings, using defaults:', error)
+      this.roleDisplayNames = {}
+    }
+
     this.loadClientProfile()
     this.loadUsers()
     this.loadApprovedProviders()
     this.loadAvailableRoles()
     this.loadLocations()
     this.loadJobs()
+  },
+  computed: {
+    getProfileDisabled() {
+      return this.editingProfile && !this.editingProfile.is_enabled
+    }
   },
   watch: {
     users() {
@@ -1566,11 +1583,20 @@ export default {
     },
 
     async loadAvailableRoles() {
-      // Load available roles for client users
-      this.availableRoles = [
-        { id: 1, name: 'Reporting Employee' },
-        { id: 2, name: 'Site Budget Controller' }
-      ]
+      // Load available roles for client users from site settings or database
+      const settings = await loadRoleSettings()
+      this.availableRoles = Object.entries(settings).map(([id, name]) => ({
+        id: parseInt(id),
+        name: name
+      })).filter(role => role.id === 1 || role.id === 2) // Only show client roles
+
+      // Ensure we always have the basic client roles even if settings are empty
+      if (this.availableRoles.length === 0) {
+        this.availableRoles = [
+          { id: 1, name: 'Reporting Employee' },
+          { id: 2, name: 'Site Budget Controller' }
+        ];
+      }
     },
 
     async addUser() {
@@ -2230,12 +2256,19 @@ export default {
         const userData = localStorage.getItem('user')
         if (userData) {
           const user = JSON.parse(userData)
+          // Return first_name + last_name if available, fallback to username
+          if (user.first_name && user.last_name) {
+            return `${user.first_name} ${user.last_name}`.trim()
+          }
           return user.username || 'User'
         }
 
         // Fallback: find current user in users array
         if (this.users && this.users.length > 0 && this.userId) {
           const currentUser = this.users.find(u => u.id == this.userId)
+          if (currentUser && currentUser.first_name && currentUser.last_name) {
+            return `${currentUser.first_name} ${currentUser.last_name}`.trim()
+          }
           return currentUser ? currentUser.username : 'User'
         }
 
@@ -2311,8 +2344,10 @@ export default {
 
         if (response.ok) {
           const data = await response.json()
+          console.log('ClientDashboard: Loading client profile:', data)
           this.clientProfile = data.profile
           this.clientProfileCompleteness = data.profile_completeness
+          console.log('ClientDashboard: Profile loaded. is_enabled:', this.clientProfile?.is_enabled, 'type:', typeof this.clientProfile?.is_enabled)
         } else {
           console.error('Failed to load client profile')
           this.clientProfile = null
@@ -2361,7 +2396,8 @@ export default {
           manager_phone: this.clientProfile.manager_phone || '',
           vat_number: this.clientProfile.vat_number || '',
           business_registration_number: this.clientProfile.business_registration_number || '',
-          is_active: this.clientProfile.is_active !== false
+          is_active: this.clientProfile.is_active !== false,
+          is_enabled: this.clientProfile.is_enabled
         }
       } else {
         this.editingProfile = {
@@ -2374,7 +2410,8 @@ export default {
           manager_phone: '',
           vat_number: '',
           business_registration_number: '',
-          is_active: true
+          is_active: true,
+          is_enabled: true
         }
       }
     },
@@ -2383,12 +2420,21 @@ export default {
       return this.clientProfile?.name || 'Organization'
     },
 
-    getRoleDisplayName(role) {
-      const roleNames = {
-        1: 'Reporting Employee',
-        2: 'Site Budget Controller'
+    async getRoleDisplayName(role) {
+      // Load dynamic role names from site settings
+      const settings = await loadRoleSettings()
+      return settings[role] || 'User'
+    },
+
+    getFallbackRoleName(roleId) {
+      switch (roleId) {
+        case 1:
+          return 'Client User'
+        case 2:
+          return 'Client Admin'
+        default:
+          return `Role ${roleId}`
       }
-      return roleNames[role] || 'User'
     },
 
     getRoleBadgeClass(role) {

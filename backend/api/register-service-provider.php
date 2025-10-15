@@ -91,16 +91,13 @@ try {
     $stmt = $pdo->prepare("INSERT INTO subscriptions (participantId, subscription_tier, status, monthly_job_limit) VALUES (?, 'free', 'active', 4)");
     $stmt->execute([$providerId]);
 
-    // Get default role for service providers (Service Provider Admin)
-    $stmt = $pdo->prepare("SELECT roleId as id FROM user_roles WHERE name = 'Service Provider Admin'");
-    $stmt->execute();
-    $role = $stmt->fetch();
-    if (!$role) {
-        $pdo->rollBack();
-        http_response_code(500);
-        echo json_encode(['error' => 'Default role not found']);
-        exit;
-    }
+    // Get default role for service providers (role_id 3 = Service Provider Admin)
+    // First user created for a service provider becomes admin, subsequent users are technicians
+    $stmt = $pdo->prepare("SELECT COUNT(*) as user_count FROM users WHERE entity_type = 'service_provider' AND entity_id = ?");
+    $stmt->execute([$providerId]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $default_role = ($result['user_count'] == 0) ? 3 : 4; // 3 = Admin, 4 = Technician
 
     // Hash password
     $passwordHash = password_hash($password, PASSWORD_DEFAULT);
@@ -110,8 +107,8 @@ try {
     $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
     // Insert user
-    $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, email, role_id, entity_id, is_active, email_verified, verification_token, token_expires) VALUES (?, ?, ?, ?, ?, FALSE, FALSE, ?, ?)");
-    $stmt->execute([$username, $passwordHash, $email, $role['id'], $providerId, $verificationToken, $tokenExpires]);
+    $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, email, role_id, entity_id, entity_type, is_active, email_verified, verification_token, token_expires) VALUES (?, ?, ?, ?, ?, 'service_provider', FALSE, FALSE, ?, ?)");
+    $stmt->execute([$username, $passwordHash, $email, $default_role, $providerId, $verificationToken, $tokenExpires]);
 
     $userId = $pdo->lastInsertId();
 

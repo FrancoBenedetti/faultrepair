@@ -16,7 +16,7 @@
                 <span class="text-sm font-medium text-gray-700">Signed in as:</span>
                 <span class="text-sm font-semibold text-gray-900">{{ getCurrentUserName() }}</span>
                 <span class="user-role-badge" :class="getRoleBadgeClass(userRole)">
-                  {{ getRoleDisplayName(userRole) }}
+                  {{ roleDisplayNames && roleDisplayNames[userRole] ? roleDisplayNames[userRole] : getFallbackRoleName(userRole) }}
                 </span>
               </div>
               <div class="organization-info flex items-center gap-2">
@@ -29,7 +29,10 @@
           <div class="subscription-info flex items-center gap-4">
             <div class="subscription-badge flex items-center gap-2 px-3 py-1 bg-white border border-gray-300 rounded-full">
               <span class="material-icon-sm text-green-600">workspace_premium</span>
-              <span class="text-xs font-medium text-gray-700">Premium Plan</span>
+              <span class="text-xs font-medium text-gray-700">{{ getSubscriptionDisplayName() }}</span>
+            </div>
+            <div v-if="subscription && currentUsage" class="text-xs text-gray-500">
+              {{ currentUsage.jobs }}/{{ limits.jobs_per_year }} jobs used
             </div>
           </div>
         </div>
@@ -126,10 +129,10 @@
                   </span>
                 </div>
                 <div class="job-actions flex gap-2">
-                  <button v-if="userRole === 3 || (userRole === 4 && job.job_status !== 'In Progress')" @click="viewJobDetails(job)" class="btn-outlined btn-small">
+                  <button v-if="userRole === 3 || (userRole === 4 && (job.assigned_technician_user_id == currentUserId || job.job_status !== 'In Progress'))" @click="viewJobDetails(job)" class="btn-outlined btn-small">
                     <span class="material-icon-sm">visibility</span>
                   </button>
-                  <button v-if="userRole === 3 || (userRole === 4 && job.job_status === 'In Progress')" @click="editJob(job)" class="btn-outlined btn-small" :title="userRole === 3 ? 'Edit/Allocate Job' : 'Update Job Status'">
+                  <button v-if="userRole === 3 || (userRole === 4 && job.assigned_technician_user_id == currentUserId)" @click="editJob(job)" class="btn-outlined btn-small" :title="userRole === 3 ? 'Edit/Allocate Job' : 'Update Job Status'">
                     <span class="material-icon-sm">edit</span>
                   </button>
                 </div>
@@ -194,7 +197,7 @@
     </div>
 
     <!-- Business Profile Section - Only for service provider admins -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" v-if="userRole === 4">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" v-if="userRole === 3">
       <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
         <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('profile')" style="cursor: pointer;">
           <div class="section-title flex items-center gap-3">
@@ -469,42 +472,56 @@
         </div>
       </div>
 
-      <!-- Technicians Section -->
-      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('technicians')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.technicians }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-              <span class="material-icon text-blue-600">engineering</span>
-              Technicians
-            </h2>
-          </div>
-          <button @click.stop="openAddTechnicianModal" class="btn-filled flex items-center gap-2">
-            <span class="material-icon-sm">person_add</span>
-            Add Technician
+    <!-- Users Section -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8" v-if="userRole === 3">
+      <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('technicians')" style="cursor: pointer;">
+        <div class="section-title flex items-center gap-3">
+          <button class="expand-btn" :class="{ expanded: sectionsExpanded.technicians }">
+            <span class="material-icon-sm">expand_more</span>
           </button>
+          <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+            <span class="material-icon text-blue-600">group</span>
+            Users
+          </h2>
         </div>
+        <button @click.stop="openAddTechnicianModal" class="btn-filled flex items-center gap-2">
+          <span class="material-icon-sm">person_add</span>
+          Add User
+        </button>
+      </div>
 
         <div v-show="sectionsExpanded.technicians" class="section-content transition-all duration-300 ease-in-out">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div v-for="technician in technicians" :key="technician.id" class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
               <div class="flex justify-between items-center p-4 bg-gray-50 border-b border-gray-200">
                 <div class="flex items-center gap-3">
-                  <div class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
-                    <span class="material-icon text-white">{{ technician.full_name.charAt(0) }}</span>
+                  <div class="w-12 h-12 rounded-full flex items-center justify-center" :class="technician.role_id === 3 ? 'bg-blue-600' : 'bg-purple-600'">
+                    <span class="material-icon text-white">{{
+                      technician && technician.full_name ?
+                        technician.full_name.charAt(0).toUpperCase() :
+                        technician && technician.username ?
+                        technician.username.charAt(0).toUpperCase() :
+                        'T'
+                    }}</span>
                   </div>
                   <div>
-                    <h3 class="font-semibold text-gray-900">{{ technician.full_name }}</h3>
-                    <span :class="[
-                      'px-2 py-1 rounded-full text-xs font-medium',
-                      technician.is_active
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    ]">
-                      {{ technician.is_active ? 'Active' : 'Inactive' }}
-                    </span>
+                    <h3 class="font-semibold text-gray-900">{{ technician.full_name || 'Unnamed User' }}</h3>
+                    <div class="flex gap-2">
+                      <span :class="[
+                        'px-2 py-1 rounded-full text-xs font-medium',
+                        technician.role_id === 3 ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                      ]">
+                        {{ technician.role_id === 3 ? 'Administrator' : 'Technician' }}
+                      </span>
+                      <span :class="[
+                        'px-2 py-1 rounded-full text-xs font-medium',
+                        technician.is_active
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      ]">
+                        {{ technician.is_active ? 'Active' : 'Inactive' }}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div class="flex gap-2">
@@ -815,14 +832,13 @@
                 <span class="material-icon-sm text-gray-500">toggle_on</span>
                 Status
               </label>
-              <select
+              <input
+                type="text"
                 id="business-status"
-                v-model="editForm.is_active"
+                :value="editForm.is_active ? 'Active' : 'Inactive'"
                 class="form-input"
+                readonly
               >
-                <option :value="true">Active</option>
-                <option :value="false">Inactive</option>
-              </select>
             </div>
           </div>
 
@@ -869,11 +885,11 @@
         </div>
 
         <!-- Content -->
-        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Available Services -->
-            <div class="space-y-4">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <!-- Available Services Section -->
+            <div class="bg-gray-50 rounded-lg p-6 space-y-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
                 <span class="material-icon-sm text-blue-600">list</span>
                 Available Services
               </h4>
@@ -893,9 +909,9 @@
               </div>
             </div>
 
-            <!-- Selected Services -->
-            <div class="space-y-4">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <!-- Selected Services Section -->
+            <div class="bg-gray-50 rounded-lg p-6 space-y-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
                 <span class="material-icon-sm text-green-600">check_circle</span>
                 Selected Services
               </h4>
@@ -904,7 +920,7 @@
                 <p class="mt-2">No services selected</p>
               </div>
               <div v-else class="space-y-3 max-h-96 overflow-y-auto">
-                <div v-for="serviceId in selectedServices" :key="serviceId" class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <div v-for="serviceId in selectedServices" :key="serviceId" class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
                   <div class="flex-1">
                     <div class="font-medium text-gray-900">{{ getServiceName(serviceId) }}</div>
                   </div>
@@ -926,7 +942,7 @@
           </div>
 
           <!-- Form Actions -->
-          <div class="flex justify-end gap-3 pt-6 border-t border-gray-200 mt-6">
+          <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
             <button
               type="button"
               @click="showServicesModal = false"
@@ -969,11 +985,11 @@
         </div>
 
         <!-- Content -->
-        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Available Regions -->
-            <div class="space-y-4">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <!-- Available Regions Section -->
+            <div class="bg-gray-50 rounded-lg p-6 space-y-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
                 <span class="material-icon-sm text-green-600">list</span>
                 Available Regions
               </h4>
@@ -993,9 +1009,9 @@
               </div>
             </div>
 
-            <!-- Selected Regions -->
-            <div class="space-y-4">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <!-- Selected Regions Section -->
+            <div class="bg-gray-50 rounded-lg p-6 space-y-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
                 <span class="material-icon-sm text-blue-600">check_circle</span>
                 Selected Regions
               </h4>
@@ -1004,7 +1020,7 @@
                 <p class="mt-2">No regions selected</p>
               </div>
               <div v-else class="space-y-3 max-h-96 overflow-y-auto">
-                <div v-for="regionId in selectedRegions" :key="regionId" class="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <div v-for="regionId in selectedRegions" :key="regionId" class="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
                   <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
                     <span class="material-icon-sm text-white">location_on</span>
                   </div>
@@ -1017,7 +1033,7 @@
           </div>
 
           <!-- Form Actions -->
-          <div class="flex justify-end gap-3 pt-6 border-t border-gray-200 mt-6">
+          <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
             <button
               type="button"
               @click="showRegionsModal = false"
@@ -1217,6 +1233,23 @@
             </div>
           </div>
 
+          <!-- Phone Row -->
+          <div class="grid grid-cols-1 gap-4">
+            <div>
+              <label for="edit_phone" class="form-label flex items-center gap-2">
+                <span class="material-icon-sm text-gray-500">phone</span>
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                id="edit_phone"
+                v-model="technicianForm.phone"
+                class="form-input"
+                placeholder="Enter phone number"
+              >
+            </div>
+          </div>
+
           <!-- First Name and Last Name Row -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -1249,7 +1282,25 @@
 
           <!-- Phone and Status Row -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div v-if="userRole === 3">
+              <label for="edit_role" class="form-label flex items-center gap-2">
+                <span class="material-icon-sm text-gray-500">admin_panel_settings</span>
+                Role
+              </label>
+              <select
+                id="edit_role"
+                v-model="technicianForm.role_id"
+                class="form-input"
+                :disabled="editingTechnician && editingTechnician.id === currentUserId"
+              >
+                <option value="3" :disabled="editingTechnician && editingTechnician.id === currentUserId">Service Provider Admin</option>
+                <option value="4">Technician</option>
+              </select>
+              <small v-if="editingTechnician && editingTechnician.id === currentUserId" class="form-help text-sm text-gray-500 mt-1">
+                You cannot change your own role
+              </small>
+            </div>
+            <div :class="userRole === 3 ? '' : 'md:col-span-2'">
               <label for="edit_phone" class="form-label flex items-center gap-2">
                 <span class="material-icon-sm text-gray-500">phone</span>
                 Phone Number
@@ -1262,6 +1313,10 @@
                 placeholder="Enter phone number"
               >
             </div>
+          </div>
+
+          <!-- Status Row (for admin users) -->
+          <div v-if="userRole === 3" class="grid grid-cols-1 gap-4">
             <div>
               <label for="edit_status" class="form-label flex items-center gap-2">
                 <span class="material-icon-sm text-gray-500">toggle_on</span>
@@ -1417,141 +1472,179 @@
     </div>
 
     <!-- Edit Job Modal -->
-    <div v-if="showEditJobModal" class="modal-overlay" @click="showEditJobModal = false">
-      <div class="modal-content large-modal" @click.stop>
-        <div class="modal-header">
-          <h3 class="flex items-center gap-3">
+    <div v-if="showEditJobModal" class="fixed inset-0 z-50 flex items-center justify-center">
+      <!-- Overlay -->
+      <div class="absolute inset-0 bg-black/50" @click="showEditJobModal = false"></div>
+
+      <!-- Modal Content -->
+      <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden" @click.stop>
+        <!-- Header -->
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+          <h3 class="text-xl font-semibold text-gray-900 flex items-center gap-3">
             <span class="material-icon text-blue-600">edit</span>
             Edit Job: {{ editingJob?.item_identifier || 'No Item ID' }}
           </h3>
-          <button @click="showEditJobModal = false" class="close-btn">&times;</button>
+          <button @click="showEditJobModal = false" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
         </div>
 
-        <form v-if="editingJob" @submit.prevent="updateJob" class="job-form">
-          <!-- Status and Provider (provider assignment restricted to budget controllers) -->
-          <div class="form-row">
-            <div class="form-group">
-              <label for="edit-status">Status *</label>
-              <select id="edit-status" v-model="editingJob.job_status" required>
-                <option v-for="status in getAvailableStatuses(editingJob, userRole)" :key="status" :value="status">
-                  {{ status }}
-                </option>
-              </select>
-            </div>
-          </div>
+        <!-- Form -->
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
+          <form v-if="editingJob" @submit.prevent="updateJob" class="space-y-6">
 
-          <!-- Technician Selection (for In Progress status or when changing technicians) - Only for Admins -->
-          <div v-if="(editingJob.job_status === 'In Progress' || (originalJobStatus === 'In Progress' && editingJob.job_status === 'In Progress')) && userRole === 3" class="form-group">
-            <label for="edit-technician" class="form-label flex items-center gap-2">
-              <span class="material-icon-sm text-gray-500">engineering</span>
-              Assign Technician *
-            </label>
-            <select id="edit-technician" v-model="selectedTechnicianId" class="form-input">
-              <option value="">Select a technician...</option>
-              <option v-for="technician in technicians" :key="technician.id" :value="technician.id">
-                {{ technician.full_name }} ({{ technician.username }})
-              </option>
-            </select>
-            <small class="form-help">A technician must be assigned for jobs in "In Progress" status</small>
-          </div>
+            <!-- Job Status Section -->
+            <div class="bg-gray-50 rounded-lg p-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                <span class="material-icon-sm text-blue-600">flag</span>
+                Job Status Management
+              </h4>
 
-          <!-- Provider assignment only for budget controllers -->
-          <div class="form-group" v-if="userRole === 2">
-            <label for="edit-provider">Assigned Provider</label>
-            <select id="edit-provider" v-model="editingJob.assigned_provider_id">
-              <option value="">No Provider Assigned</option>
-              <option v-for="provider in approvedProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
-                {{ provider.name }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Show current provider for reporting employees (read-only) -->
-          <div class="form-group" v-else-if="editingJob.assigned_provider_name">
-            <label>Assigned Provider</label>
-            <div class="readonly-field">{{ editingJob.assigned_provider_name }}</div>
-            <small class="form-help">Only Budget Controllers can change provider assignments</small>
-          </div>
-
-          <!-- Full details (only editable when status is 'Reported') -->
-          <div v-if="canEditJobDetails(editingJob)" class="edit-details-section">
-            <h4>Job Details</h4>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="edit-item-identifier">Item Identifier</label>
-                <input type="text" id="edit-item-identifier" v-model="editingJob.item_identifier"
-                       placeholder="e.g., Computer-001, Printer-ABC">
-                <small class="form-help">Optional: Unique identifier for the item</small>
-              </div>
-              <div class="form-group">
-                <label for="edit-contact-person">Contact Person</label>
-                    <input type="text" id="edit-contact-person" v-model="editingJob.contact_person"
-                       placeholder="Person to contact about this service request">
-                <small class="form-help">Optional: Who should the technician contact?</small>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-2">
+                  <label for="edit-status" class="form-label">Status *</label>
+                  <select id="edit-status" v-model="editingJob.job_status" required class="form-input">
+                    <option v-for="status in getAvailableStatuses(editingJob, userRole)" :key="status" :value="status">
+                      {{ status }}
+                    </option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            <div class="form-group">
-              <label for="edit-fault-description">Service Description *</label>
-              <textarea id="edit-fault-description" v-model="editingJob.fault_description" required
-                        rows="4" placeholder="Describe the service request in detail..."></textarea>
-            </div>
+            <!-- Technician Assignment Section -->
+            <div v-if="(editingJob.job_status === 'In Progress' || (originalJobStatus === 'In Progress' && editingJob.job_status === 'In Progress')) && userRole === 3" class="bg-gray-50 rounded-lg p-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                <span class="material-icon-sm text-purple-600">engineering</span>
+                Technician Assignment
+              </h4>
 
-            <!-- Image Upload Section for editing -->
-            <div class="form-group">
-              <label>Attach Additional Images</label>
-              <ImageUpload
-                ref="editImageUpload"
-                :max-images="10"
-                :max-file-size="10 * 1024 * 1024"
-                @images-changed="handleEditImagesChanged"
-              />
-            </div>
-          </div>
-
-          <!-- Technician Notes (visible to service providers only) -->
-          <div v-if="userRole === 3 || userRole === 4" class="technician-notes-section">
-            <h4>Technician Notes</h4>
-            <div class="form-group">
-              <label for="edit-technician-notes">Technician Notes</label>
-              <textarea id="edit-technician-notes" v-model="editingJob.technician_notes"
-                        rows="4" placeholder="Internal notes for technicians and service providers..."></textarea>
-              <small class="form-help">These notes are only visible to service providers and technicians</small>
-            </div>
-          </div>
-
-          <!-- Read-only details when not fully editable -->
-          <div v-else class="readonly-details-section">
-            <h4>Job Details (Read Only)</h4>
-
-            <div class="readonly-info">
-              <div class="info-row">
-                <label>Item Identifier:</label>
-                <span>{{ editingJob.item_identifier || 'Not specified' }}</span>
-              </div>
-              <div class="info-row">
-                <label>Contact Person:</label>
-                <span>{{ editingJob.contact_person || 'Not specified' }}</span>
-              </div>
-              <div class="info-row">
-                <label>Service Description:</label>
-                <span>{{ editingJob.fault_description }}</span>
+              <div class="space-y-2">
+                <label for="edit-technician" class="form-label flex items-center gap-2">
+                  <span class="material-icon-sm text-gray-500">engineering</span>
+                  Assign Technician *
+                </label>
+                <select id="edit-technician" v-model="selectedTechnicianId" class="form-input">
+                  <option value="">Select a technician...</option>
+                  <option v-for="technician in technicians" :key="technician.id" :value="technician.id">
+                    {{ technician.full_name }} ({{ technician.username }})
+                  </option>
+                </select>
+                <small class="form-help text-sm text-gray-600">A technician must be assigned for jobs in "In Progress" status</small>
               </div>
             </div>
-          </div>
 
-          <!-- Existing Images Gallery -->
-          <div class="images-section">
-            <h4>Attached Images ({{ editingJob.images?.length || 0 }})</h4>
+            <!-- Provider Assignment Section -->
+            <div v-if="userRole === 2" class="bg-gray-50 rounded-lg p-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                <span class="material-icon-sm text-green-600">business</span>
+                Provider Assignment
+              </h4>
 
-            <div v-if="!editingJob.images || editingJob.images.length === 0" class="no-images">
-              <div class="no-images-icon">📷</div>
-              <p>No images attached to this job</p>
+              <div class="space-y-2">
+                <label for="edit-provider" class="form-label">Assigned Provider</label>
+                <select id="edit-provider" v-model="editingJob.assigned_provider_id" class="form-input">
+                  <option value="">No Provider Assigned</option>
+                  <option v-for="provider in approvedProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
+                    {{ provider.name }}
+                  </option>
+                </select>
+              </div>
             </div>
 
-            <div v-else class="images-gallery">
-              <div class="gallery-grid">
+            <!-- Job Details Section (only editable when status is 'Reported') -->
+            <div v-if="canEditJobDetails(editingJob)" class="bg-gray-50 rounded-lg p-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                <span class="material-icon-sm text-orange-600">description</span>
+                Job Details
+              </h4>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="space-y-2">
+                  <label for="edit-item-identifier" class="form-label">Item Identifier</label>
+                  <input type="text" id="edit-item-identifier" v-model="editingJob.item_identifier"
+                         class="form-input"
+                         placeholder="e.g., Computer-001, Printer-ABC">
+                  <small class="form-help text-sm text-gray-600">Optional: Unique identifier for the item</small>
+                </div>
+                <div class="space-y-2">
+                  <label for="edit-contact-person" class="form-label">Contact Person</label>
+                  <input type="text" id="edit-contact-person" v-model="editingJob.contact_person"
+                         class="form-input"
+                         placeholder="Person to contact about this service request">
+                  <small class="form-help text-sm text-gray-600">Optional: Who should the technician contact?</small>
+                </div>
+              </div>
+
+              <div class="space-y-2 mb-4">
+                <label for="edit-fault-description" class="form-label">Service Description *</label>
+                <textarea id="edit-fault-description" v-model="editingJob.fault_description" required
+                          rows="4" class="form-input resize-none"
+                          placeholder="Describe the service request in detail..."></textarea>
+              </div>
+
+              <!-- Image Upload Section for editing -->
+              <div class="space-y-2">
+                <label class="form-label">Attach Additional Images</label>
+                <ImageUpload
+                  ref="editImageUpload"
+                  :max-images="10"
+                  :max-file-size="10 * 1024 * 1024"
+                  @images-changed="handleEditImagesChanged"
+                />
+              </div>
+            </div>
+
+            <!-- Technician Notes Section (visible to service providers only) -->
+            <div v-if="userRole === 3 || userRole === 4" class="bg-gray-50 rounded-lg p-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                <span class="material-icon-sm text-indigo-600">notes</span>
+                Technician Notes
+              </h4>
+
+              <div class="space-y-2">
+                <label for="edit-technician-notes" class="form-label">Internal Notes</label>
+                <textarea id="edit-technician-notes" v-model="editingJob.technician_notes"
+                          rows="4" class="form-input resize-none"
+                          placeholder="Internal notes for technicians and service providers..."></textarea>
+                <small class="form-help text-sm text-gray-600">These notes are only visible to service providers and technicians</small>
+              </div>
+            </div>
+
+            <!-- Read-only details when not fully editable -->
+            <div v-else class="bg-gray-50 rounded-lg p-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                <span class="material-icon-sm text-blue-600">info</span>
+                Job Details (Read Only)
+              </h4>
+
+              <div class="space-y-3">
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500">Item Identifier:</span>
+                  <span class="text-sm text-gray-900 text-right">{{ editingJob.item_identifier || 'Not specified' }}</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500">Contact Person:</span>
+                  <span class="text-sm text-gray-900 text-right">{{ editingJob.contact_person || 'Not specified' }}</span>
+                </div>
+                <div class="flex justify-between items-start">
+                  <span class="text-sm font-medium text-gray-500">Service Description:</span>
+                  <span class="text-sm text-gray-900 text-right">{{ editingJob.fault_description }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Existing Images Section -->
+            <div class="bg-gray-50 rounded-lg p-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                <span class="material-icon-sm text-gray-600">image</span>
+                Attached Images ({{ editingJob.images?.length || 0 }})
+              </h4>
+
+              <div v-if="!editingJob.images || editingJob.images.length === 0" class="text-center py-8 text-gray-500">
+                <span class="material-icon text-4xl text-gray-300">image</span>
+                <p class="mt-2">No images attached to this job</p>
+              </div>
+
+              <div v-else class="gallery-grid">
                 <div v-for="image in editingJob.images" :key="image.id" class="gallery-item">
                   <img :src="generateImageUrl(image)"
                        :alt="image.original_filename"
@@ -1563,15 +1656,31 @@
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="form-actions">
-            <button type="button" @click="showEditJobModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary">
-              Update Job
-            </button>
-          </div>
-        </form>
+            <!-- Form Actions -->
+            <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                @click="showEditJobModal = false"
+                class="btn-filled flex items-center gap-2"
+                :disabled="loading"
+              >
+                <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
+                <span v-else class="material-icon-sm">cancel</span>
+                {{ loading ? 'Canceling...' : 'Cancel' }}
+              </button>
+              <button
+                type="submit"
+                class="btn-filled flex items-center gap-2"
+                :disabled="loading"
+              >
+                <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
+                <span v-else class="material-icon-sm">save</span>
+                {{ loading ? 'Updating...' : 'Update Job' }}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
 
@@ -1593,13 +1702,33 @@
 </template>
 
 <script>
-import { apiFetch } from '@/utils/api.js'
+import { apiFetch, loadRoleSettings } from '@/utils/api.js'
 
 export default {
   name: 'ServiceProviderDashboard',
+  computed: {
+    currentUserId() {
+      const token = localStorage.getItem('token')
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+          return payload.user_id
+        } catch (error) {
+          console.error('Error parsing token:', error)
+          return null
+        }
+      }
+      return null
+    }
+  },
   data() {
     return {
+      roleDisplayNames: {}, // Add this for role settings
       profile: {},
+      subscription: null,
+      pricing: null,
+      limits: null,
+      currentUsage: null,
       services: [],
       regions: [],
       approvedClients: [],
@@ -1662,17 +1791,33 @@ export default {
       }
     }
   },
-  mounted() {
-    this.getUserRole()
-    this.loadProfile()
-    this.loadAvailableOptions()
-    this.loadApprovedClients()
-    this.loadJobs()
-    if (this.userRole === 4) {
-      this.loadTechnicians()
+
+  async mounted() {
+    await this.getUserRole()
+    await this.loadRoleSettings()
+    await this.loadProfile()
+    await this.loadAvailableOptions()
+    await this.loadApprovedClients()
+    await this.loadSubscription()
+    await this.loadJobs()
+
+    // Admin users (role 3) need to load technicians to assign jobs, and profile visibility
+    // Technicians (role 4) need to load technicians only for their own profile
+    if (this.userRole === 3 || this.userRole === 4) {
+      await this.loadTechnicians()
     }
   },
   methods: {
+    async loadRoleSettings() {
+      try {
+        const settings = await loadRoleSettings()
+        this.roleDisplayNames = settings || {}
+      } catch (error) {
+        console.warn('Failed to load role settings:', error)
+        this.roleDisplayNames = {}
+      }
+    },
+
     // Generate authenticated image URL
     generateImageUrl(image) {
       const token = localStorage.getItem('token')
@@ -1761,39 +1906,66 @@ export default {
       return this.profile?.name || 'Service Provider'
     },
 
-    getRoleDisplayName(role) {
-      const roleNames = {
-        3: 'Admin',
-        4: 'Technician'
+    getFallbackRoleName(roleId) {
+      switch (roleId) {
+        case 3:
+          return 'Service Provider Admin'
+        case 4:
+          return 'Service Provider Technician'
+        default:
+          return `Role ${roleId}`
       }
-      return roleNames[role] || 'Service Provider'
     },
+
+
 
     getRoleBadgeClass(role) {
       return role === 3 ? 'role-admin' : 'role-technician'
     },
 
-    getCurrentUserName() {
-      // Get current user name from localStorage or technicians array
-      try {
-        const userData = localStorage.getItem('user')
-        if (userData) {
-          const user = JSON.parse(userData)
-          return user.username || 'User'
-        }
+getCurrentUserName() {
+  // Get current user name from localStorage, technicians array, or user data
+  try {
+    // Get current user ID from token
+    const currentUserId = JSON.parse(atob(localStorage.getItem('token').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).user_id
 
-        // Fallback: find current user in technicians array for technicians
-        if (this.userRole === 4 && this.technicians) {
-          const currentUserId = JSON.parse(atob(localStorage.getItem('token').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).user_id
-          const currentUser = this.technicians.find(t => t.id == currentUserId)
-          return currentUser ? currentUser.full_name || currentUser.username : 'User'
+    // First check if current user is in the technicians array (which now includes admins and technicians)
+    if (this.technicians) {
+      const currentUser = this.technicians.find(t => t.id == currentUserId)
+      if (currentUser) {
+        if (currentUser.first_name && currentUser.last_name) {
+          return `${currentUser.first_name} ${currentUser.last_name}`
         }
-
-        return 'User'
-      } catch (error) {
-        return 'User'
+        return currentUser.full_name || currentUser.username.replace(/@.*/, '') || 'User'
       }
-    },
+    }
+
+    // For service provider admins, try to get name from profile data (business profile)
+    if (this.userRole === 3 && this.profile) {
+      if (this.profile.manager_name) {
+        return this.profile.manager_name
+      }
+    }
+
+    // Fallback: try to get from user data cache in localStorage
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      const user = JSON.parse(userData)
+      // If we have first_name and last_name
+      if (user.first_name && user.last_name) {
+        return `${user.first_name} ${user.last_name}`
+      }
+      // If it's a client user or other, return username
+      return user.username || 'User'
+    }
+
+    // Last fallback
+    return this.userRole === 3 ? 'Administrator' : this.userRole === 4 ? 'Technician' : 'User'
+  } catch (error) {
+    console.error('Error getting current user name:', error)
+    return 'User'
+  }
+},
 
     async updateServices() {
       this.loading = true
@@ -2002,7 +2174,8 @@ export default {
         first_name: technician.first_name,
         last_name: technician.last_name,
         phone: technician.phone || '',
-        is_active: technician.is_active
+        is_active: technician.is_active,
+        role_id: technician.role_id || 4 // Default to technician role
       }
       this.showEditTechnicianModal = true
     },
@@ -2294,6 +2467,38 @@ export default {
 
     openImageModal(image) {
       this.selectedImage = image
+    },
+
+    // Fetch subscription data from API
+    async loadSubscription() {
+      try {
+        const response = await apiFetch('/backend/api/subscription.php?action=subscription')
+        if (response.ok) {
+          const data = await response.json()
+          this.subscription = data.subscription
+          this.pricing = data.pricing
+          this.limits = data.limits
+          this.currentUsage = data.current_usage
+        } else {
+          console.error('Failed to load subscription data')
+        }
+      } catch (error) {
+        console.error('Error loading subscription:', error)
+      }
+    },
+
+    // Format subscription tier display name
+    getSubscriptionDisplayName() {
+      if (!this.subscription) return 'Free Plan'
+
+      const tierMap = {
+        'free': 'Free Plan',
+        'basic': 'Basic Plan',
+        'advanced': 'Advanced Plan',
+        'premium': 'Premium Plan'
+      }
+
+      return tierMap[this.subscription.subscription_tier] || this.subscription.subscription_tier
     },
 
     // Section collapse/expand functionality

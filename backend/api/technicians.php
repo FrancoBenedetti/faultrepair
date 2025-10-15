@@ -9,7 +9,7 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    exit(0);
+    exit(0);    
 }
 
 // JWT Authentication - Read from query parameter for live server compatibility
@@ -32,8 +32,12 @@ try {
     exit;
 }
 
-// Verify user is a service provider admin
-if ($entity_type !== 'service_provider' || $role_id !== 3) {
+// Allow service provider admins (role_id 3) OR quickfix-admin user (role_id 4), OR system admins (role_id 5)
+$isAllowed = ($entity_type === 'service_provider' && $role_id === 3) ||
+             $role_id === 5 ||  // System Administrator
+             $role_id === 4;    // Allow all users with role_id 4 (including quickfix-admin)
+
+if (!$isAllowed) {
     http_response_code(403);
     echo json_encode(['error' => 'Access denied. Service provider admin access required.']);
     exit;
@@ -66,31 +70,61 @@ switch ($method) {
 
 function getTechnicians($provider_id) {
     global $pdo;
+    global $role_id;
+    global $entity_type;
+    global $user_id;
 
     try {
-        $stmt = $pdo->prepare("
-            SELECT
-                u.id,
-                u.username,
-                u.email,
-                u.created_at,
-                CONCAT(u.first_name, ' ', u.last_name) as full_name,
-                u.first_name,
-                u.last_name,
-                u.phone,
-                u.is_active
-            FROM users u
-            WHERE u.entity_type = 'service_provider'
-            AND u.entity_id = ?
-            AND u.role_id = 4
-            ORDER BY u.created_at DESC
-        ");
-        $stmt->execute([$provider_id]);
+        // For service provider admins (role_id 3), show technicians AND admins for their organization
+        if ($entity_type === 'service_provider' && $role_id === 3) {
+            $query = "
+                SELECT
+                    u.userId as id,
+                    u.username,
+                    u.email,
+                    u.created_at,
+                    CONCAT(u.first_name, ' ', u.last_name) as full_name,
+                    u.first_name,
+                    u.last_name,
+                    u.phone,
+                    u.is_active,
+                    u.role_id
+                FROM users u
+                WHERE u.entity_type = 'service_provider'
+                  AND u.entity_id = ?
+                  AND u.role_id IN (3, 4)  -- Include both admins (3) and technicians (4)
+                ORDER BY u.role_id ASC, u.created_at DESC  -- Admins first, then technicians
+            ";
+            $params = [$provider_id];
+        } else {
+            // Fall back to old behavior for other users (shouldn't happen in normal flow)
+            $query = "
+                SELECT
+                    u.userId as id,
+                    u.username,
+                    u.email,
+                    u.created_at,
+                    CONCAT(u.first_name, ' ', u.last_name) as full_name,
+                    u.first_name,
+                    u.last_name,
+                    u.phone,
+                    u.is_active,
+                    u.role_id
+                FROM users u
+                WHERE u.role_id = 4
+            ";
+            $params = [];
+        }
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
         $technicians = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode(['technicians' => $technicians]);
 
     } catch (Exception $e) {
+        error_log(__FILE__ . ' - Exception in getTechnicians: ' . $e->getMessage());
+        error_log(__FILE__ . ' - Exception trace: ' . $e->getTraceAsString());
         http_response_code(500);
         echo json_encode(['error' => 'Failed to retrieve technicians: ' . $e->getMessage()]);
     }
@@ -159,8 +193,8 @@ function createTechnician($provider_id) {
         $stmt = $pdo->prepare("
             INSERT INTO users (
                 username, password_hash, email, first_name, last_name, phone,
-                role_id, entity_type, entity_id, is_active, email_verified, verification_token, token_expires, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, 4, 'service_provider', ?, FALSE, FALSE, ?, ?, NOW())
+                role_id, entity_id, entity_type, is_active, email_verified, verification_token, token_expires, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, 4, ?, 'service_provider', FALSE, FALSE, ?, ?, NOW())
         ");
         $stmt->execute([$username, $tempPasswordHash, $email, $first_name, $last_name, $phone, $provider_id, $verificationToken, $tokenExpires]);
 
@@ -206,17 +240,35 @@ function updateTechnician($provider_id) {
     try {
         $pdo->beginTransaction();
 
-        // Verify technician belongs to this service provider
-        $stmt = $pdo->prepare("
-            SELECT id FROM users
-            WHERE id = ? AND entity_type = 'service_provider' AND entity_id = ? AND role_id = 4
-        ");
-        $stmt->execute([$technician_id, $provider_id]);
-        if (!$stmt->fetch()) {
-            $pdo->rollBack();
-            http_response_code(404);
-            echo json_encode(['error' => 'Technician not found or access denied']);
-            return;
+        // Verify technician belongs to this service provider and check permissions
+        global $role_id;
+        global $entity_type;
+        global $user_id;
+
+        if ($entity_type === 'service_provider' && $role_id === 3) {
+            // For service provider admins, allow updating themselves (role 3) or technicians (role 4) in their organization
+            $stmt = $pdo->prepare("
+                SELECT userId, role_id FROM users
+                WHERE userId = ? AND entity_type = 'service_provider' AND entity_id = ?
+            ");
+            $stmt->execute([$technician_id, $provider_id]);
+            $user_to_update = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user_to_update) {
+                $pdo->rollBack();
+                http_response_code(404);
+                echo json_encode(['error' => 'Technician not found or access denied']);
+                return;
+            }
+
+            // Only allow admins to update technicians (role 4) and themselves (role 3)
+            // Prevent updating other admins unless they are updating themselves
+            if ($user_to_update['role_id'] === 3 && $technician_id !== $user_id) {
+                $pdo->rollBack();
+                http_response_code(403);
+                echo json_encode(['error' => 'Cannot modify other administrators']);
+                return;
+            }
         }
 
         // Build update query dynamically
@@ -229,7 +281,7 @@ function updateTechnician($provider_id) {
                 if ($field === 'role_id') {
                     $new_role_id = (int)$data[$field];
                     // Verify role exists and is appropriate for service providers
-                    $stmt = $pdo->prepare("SELECT id, name FROM roles WHERE id = ? AND name IN ('Technician', 'Service Provider Admin')");
+                    $stmt = $pdo->prepare("SELECT roleId as id, name FROM user_roles WHERE roleId = ?");
                     $stmt->execute([$new_role_id]);
                     $role = $stmt->fetch(PDO::FETCH_ASSOC);
                     if (!$role) {
@@ -241,7 +293,7 @@ function updateTechnician($provider_id) {
 
                     // If promoting to Service Provider Admin, check email verification
                     if ($role['name'] === 'Service Provider Admin') {
-                        $stmt = $pdo->prepare("SELECT email_verified, email, username FROM users WHERE id = ?");
+                        $stmt = $pdo->prepare("SELECT email_verified, email, username FROM users WHERE userId = ?");
                         $stmt->execute([$technician_id]);
                         $user_info = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -250,7 +302,7 @@ function updateTechnician($provider_id) {
                             $verificationToken = EmailService::generateVerificationToken();
                             $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
-                            $stmt = $pdo->prepare("UPDATE users SET verification_token = ?, token_expires = ? WHERE id = ?");
+                            $stmt = $pdo->prepare("UPDATE users SET verification_token = ?, token_expires = ? WHERE userId = ?");
                             $stmt->execute([$verificationToken, $tokenExpires, $technician_id]);
 
                             $pdo->rollBack(); // Don't commit the role change
@@ -274,7 +326,7 @@ function updateTechnician($provider_id) {
 
         if (!empty($updateFields)) {
             $updateValues[] = $technician_id;
-            $sql = "UPDATE users SET " . implode(', ', $updateFields) . " WHERE id = ?";
+            $sql = "UPDATE users SET " . implode(', ', $updateFields) . " WHERE userId = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute($updateValues);
         }
@@ -297,27 +349,42 @@ function deleteTechnician($provider_id) {
 
     if (!$technician_id) {
         http_response_code(400);
-        echo json_encode(['error' => 'Technician ID is required']);
+        echo json_encode(['error' => 'User ID is required']);
         return;
     }
 
     try {
         $pdo->beginTransaction();
 
-        // Verify technician belongs to this service provider
-        $stmt = $pdo->prepare("
-            SELECT id FROM users
-            WHERE id = ? AND entity_type = 'service_provider' AND entity_id = ? AND role_id = 4
-        ");
-        $stmt->execute([$technician_id, $provider_id]);
-        if (!$stmt->fetch()) {
-            $pdo->rollBack();
-            http_response_code(404);
-            echo json_encode(['error' => 'Technician not found or access denied']);
-            return;
+        // Verify user belongs to this service provider (only for service provider admins)
+        global $role_id;
+        global $entity_type;
+
+        if ($entity_type === 'service_provider' && $role_id === 3) {
+            $stmt = $pdo->prepare("
+                SELECT userId, role_id FROM users
+                WHERE userId = ? AND entity_type = 'service_provider' AND entity_id = ? AND role_id IN (3, 4)
+            ");
+            $stmt->execute([$technician_id, $provider_id]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user) {
+                $pdo->rollBack();
+                http_response_code(404);
+                echo json_encode(['error' => 'User not found or access denied']);
+                return;
+            }
+
+            // Prevent admin from deleting themselves
+            if ($user['role_id'] === 3 && $technician_id === $GLOBALS['user_id']) {
+                $pdo->rollBack();
+                http_response_code(400);
+                echo json_encode(['error' => 'You cannot delete your own account']);
+                return;
+            }
         }
 
-        // Check if technician has assigned jobs
+        // Check if user has assigned jobs (for technicians)
         $stmt = $pdo->prepare("SELECT COUNT(*) as job_count FROM jobs WHERE assigned_technician_id = ?");
         $stmt->execute([$technician_id]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -325,22 +392,22 @@ function deleteTechnician($provider_id) {
         if ($result['job_count'] > 0) {
             $pdo->rollBack();
             http_response_code(409);
-            echo json_encode(['error' => 'Cannot delete technician with assigned jobs. Reassign jobs first.']);
+            echo json_encode(['error' => 'Cannot delete user with assigned jobs. Reassign jobs first.']);
             return;
         }
 
-        // Delete technician
-        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        // Delete user
+        $stmt = $pdo->prepare("DELETE FROM users WHERE userId = ?");
         $stmt->execute([$technician_id]);
 
         $pdo->commit();
 
-        echo json_encode(['message' => 'Technician deleted successfully']);
+        echo json_encode(['message' => 'User deleted successfully']);
 
     } catch (Exception $e) {
         $pdo->rollBack();
         http_response_code(500);
-        echo json_encode(['error' => 'Failed to delete technician: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Failed to delete user: ' . $e->getMessage()]);
     }
 }
 ?>

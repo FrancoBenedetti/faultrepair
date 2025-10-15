@@ -1,4 +1,6 @@
 <?php
+ini_set('log_errors', true);
+ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/service-provider-jobs.log');
 require_once '../config/database.php';
 require_once '../includes/JWT.php';
 
@@ -43,30 +45,35 @@ if ($entity_type !== 'service_provider') {
     exit;
 }
 
+// Build query based on parameters instead of role
+// If technician_id parameter is passed, filter by that technician, else show all for provider
+error_log("service-provider-jobs.php - Processing request, user_id: $user_id, entity_id: $entity_id");
+
 try {
-    // Build query with optional filters
+    // Base condition - always filter by provider participant
     $where_conditions = ["j.assigned_provider_participant_id = ?"];
     $params = [$entity_id];
 
-    // Status filter
+    // If technician_id is passed, filter by specific technician (technician view)
+    if (isset($_GET['technician_id']) && !empty($_GET['technician_id'])) {
+        $where_conditions[] = "j.assigned_technician_user_id = ?";
+        $params[] = $_GET['technician_id'];
+        error_log("service-provider-jobs.php - Technician filter applied for technician_id: " . $_GET['technician_id']);
+    }
+
+    // Additional filters
     if (isset($_GET['status']) && !empty($_GET['status'])) {
         $where_conditions[] = "j.job_status = ?";
         $params[] = $_GET['status'];
     }
 
-    // Client filter
     if (isset($_GET['client_id']) && !empty($_GET['client_id'])) {
         $where_conditions[] = "p.participantId = ?";
         $params[] = $_GET['client_id'];
     }
 
-    // Technician filter
-    if (isset($_GET['technician_id']) && !empty($_GET['technician_id'])) {
-        $where_conditions[] = "j.assigned_technician_user_id = ?";
-        $params[] = $_GET['technician_id'];
-    }
-
     $where_clause = implode(" AND ", $where_conditions);
+    error_log("service-provider-jobs.php - WHERE clause: $where_clause, params: " . json_encode($params));
 
     // Get filtered jobs assigned to this service provider
     $stmt = $pdo->prepare("
@@ -102,11 +109,14 @@ try {
     $stmt->execute($params);
     $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    error_log("service-provider-jobs.php - Found " . count($jobs) . " jobs");
+
     echo json_encode([
         'jobs' => $jobs
     ]);
 
 } catch (Exception $e) {
+    error_log("service-provider-jobs.php - Admin query failed: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(['error' => 'Failed to retrieve jobs: ' . $e->getMessage()]);
 }
