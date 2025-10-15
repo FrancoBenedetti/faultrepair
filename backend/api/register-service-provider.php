@@ -23,35 +23,40 @@ $data = json_decode(file_get_contents('php://input'), true);
 // Check for invitation token
 $invitationToken = isset($data['invitationToken']) ? trim($data['invitationToken']) : null;
 
-$requiredFields = ['providerName', 'address', 'username', 'email', 'password'];
+$requiredFields = ['providerName', 'firstName', 'lastName', 'address', 'email', 'password'];
 if (!$invitationToken) {
     // Regular registration requires all fields
     if (!$data || count(array_intersect_key(array_flip($requiredFields), $data)) !== count($requiredFields)) {
         http_response_code(400);
-        echo json_encode(['error' => 'All fields are required: providerName, address, username, email, password']);
+        echo json_encode(['error' => 'All fields are required: providerName (company name), firstName, lastName, address, email, password']);
         exit;
     }
 } else {
     // Invitation-based registration - some fields may be pre-filled
-    $requiredFieldsForInvitation = ['username', 'email', 'password'];
+    $requiredFieldsForInvitation = ['firstName', 'lastName', 'email', 'password'];
     if (!$data || count(array_intersect_key(array_flip($requiredFieldsForInvitation), $data)) !== count($requiredFieldsForInvitation)) {
         http_response_code(400);
-        echo json_encode(['error' => 'Username, email, and password are required for invitation-based registration']);
+        echo json_encode(['error' => 'First name, last name, email and password are required for invitation-based registration']);
         exit;
     }
 }
 
 $providerName = trim($data['providerName']);
+$firstName = trim($data['firstName']);
+$lastName = trim($data['lastName']);
 $address = trim($data['address']);
-$username = trim($data['username']);
 $email = trim($data['email']);
 $password = $data['password'];
 
-if (empty($providerName) || empty($address) || empty($username) || empty($email) || empty($password)) {
+if (empty($providerName) || empty($firstName) || empty($lastName) || empty($address) || empty($email) || empty($password)) {
     http_response_code(400);
     echo json_encode(['error' => 'All fields must be non-empty']);
     exit;
 }
+
+// Since we're using email-only authentication, generate a username from email
+// Remove @ and domain to create a username
+$username = preg_replace('/@.*/', '', $email);
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     http_response_code(400);
@@ -68,13 +73,13 @@ if (strlen($password) < 6) {
 try {
     $pdo->beginTransaction();
 
-    // Check if username or email already exists
-    $stmt = $pdo->prepare("SELECT userId FROM users WHERE username = ? OR email = ?");
-    $stmt->execute([$username, $email]);
+    // Check if email already exists (allow duplicate usernames since we're generating them)
+    $stmt = $pdo->prepare("SELECT userId FROM users WHERE email = ?");
+    $stmt->execute([$email]);
     if ($stmt->fetch()) {
         $pdo->rollBack();
         http_response_code(409);
-        echo json_encode(['error' => 'Username or email already exists']);
+        echo json_encode(['error' => 'Email already exists']);
         exit;
     }
 
@@ -106,10 +111,9 @@ try {
     $verificationToken = EmailService::generateVerificationToken();
     $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
-    // Insert user
-    $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, email, role_id, entity_id, entity_type, is_active, email_verified, verification_token, token_expires) VALUES (?, ?, ?, ?, ?, 'service_provider', FALSE, FALSE, ?, ?)");
-    $stmt->execute([$username, $passwordHash, $email, $default_role, $providerId, $verificationToken, $tokenExpires]);
-
+    // Insert user with first_name and last_name
+    $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, email, first_name, last_name, role_id, entity_id, entity_type, is_active, email_verified, verification_token, token_expires) VALUES (?, ?, ?, ?, ?, ?, ?, 'service_provider', FALSE, FALSE, ?, ?)");
+    $stmt->execute([$username, $passwordHash, $email, $firstName, $lastName, $default_role, $providerId, $verificationToken, $tokenExpires]);
     $userId = $pdo->lastInsertId();
 
     // Handle invitation-based registration
@@ -143,8 +147,8 @@ try {
 
     $pdo->commit();
 
-    // Send verification email
-    $emailSent = EmailService::sendVerificationEmail($email, $username, $verificationToken);
+    // Send verification email using user ID for proper name display
+    $emailSent = EmailService::sendVerificationEmail($email, $userId, $verificationToken);
 
     if ($emailSent) {
         echo json_encode(['message' => 'Service provider registered successfully. Please check your email to verify your account.']);

@@ -75,8 +75,8 @@ if (!$admin_user) {
             <div class="alert alert-error" id="error-message" style="display: none;"></div>
             <form id="login-form">
                 <div class="form-group">
-                    <label for="username">Username:</label>
-                    <input type="text" id="username" name="username" required placeholder="admin">
+                    <label for="email">Email Address:</label>
+                    <input type="email" id="email" name="email" required placeholder="admin@yourdomain.com">
                 </div>
                 <div class="form-group">
                     <label for="password">Password:</label>
@@ -90,15 +90,15 @@ if (!$admin_user) {
             document.getElementById('login-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
 
-                const username = document.getElementById('username').value;
+                const email = document.getElementById('email').value;
                 const password = document.getElementById('password').value;
 
-                // Authenticate with the main auth endpoint
+                // Authenticate with the main auth endpoint (using email now instead of username)
                 try {
                 const response = await fetch('../backend/api/auth.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ email, password })
                 });
 
                     const data = await response.json();

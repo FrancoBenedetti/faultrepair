@@ -78,17 +78,17 @@
         <div class="px-6 py-4">
           <form @submit.prevent="signin" class="space-y-6">
             <div>
-              <label for="email" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">email</span>
-                Email Address
+              <label for="username" class="form-label flex items-center gap-2">
+                <span class="material-icon-sm text-gray-500">person</span>
+                Username
               </label>
               <input
-                type="email"
-                id="email"
-                v-model="form.email"
+                type="text"
+                id="username"
+                v-model="form.username"
                 required
                 class="form-input"
-                placeholder="Enter your email address"
+                placeholder="Enter your username"
               >
             </div>
 
@@ -151,7 +151,7 @@ export default {
     return {
       loading: false,
       form: {
-        email: '',
+        username: '',
         password: ''
       }
     }

@@ -874,7 +874,7 @@
       <div class="absolute inset-0 bg-black/50" @click="showServicesModal = false"></div>
 
       <!-- Modal Content -->
-      <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" @click.stop>
+      <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden" @click.stop>
         <!-- Header -->
         <div class="flex justify-between items-center p-6 border-b border-gray-200">
           <h3 class="text-xl font-semibold text-gray-900 flex items-center gap-3">
@@ -886,24 +886,119 @@
 
         <!-- Content -->
         <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Search and Filter Section -->
+          <div class="bg-blue-50 rounded-lg p-4 space-y-4">
+            <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <span class="material-icon-sm text-blue-600">search</span>
+              Search & Filter Services
+            </h4>
+            <div class="grid grid-cols-1 gap-4">
+              <!-- Search Input -->
+              <div class="space-y-1">
+                <label for="service-search" class="form-label">Search Services</label>
+                <input
+                  id="service-search"
+                  type="text"
+                  v-model="searchTerm"
+                  placeholder="Type to search services..."
+                  class="form-input"
+                  @input="debouncedSearch"
+                >
+              </div>
+            </div>
+
+            <!-- Filter Actions -->
+            <div class="flex items-center gap-4 pt-2 border-t border-blue-200">
+              <div class="text-sm text-gray-600">
+                Showing {{ getFilteredServices().length }} of {{ (availableServices || []).length }} services
+              </div>
+              <div class="flex gap-2 ml-auto">
+                <button
+                  @click="expandAllCategories"
+                  class="btn-outlined btn-small"
+                >
+                  Expand All
+                </button>
+                <button
+                  @click="collapseAllCategories"
+                  class="btn-outlined btn-small"
+                >
+                  Collapse All
+                </button>
+              </div>
+            </div>
+          </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <!-- Available Services Section -->
-            <div class="bg-gray-50 rounded-lg p-6 space-y-6">
+            <div class="xl:col-span-2 bg-gray-50 rounded-lg p-6 space-y-6">
               <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
                 <span class="material-icon-sm text-blue-600">list</span>
                 Available Services
+                <span class="text-sm font-normal text-gray-500" v-if="getFilteredServices().length !== (availableServices || []).length">
+                  ({{ getFilteredServices().length }} filtered)
+                </span>
               </h4>
-              <div class="space-y-3 max-h-96 overflow-y-auto">
-                <div v-for="service in availableServices" :key="service.id" class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    :value="service.id"
-                    v-model="selectedServices"
-                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+
+              <div v-if="getFilteredServices().length === 0" class="text-center py-12 text-gray-500">
+                <span class="material-icon text-4xl text-gray-300">search_off</span>
+                <p class="mt-2">No services match your search criteria</p>
+              </div>
+
+              <div v-else class="space-y-4 max-h-[500px] overflow-y-auto">
+                <div v-for="category in getFilteredCategories()" :key="category" class="category-section bg-white rounded-lg border border-gray-200">
+                  <!-- Category Header -->
+                  <div
+                    class="category-header p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                    @click="toggleCategoryExpansion(category)"
                   >
-                  <div class="flex-1">
-                    <div class="font-medium text-gray-900">{{ service.name }}</div>
-                    <div class="text-sm text-gray-600">{{ service.category }}</div>
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <button class="expand-btn" :class="{ expanded: expandedCategories[category] }">
+                          <span class="material-icon-sm">expand_more</span>
+                        </button>
+                        <h5 class="font-semibold text-gray-900">
+                          {{ category }}
+                          <span class="text-sm font-normal text-gray-500">({{ getServicesByCategory(category).length }})</span>
+                        </h5>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <button
+                          @click.stop="selectAllInCategory(category)"
+                          class="btn-outlined btn-small"
+                          :disabled="isCategoryFullySelected(category)"
+                        >
+                          Select All
+                        </button>
+                        <button
+                          @click.stop="deselectAllInCategory(category)"
+                          class="btn-outlined btn-small"
+                          :disabled="!isCategoryPartiallySelected(category)"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Category Services -->
+                  <div v-show="expandedCategories[category]" class="category-services p-4 space-y-3 border-t border-gray-100">
+                    <div
+                      v-for="service in getServicesByCategory(category)"
+                      :key="service.id"
+                      class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="service.id"
+                        v-model="selectedServices"
+                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      >
+                      <div class="flex-1">
+                        <div class="font-medium text-gray-900">{{ service.name }}</div>
+                        <div class="text-sm text-gray-600">{{ service.category }}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -913,16 +1008,18 @@
             <div class="bg-gray-50 rounded-lg p-6 space-y-6">
               <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
                 <span class="material-icon-sm text-green-600">check_circle</span>
-                Selected Services
+                Selected Services ({{ selectedServices.length }})
               </h4>
-              <div v-if="selectedServices.length === 0" class="text-center py-8 text-gray-500">
+              <div v-if="selectedServices.length === 0" class="text-center py-12 text-gray-500">
                 <span class="material-icon text-4xl text-gray-300">inventory_2</span>
                 <p class="mt-2">No services selected</p>
+                <p class="text-sm mt-1">Check the boxes in the available services section to select services</p>
               </div>
-              <div v-else class="space-y-3 max-h-96 overflow-y-auto">
+              <div v-else class="space-y-3 max-h-[500px] overflow-y-auto">
                 <div v-for="serviceId in selectedServices" :key="serviceId" class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
                   <div class="flex-1">
                     <div class="font-medium text-gray-900">{{ getServiceName(serviceId) }}</div>
+                    <div class="text-sm text-gray-600">{{ getServiceCategory(serviceId) }}</div>
                   </div>
                   <button
                     type="button"
@@ -1740,7 +1837,7 @@ export default {
       selectedServices: [],
       selectedRegions: [],
       primaryServiceId: null,
-      showProfileModal: false,
+          showProfileModal: false,
       showServicesModal: false,
       showRegionsModal: false,
       showAddTechnicianModal: false,
@@ -1756,21 +1853,26 @@ export default {
       originalProviderId: null,
       editingImages: [], // Array to store additional images for editing
       userRole: null, // Store user role for UI restrictions
-      selectedTechnicianId: null, // For technician assignment when setting status to "In Progress"
-      jobFilters: {
-        status: '',
-        client_id: '',
-        technician_id: ''
-      },
-      // Section collapse/expand state
-      sectionsExpanded: {
-        profile: false, // Profile overview collapsed by default
-        services: false, // Services collapsed by default
-        regions: false, // Regions collapsed by default
-        technicians: false, // Technicians collapsed by default
-        clients: false, // Clients collapsed by default
-        jobs: true // Jobs section expanded by default
-      },
+    selectedTechnicianId: null, // For technician assignment when setting status to "In Progress"
+        // Services modal additional data
+    searchTerm: '',
+    selectedCategoryFilter: '',
+    expandedCategories: {},
+    searchTimeout: null, // For debounced search
+    jobFilters: {
+      status: '',
+      client_id: '',
+      technician_id: ''
+    },
+    // Section collapse/expand state
+    sectionsExpanded: {
+      profile: false, // Profile overview collapsed by default
+      services: false, // Services collapsed by default
+      regions: false, // Regions collapsed by default
+      technicians: false, // Technicians collapsed by default
+      clients: false, // Clients collapsed by default
+      jobs: true // Jobs section expanded by default
+    },
       technicianForm: {
         username: '',
         email: '',
@@ -2504,6 +2606,114 @@ getCurrentUserName() {
     // Section collapse/expand functionality
     toggleSection(sectionName) {
       this.sectionsExpanded[sectionName] = !this.sectionsExpanded[sectionName]
+    },
+
+    // Services modal methods
+    getServiceCategory(serviceId) {
+      const service = this.availableServices.find(s => s.id === serviceId)
+      return service ? service.category : 'Unknown Category'
+    },
+
+    getFilteredServices() {
+      // Defensive check for availableServices
+      if (!Array.isArray(this.availableServices)) {
+        return []
+      }
+
+      const services = this.availableServices
+      let filtered = [...services] // Make a copy
+
+      // Filter by search term
+      if (this.searchTerm && this.searchTerm.trim()) {
+        filtered = filtered.filter(service =>
+          service && service.name && service.name.toLowerCase().includes(this.searchTerm.toLowerCase())
+        )
+      }
+
+      // Filter by category
+      if (this.selectedCategoryFilter && this.selectedCategoryFilter !== '') {
+        filtered = filtered.filter(service => service && service.category === this.selectedCategoryFilter)
+      }
+
+      return filtered
+    },
+
+    getAvailableCategories() {
+      const services = this.availableServices || []
+      return [...new Set(services.map(s => s.category))].sort()
+    },
+
+    getFilteredCategories() {
+      // Get categories from filtered services
+      const filteredServices = this.getFilteredServices()
+      const filteredCategories = [...new Set(filteredServices.map(s => s.category))].sort()
+
+      // Initialize expansion state for any new categories
+      filteredCategories.forEach(cat => {
+        if (this.expandedCategories[cat] === undefined) {
+          this.expandedCategories[cat] = true
+        }
+      })
+
+      return filteredCategories
+    },
+
+    getServicesByCategory(category) {
+      return this.getFilteredServices().filter(service => service.category === category)
+    },
+
+    isCategoryFullySelected(category) {
+      const categoryServices = this.getServicesByCategory(category)
+      const selectedInCategory = categoryServices.filter(service => this.selectedServices.includes(service.id))
+      return categoryServices.length > 0 && selectedInCategory.length === categoryServices.length
+    },
+
+    isCategoryPartiallySelected(category) {
+      const categoryServices = this.getServicesByCategory(category)
+      const selectedInCategory = categoryServices.filter(service => this.selectedServices.includes(service.id))
+      return selectedInCategory.length > 0 && selectedInCategory.length < categoryServices.length
+    },
+
+    selectAllInCategory(category) {
+      const categoryServices = this.getServicesByCategory(category)
+      const serviceIdsToAdd = categoryServices
+        .map(s => s.id)
+        .filter(id => !this.selectedServices.includes(id))
+
+      this.selectedServices.push(...serviceIdsToAdd)
+    },
+
+    deselectAllInCategory(category) {
+      const categoryServices = this.getServicesByCategory(category)
+      const categoryServiceIds = categoryServices.map(s => s.id)
+
+      this.selectedServices = this.selectedServices.filter(id => !categoryServiceIds.includes(id))
+    },
+
+    toggleCategoryExpansion(category) {
+      this.expandedCategories[category] = !this.expandedCategories[category]
+    },
+
+    expandAllCategories() {
+      const categories = this.getFilteredCategories()
+      categories.forEach(cat => {
+        this.expandedCategories[cat] = true
+      })
+    },
+
+    collapseAllCategories() {
+      const categories = this.getFilteredCategories()
+      categories.forEach(cat => {
+        this.expandedCategories[cat] = false
+      })
+    },
+
+    debouncedSearch() {
+      clearTimeout(this.searchTimeout)
+      this.searchTimeout = setTimeout(() => {
+        // Search is handled reactively, but we can clear the timeout
+        this.searchTimeout = null
+      }, 300)
     },
 
     // Get available status options based on role and current job status

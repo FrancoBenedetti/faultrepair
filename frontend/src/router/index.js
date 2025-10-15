@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
+import UnifiedRegistration from '../views/UnifiedRegistration.vue'
 import ClientRegistration from '../views/ClientRegistration.vue'
 import ClientDashboard from '../views/ClientDashboard.vue'
 import ServiceProviderRegistration from '../views/ServiceProviderRegistration.vue'
@@ -10,6 +11,9 @@ import ClientServiceProviderBrowser from '../views/ClientServiceProviderBrowser.
 import CreateInvitation from '../views/CreateInvitation.vue'
 import ForgotPassword from '../views/ForgotPassword.vue'
 import ResetPassword from '../views/ResetPassword.vue'
+import Terms from '../views/Terms.vue'
+import Subscription from '../views/Subscription.vue'
+import About from '../views/About.vue'
 import { handleTokenExpiration } from '../utils/api.js'
 
 const routes = [
@@ -19,9 +23,30 @@ const routes = [
     component: Home
   },
   {
+    path: '/register',
+    name: 'UnifiedRegistration',
+    component: UnifiedRegistration
+  },
+  {
+    path: '/terms',
+    name: 'Terms',
+    component: Terms
+  },
+  {
+    path: '/subscription',
+    name: 'Subscription',
+    component: Subscription
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: About
+  },
+  {
     path: '/client-registration',
     name: 'ClientRegistration',
-    component: ClientRegistration
+    component: ClientRegistration,
+    redirect: '/register' // Redirect old routes to new unified registration
   },
   {
     path: '/client-dashboard',
@@ -32,7 +57,8 @@ const routes = [
   {
     path: '/service-provider-registration',
     name: 'ServiceProviderRegistration',
-    component: ServiceProviderRegistration
+    component: ServiceProviderRegistration,
+    redirect: '/register' // Redirect old routes to new unified registration
   },
   {
     path: '/service-provider-dashboard',

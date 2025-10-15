@@ -19,13 +19,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $data = json_decode(file_get_contents('php://input'), true);
 
-if (!$data || !isset($data['username']) || !isset($data['password'])) {
+if (!$data || !isset($data['email']) || !isset($data['password'])) {
     http_response_code(400);
-    echo json_encode(['error' => 'Username and password required']);
+    echo json_encode(['error' => 'Email and password required']);
     exit;
 }
 
-$username = $data['username'];
+$email = $data['email'];
 $password = $data['password'];
 
 $stmt = $pdo->prepare("
@@ -43,9 +43,9 @@ $stmt = $pdo->prepare("
         END as entity_type
     FROM users u
     LEFT JOIN participant_type pt ON u.entity_id = pt.participantId
-    WHERE u.username = ?
+    WHERE u.email = ?
 ");
-$stmt->execute([$username]);
+$stmt->execute([$email]);
 $user = $stmt->fetch();
 
 if (!$user) {

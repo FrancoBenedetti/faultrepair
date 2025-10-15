@@ -203,7 +203,7 @@ function createTechnician($provider_id) {
         $pdo->commit();
 
         // Send password reset email
-        $emailSent = EmailService::sendVerificationEmail($email, $username, $verificationToken, true);
+        $emailSent = EmailService::sendVerificationEmail($email, $technician_id, $verificationToken, true);
 
         if ($emailSent) {
             echo json_encode([
@@ -307,7 +307,7 @@ function updateTechnician($provider_id) {
 
                             $pdo->rollBack(); // Don't commit the role change
 
-                            $emailSent = EmailService::sendVerificationEmail($user_info['email'], $user_info['username'], $verificationToken);
+                            $emailSent = EmailService::sendVerificationEmail($user_info['email'], $technician_id, $verificationToken);
 
                             http_response_code(403);
                             echo json_encode(['error' => 'Email verification required before promoting to admin role. Verification email sent.']);

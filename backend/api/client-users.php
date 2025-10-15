@@ -189,7 +189,8 @@ function addClientUser($client_id) {
         $pdo->commit();
 
         // Send password reset email
-        $emailSent = EmailService::sendVerificationEmail($email, $username, $verificationToken, true);
+
+        $emailSent = EmailService::sendVerificationEmail($email, $userId, $verificationToken, true);
 
         if ($emailSent) {
             echo json_encode([
@@ -327,7 +328,7 @@ function updateClientUser($client_id) {
 
                     $pdo->rollBack(); // Don't commit the role change
 
-                    $emailSent = EmailService::sendVerificationEmail($user_info['email'], $user_info['username'], $verificationToken);
+                    $emailSent = EmailService::sendVerificationEmail($user_info['email'], $user_id, $verificationToken);
 
                     http_response_code(403);
                     echo json_encode(['error' => 'Email verification required before promoting to admin role. Verification email sent.']);
@@ -396,7 +397,7 @@ function updateClientUser($client_id) {
             $stmt = $pdo->prepare("UPDATE users SET verification_token = ?, token_expires = ? WHERE userId = ?");
             $stmt->execute([$resetToken, $tokenExpires, $user_id]);
 
-            $emailSent = EmailService::sendVerificationEmail($newEmail, $currentUser['username'], $resetToken, true);
+            $emailSent = EmailService::sendVerificationEmail($newEmail, $user_id, $resetToken, true);
 
             if ($emailSent) {
                 echo json_encode(['message' => 'User updated successfully. A password reset email has been sent to the new email address.']);

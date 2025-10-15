@@ -37,7 +37,7 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
 try {
     // Find user by email
-    $stmt = $pdo->prepare("SELECT userId AS id, username, email, email_verified FROM users WHERE email = ?");
+    $stmt = $pdo->prepare("SELECT userId AS id, email, email_verified FROM users WHERE email = ?");
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -66,8 +66,8 @@ try {
     $stmt = $pdo->prepare("UPDATE users SET verification_token = ?, token_expires = ? WHERE userId = ?");
     $stmt->execute([$resetToken, $tokenExpires, $user['id']]);
 
-    // Send reset email
-    $emailSent = EmailService::sendVerificationEmail($user['email'], $user['username'], $resetToken, true);
+    // Send reset email using user ID for proper name display
+    $emailSent = EmailService::sendVerificationEmail($user['email'], $user['userId'], $resetToken, true);
 
     error_log(__FILE__.'/'.__LINE__.'/ >>>> '.json_encode($emailSent));
 
