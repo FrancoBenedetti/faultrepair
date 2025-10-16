@@ -296,6 +296,7 @@ export default {
       step: 1,
       selectedRole: null,
       loading: false,
+      invitationData: null,
       form: {
         companyName: '',
         firstName: '',
@@ -308,16 +309,54 @@ export default {
       }
     }
   },
-  mounted() {
-    // Check for invitation token in URL
+  async mounted() {
+    // Check for invitation token and role in URL
     const urlParams = new URLSearchParams(window.location.search)
     const token = urlParams.get('token')
+    const role = urlParams.get('role')
+
     if (token) {
       this.form.invitationToken = token
-      // Handle invitation logic here if needed
+      await this.loadInvitationData(token)
+
+      // Pre-select role if provided
+      if (role && (role === 'client' || role === 'service_provider')) {
+        this.selectedRole = role
+        // Auto-advance to registration form after brief delay
+        setTimeout(() => {
+          this.goToRegistrationForm()
+        }, 500)
+      }
     }
   },
   methods: {
+    async loadInvitationData(token) {
+      try {
+        const response = await fetch(`/backend/api/validate-invitation.php?token=${encodeURIComponent(token)}`)
+        const data = await response.json()
+
+        if (response.ok && data.success) {
+          // Store invitation data for potential display
+          this.invitationData = data.invitation
+          // Pre-populate form fields if available
+          if (this.invitationData.invitee_email && !this.form.email) {
+            this.form.email = this.invitationData.invitee_email
+          }
+          if (this.invitationData.invitee_first_name && !this.form.firstName) {
+            this.form.firstName = this.invitationData.invitee_first_name
+          }
+          if (this.invitationData.invitee_last_name && !this.form.lastName) {
+            this.form.lastName = this.invitationData.invitee_last_name
+          }
+          if (this.invitationData.invitee_phone && !this.form.phone) {
+            // Phone field might be added later if needed
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load invitation data:', error)
+        // Don't show error to user - continue with normal registration
+      }
+    },
     selectRole(role) {
       this.selectedRole = role
     },
@@ -362,7 +401,14 @@ export default {
         const data = await response.json()
 
         if (response.ok) {
-          alert('Registration successful! Please check your email to verify your account before signing in.')
+          // Handle auto-approval for client→service provider invitations
+          if (this.invitationData && this.invitationData.invitation_type === 'service_provider' &&
+              this.invitationData.inviter_details.entity_type === 'client') {
+            alert('Registration successful! You have been automatically approved as a service provider for ' +
+                  this.invitationData.inviter_details.entity_name + '. Please check your email to verify your account before signing in.')
+          } else {
+            alert('Registration successful! Please check your email to verify your account before signing in.')
+          }
           this.$router.push('/')
         } else {
           alert(data.error || 'Registration failed. Please try again.')

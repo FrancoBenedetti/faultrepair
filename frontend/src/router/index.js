@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
+import InvitationLanding from '../views/InvitationLanding.vue'
 import UnifiedRegistration from '../views/UnifiedRegistration.vue'
 import ClientRegistration from '../views/ClientRegistration.vue'
 import ClientDashboard from '../views/ClientDashboard.vue'
@@ -21,6 +22,11 @@ const routes = [
     path: '/',
     name: 'Home',
     component: Home
+  },
+  {
+    path: '/invitation',
+    name: 'InvitationLanding',
+    component: InvitationLanding
   },
   {
     path: '/register',

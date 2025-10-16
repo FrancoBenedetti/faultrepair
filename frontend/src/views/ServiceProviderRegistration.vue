@@ -111,6 +111,9 @@ export default {
           if (this.invitationData.invitee_email) {
             this.form.email = this.invitationData.invitee_email;
           }
+          if (this.invitationData.invitee_first_name) {
+            this.form.username = this.invitationData.invitee_first_name + ' ' + (this.invitationData.invitee_last_name || '');
+          }
           if (this.invitationData.invitee_phone) {
             // Could pre-populate phone if available, but usually not for new registrations
           }

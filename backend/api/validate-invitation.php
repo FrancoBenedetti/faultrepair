@@ -29,13 +29,12 @@ try {
     $stmt = $pdo->prepare("
         SELECT i.*, u.first_name, u.last_name, u.email as inviter_email,
                u.phone as inviter_phone,
-               CASE
-                   WHEN i.inviter_entity_type = 'client' THEN p.name
-                   WHEN i.inviter_entity_type = 'service_provider' THEN p.name
-               END as inviter_entity_name
+               p.name as inviter_entity_name,
+               pt.participantType as inviter_entity_type_fixed
         FROM invitations i
         JOIN users u ON i.inviter_user_id = u.userId
         JOIN participants p ON i.inviter_entity_id = p.participantId
+        JOIN participant_type pt ON p.participantId = pt.participantId
         WHERE i.invitation_token = ? AND i.invitation_status != 'expired'
     ");
     $stmt->execute([$token]);
@@ -99,8 +98,11 @@ try {
                 'email' => $invitation['inviter_email'],
                 'phone' => $invitation['inviter_phone'],
                 'entity_name' => $invitation['inviter_entity_name'],
-                'entity_type' => $invitation['inviter_entity_type']
+                'entity_type' => strtolower($invitation['inviter_entity_type_fixed'])
             ],
+            'invitee_first_name' => $invitation['invitee_first_name'],
+            'invitee_last_name' => $invitation['invitee_last_name'],
+            'notes' => $invitation['notes'],
             'registration_data' => json_decode($invitation['registration_data'], true)
         ]
     ]);

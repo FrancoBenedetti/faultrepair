@@ -281,9 +281,9 @@ try {
 
     $pdo->commit();
 
-    // Generate invitation URL
+    // Generate invitation URL - now points to invitation landing page first
     $baseUrl = (DOMAIN === 'localhost' ? 'http' : 'https') . '://' . DOMAIN;
-    $invitationUrl = $baseUrl . "/register-{$invitationType}?token=" . urlencode($invitationToken);
+    $invitationUrl = $baseUrl . "/invitation?token=" . urlencode($invitationToken);
 
     echo json_encode([
         'success' => true,
