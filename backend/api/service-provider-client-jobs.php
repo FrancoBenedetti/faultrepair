@@ -83,7 +83,7 @@ try {
                 l.address as location_address,
                 p.name as client_name,
                 u.username as reporting_user,
-                tu.username as assigned_technician
+                CONCAT(tu.first_name, ' ', tu.last_name) as assigned_technician
             FROM jobs j
             JOIN locations l ON j.client_location_id = l.id
             JOIN participants p ON l.participant_id = p.participantId

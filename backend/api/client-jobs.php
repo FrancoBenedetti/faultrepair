@@ -67,7 +67,7 @@ try {
                 l.address as location_address,
                 sp.name as assigned_provider_name,
                 u.username as reporting_user,
-                tu.username as assigned_technician,
+                CONCAT(tu.first_name, ' ', tu.last_name) as assigned_technician,
                 (SELECT COUNT(*) FROM job_images WHERE job_id = j.id) as image_count
             FROM jobs j
             JOIN locations l ON j.client_location_id = l.id

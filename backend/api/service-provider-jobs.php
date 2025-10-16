@@ -86,6 +86,7 @@ try {
             j.created_at,
             j.updated_at,
             j.contact_person,
+            j.assigned_technician_user_id,
             l.name as location_name,
             l.address as location_address,
             l.coordinates as location_coordinates,
@@ -94,7 +95,7 @@ try {
             p.name as client_name,
             p.participantId as client_id,
             u.username as reporting_user,
-            tu.username as assigned_technician,
+            CONCAT(tu.first_name, ' ', tu.last_name) as assigned_technician,
             tu.userId as assigned_technician_user_id,
             (SELECT COUNT(*) FROM job_images ji WHERE ji.job_id = j.id) as image_count
         FROM jobs j
@@ -110,6 +111,14 @@ try {
     $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     error_log("service-provider-jobs.php - Found " . count($jobs) . " jobs");
+    error_log("service-provider-jobs.php - First few jobs raw data:");
+    for ($i = 0; $i < min(3, count($jobs)); $i++) {
+        error_log("service-provider-jobs.php - Job " . ($i + 1) . ": " . json_encode([
+            'id' => $jobs[$i]['id'] ?? 'missing',
+            'assigned_technician_user_id' => $jobs[$i]['assigned_technician_user_id'] ?? 'missing',
+            'assigned_technician' => $jobs[$i]['assigned_technician'] ?? 'missing'
+        ]));
+    }
 
     echo json_encode([
         'jobs' => $jobs

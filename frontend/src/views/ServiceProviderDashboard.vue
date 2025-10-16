@@ -1570,10 +1570,12 @@
                   <span class="material-icon-sm text-gray-500">engineering</span>
                   Assign Technician *
                 </label>
-                <select id="edit-technician" v-model="selectedTechnicianId" class="form-input">
+                <select id="edit-technician" v-model="selectedTechnicianId" :class="'form-input' + (userRole === 3 ? ' admin-select' : ' technician-select')" tabindex="0">
                   <option value="">Select a technician...</option>
                   <option v-for="technician in technicians" :key="technician.id" :value="technician.id">
-                    {{ technician.full_name }} ({{ technician.username }})
+                    {{ technician.full_name }}
+                    <span v-if="technician.role_id === 3">(Admin)</span>
+                    <span v-else>(Tech)</span>
                   </option>
                 </select>
                 <small class="form-help text-sm text-gray-600">A technician must be assigned for jobs in "In Progress" status</small>
@@ -2362,7 +2364,9 @@ getCurrentUserName() {
       this.originalProviderId = job.assigned_provider_id
 
       // Initialize technician selection with current assigned technician
-      this.selectedTechnicianId = job.assigned_technician_id || null
+      this.selectedTechnicianId = job.assigned_technician_user_id || null
+
+
 
       // Load job images if not already loaded
       if (!job.images) {
@@ -2444,7 +2448,7 @@ getCurrentUserName() {
         // Include technician assignment if setting to "In Progress" or changing technician on existing "In Progress" jobs
         if (this.editingJob.job_status === 'In Progress' && this.selectedTechnicianId) {
           updateData.technician_id = this.selectedTechnicianId
-        } else if (this.originalJobStatus === 'In Progress' && this.selectedTechnicianId && this.selectedTechnicianId !== this.editingJob.assigned_technician_id) {
+        } else if (this.originalJobStatus === 'In Progress' && this.selectedTechnicianId && this.selectedTechnicianId !== this.editingJob.assigned_technician_user_id) {
           // Allow changing technician on jobs that are already "In Progress"
           updateData.technician_id = this.selectedTechnicianId
         }
