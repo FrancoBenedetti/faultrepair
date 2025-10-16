@@ -205,7 +205,7 @@ try {
             <div class="nav-tab" data-tab="users">Users</div>
             <div class="nav-tab" data-tab="regions">Regions</div>
             <div class="nav-tab" data-tab="services">Services</div>
-            <div class="nav-tab" data-tab="participants">Participants</div>
+            <div class="nav-tab" data-tab="participants">Subscribers</div>
             <div class="nav-tab" data-tab="settings">Settings</div>
             <div class="nav-tab" data-tab="audit">Audit Log</div>
         </div>

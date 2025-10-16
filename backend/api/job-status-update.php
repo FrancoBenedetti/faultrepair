@@ -67,7 +67,7 @@ if ($new_status === 'In Progress' && !$technician_id) {
 try {
     // Verify the job exists and belongs to the user's service provider
     $stmt = $pdo->prepare("
-        SELECT j.id, j.assigned_technician_id, j.job_status, j.assigned_provider_id as service_provider_id
+        SELECT j.id, j.assigned_technician_user_id, j.job_status, j.assigned_provider_id as service_provider_id
         FROM jobs j
         WHERE j.id = ?
     ");
@@ -81,7 +81,7 @@ try {
     }
 
     // For technicians, verify they are assigned to this job
-    if ($role_id === 4 && $job['assigned_technician_id'] !== $user_id) {
+    if ($role_id === 4 && $job['assigned_technician_user_id'] !== $user_id) {
         http_response_code(403);
         echo json_encode(['error' => 'Access denied. You are not assigned to this job.']);
         exit;
@@ -132,7 +132,7 @@ try {
 
         $stmt = $pdo->prepare("
             UPDATE jobs
-            SET job_status = ?, assigned_technician_id = ?, technician_notes = ?, updated_at = NOW()
+            SET job_status = ?, assigned_technician_user_id = ?, technician_notes = ?, updated_at = NOW()
             WHERE id = ?
         ");
         $stmt->execute([$new_status, $technician_id, $technician_notes, $job_id]);

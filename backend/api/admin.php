@@ -1136,7 +1136,7 @@ function getDetailedUsageStats($month, $user_type = null) {
 function getUserManagementData($filter, $search) {
     global $pdo;
 
-    $where_conditions = ["u.role_id NOT IN (2, 5)"]; // Exclude administrators and budget controllers from user management
+    $where_conditions = ["u.role_id NOT IN (6, 5)"]; // Exclude administrators and budget controllers from user management
     $params = [];
 
     // Add search condition - now searches users, participants, and their associated data
@@ -1226,7 +1226,7 @@ function getAdminDashboardStats() {
 
         // Get active users (excluding admin users)
         $stmt = $pdo->prepare("
-            SELECT COUNT(*) as count FROM users WHERE role_id NOT IN (2, 5) AND is_active = TRUE
+            SELECT COUNT(*) as count FROM users WHERE role_id NOT IN (6, 5) AND is_active = TRUE
         ");
         $stmt->execute();
         $users_result = $stmt->fetch(PDO::FETCH_ASSOC);

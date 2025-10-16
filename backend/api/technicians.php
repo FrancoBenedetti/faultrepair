@@ -385,7 +385,7 @@ function deleteTechnician($provider_id) {
         }
 
         // Check if user has assigned jobs (for technicians)
-        $stmt = $pdo->prepare("SELECT COUNT(*) as job_count FROM jobs WHERE assigned_technician_id = ?");
+        $stmt = $pdo->prepare("SELECT COUNT(*) as job_count FROM jobs WHERE assigned_technician_user_id = ?");
         $stmt->execute([$technician_id]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
 

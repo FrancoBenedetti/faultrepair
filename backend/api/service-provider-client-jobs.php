@@ -88,7 +88,7 @@ try {
             JOIN locations l ON j.client_location_id = l.id
             JOIN participants p ON l.participant_id = p.participantId
             LEFT JOIN users u ON j.reporting_user_id = u.id
-            LEFT JOIN users tu ON j.assigned_technician_id = tu.id
+            LEFT JOIN users tu ON j.assigned_technician_user_id = tu.id
             WHERE j.assigned_provider_participant_id = ? AND l.participant_id = ?
             ORDER BY j.created_at DESC
         ");

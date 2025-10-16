@@ -95,7 +95,7 @@ try {
             p.participantId as client_id,
             u.username as reporting_user,
             tu.username as assigned_technician,
-            tu.userId as assigned_technician_id,
+            tu.userId as assigned_technician_user_id,
             (SELECT COUNT(*) FROM job_images ji WHERE ji.job_id = j.id) as image_count
         FROM jobs j
         JOIN locations l ON j.client_location_id = l.id

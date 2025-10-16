@@ -116,7 +116,7 @@ try {
         JOIN clients c ON l.client_id = c.id
         JOIN service_providers sp ON j.assigned_provider_id = sp.id
         LEFT JOIN users u ON j.reporting_user_id = u.id
-        WHERE j.assigned_technician_id = ?
+        WHERE j.assigned_technician_user_id = ?
         ORDER BY j.created_at DESC
     ");
 
@@ -146,7 +146,7 @@ try {
             SUM(CASE WHEN job_status IN ('Reported', 'Assigned', 'In Progress') THEN 1 ELSE 0 END) as active_jobs,
             SUM(CASE WHEN job_status = 'Completed' THEN 1 ELSE 0 END) as completed_jobs
         FROM jobs
-        WHERE assigned_technician_id = ?
+        WHERE assigned_technician_user_id = ?
     ");
     $stmt->execute([$technician_id]);
     $stats = $stmt->fetch(PDO::FETCH_ASSOC);
