@@ -67,7 +67,7 @@ if ($new_status === 'In Progress' && !$technician_id) {
 try {
     // Verify the job exists and belongs to the user's service provider
     $stmt = $pdo->prepare("
-        SELECT j.id, j.assigned_technician_user_id, j.job_status, j.assigned_provider_id as service_provider_id
+        SELECT j.id, j.assigned_technician_user_id, j.job_status, j.assigned_provider_participant_id as service_provider_id
         FROM jobs j
         WHERE j.id = ?
     ");

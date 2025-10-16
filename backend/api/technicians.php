@@ -135,21 +135,34 @@ function createTechnician($provider_id) {
 
     $data = json_decode(file_get_contents('php://input'), true);
 
-    if (!$data || !isset($data['username']) || !isset($data['email']) ||
+    if (!$data || !isset($data['email']) ||
         !isset($data['first_name']) || !isset($data['last_name'])) {
         http_response_code(400);
-        echo json_encode(['error' => 'Required fields: username, email, first_name, last_name']);
+        echo json_encode(['error' => 'Required fields: email, first_name, last_name']);
         return;
     }
 
-    $username = trim($data['username']);
     $email = trim($data['email']);
     $first_name = trim($data['first_name']);
     $last_name = trim($data['last_name']);
     $phone = trim($data['phone']);
 
+    // Generate username from first and last names
+    $username = strtolower(trim($first_name) . '.' . trim($last_name));
+
+    // Ensure username is unique by adding a number if needed
+    $baseUsername = $username;
+    $counter = 1;
+    $stmt = $pdo->prepare("SELECT userId FROM users WHERE username = ?");
+    $stmt->execute([$username]);
+    while ($stmt->fetch()) {
+        $username = $baseUsername . $counter;
+        $stmt->execute([$username]);
+        $counter++;
+    }
+
     // Validation
-    if (empty($username) || empty($email) || empty($first_name) || empty($last_name) || empty($phone)) {
+    if (empty($email) || empty($first_name) || empty($last_name) || empty($phone)) {
         http_response_code(400);
         echo json_encode(['error' => 'All required fields must be non-empty']);
         return;

@@ -304,7 +304,7 @@
               </div>
 
               <div class="user-content card-content">
-                <h3 class="user-name text-title-medium text-on-surface mb-2">{{ user.username }}</h3>
+                <h3 class="user-name text-title-medium text-on-surface mb-2">{{ user.first_name }} {{ user.last_name }}</h3>
                 <p class="user-email text-body-medium text-on-surface-variant mb-3">{{ user.email }}</p>
                 <div class="user-role">
                   <span class="role-badge status-badge" :class="getRoleClass(user.role_name)">
@@ -732,27 +732,23 @@
     <div v-if="showAddUserModal" class="modal-overlay" @click="showAddUserModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>Edit User: {{ editingUser.username }} (ID: {{ editingUser.id }})</h3>
-          <button @click="showEditUserModal" class="close-btn">&times;</button>
+          <h3>Add New User</h3>
+          <button @click="showAddUserModal = false" class="close-btn">&times;</button>
         </div>
 
         <form @submit.prevent="addUser" class="user-form">
           <div class="form-row">
             <div class="form-group">
-              <label for="username">Username *</label>
-              <input type="text" id="username" v-model="newUser.username" required>
-            </div>
-            <div class="form-group">
               <label for="email">Email Address *</label>
               <input type="email" id="email" v-model="newUser.email" required>
             </div>
-          </div>
-
-          <div class="form-row">
             <div class="form-group">
               <label for="first_name">First Name *</label>
               <input type="text" id="first_name" v-model="newUser.first_name" required>
             </div>
+          </div>
+
+          <div class="form-row">
             <div class="form-group">
               <label for="last_name">Last Name *</label>
               <input type="text" id="last_name" v-model="newUser.last_name" required>
@@ -760,11 +756,6 @@
           </div>
 
           <div class="form-row">
-            <div class="form-group">
-              <label for="phone">Phone Number *</label>
-              <input type="tel" id="phone" v-model="newUser.phone" required
-                     placeholder="+27 12 345 6789">
-            </div>
             <div class="form-group">
               <label for="role">Role *</label>
               <select id="role" v-model="newUser.role_id" required>
@@ -790,20 +781,31 @@
     <div v-if="showEditUserModal" class="modal-overlay" @click="showEditUserModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>Edit User: {{ editingUser.username }}</h3>
+          <h3>Edit User: {{ editingUser.first_name }} {{ editingUser.last_name }}</h3>
           <button @click="showEditUserModal = false" class="close-btn">&times;</button>
         </div>
 
         <form @submit.prevent="updateUser" class="user-form">
           <div class="form-row">
             <div class="form-group">
-              <label for="edit-username">Username</label>
-              <input type="text" id="edit-username" v-model="editingUser.username" disabled>
-              <small class="form-help">Username cannot be changed</small>
+              <label for="edit-first-name">First Name</label>
+              <input type="text" id="edit-first-name" v-model="editingUser.first_name" placeholder="Enter first name">
             </div>
+            <div class="form-group">
+              <label for="edit-last-name">Last Name</label>
+              <input type="text" id="edit-last-name" v-model="editingUser.last_name" placeholder="Enter last name">
+            </div>
+          </div>
+
+          <div class="form-row">
             <div class="form-group">
               <label for="edit-email">Email Address *</label>
               <input type="email" id="edit-email" v-model="editingUser.email" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-phone">Phone Number</label>
+              <input type="tel" id="edit-phone" v-model="editingUser.phone"
+                     placeholder="+27 12 345 6789">
             </div>
           </div>
 
@@ -815,11 +817,6 @@
                   {{ role.name }}
                 </option>
               </select>
-            </div>
-            <div class="form-group">
-              <label for="edit-mobile">Mobile Number</label>
-              <input type="tel" id="edit-mobile" v-model="editingUser.mobile"
-                     placeholder="+27 12 345 6789">
             </div>
           </div>
 
@@ -1434,7 +1431,6 @@ export default {
       jobToAssign: null,
       selectedImages: [], // Array to store selected images from component
       newUser: {
-        username: '',
         email: '',
         first_name: '',
         last_name: '',
@@ -1445,7 +1441,7 @@ export default {
         id: null,
         username: '',
         email: '',
-        mobile: '',
+        phone: '',
         role_id: null,
         newPassword: ''
       },
@@ -1611,7 +1607,6 @@ export default {
         const response = await apiFetch('/backend/api/client-users.php', {
           method: 'POST',
           body: JSON.stringify({
-            username: this.newUser.username,
             email: this.newUser.email,
             first_name: this.newUser.first_name,
             last_name: this.newUser.last_name,
@@ -1641,7 +1636,9 @@ export default {
         id: user.id,
         username: user.username,
         email: user.email,
-        mobile: user.phone || '',  // Use user.phone, not user.mobile
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone || '',
         role_id: user.role_id,
         newPassword: ''
       }
@@ -1660,7 +1657,7 @@ export default {
         const updateData = {
           user_id: this.editingUser.id,
           email: this.editingUser.email,
-          mobile: this.editingUser.mobile || null,
+          mobile: this.editingUser.phone || null,
           role_id: this.editingUser.role_id
         }
 

@@ -1172,71 +1172,57 @@
           <button @click="closeAddTechnicianModal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
         </div>
 
-        <!-- Form -->
-        <form @submit.prevent="createTechnician" class="p-6 space-y-6">
-          <!-- Username and Email Row -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label for="tech_username" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">person</span>
-                Username *
-              </label>
-              <input
-                type="text"
-                id="tech_username"
-                v-model="technicianForm.username"
-                required
-                class="form-input"
-                placeholder="Enter username"
-              >
-            </div>
-            <div>
-              <label for="tech_email" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">email</span>
-                Email Address *
-              </label>
-              <input
-                type="email"
-                id="tech_email"
-                v-model="technicianForm.email"
-                required
-                class="form-input"
-                placeholder="Enter email address"
-              >
-            </div>
-          </div>
+    <!-- Form -->
+    <form @submit.prevent="createTechnician" class="p-6 space-y-6">
+      <!-- First Name and Last Name Row -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="tech_first_name" class="form-label flex items-center gap-2">
+            <span class="material-icon-sm text-gray-500">badge</span>
+            First Name *
+          </label>
+          <input
+            type="text"
+            id="tech_first_name"
+            v-model="technicianForm.first_name"
+            required
+            class="form-input"
+            placeholder="Enter first name"
+          >
+        </div>
+        <div>
+          <label for="tech_last_name" class="form-label flex items-center gap-2">
+            <span class="material-icon-sm text-gray-500">badge</span>
+            Last Name *
+          </label>
+          <input
+            type="text"
+            id="tech_last_name"
+            v-model="technicianForm.last_name"
+            required
+            class="form-input"
+            placeholder="Enter last name"
+          >
+        </div>
+      </div>
 
-          <!-- First Name and Last Name Row -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label for="tech_first_name" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">badge</span>
-                First Name *
-              </label>
-              <input
-                type="text"
-                id="tech_first_name"
-                v-model="technicianForm.first_name"
-                required
-                class="form-input"
-                placeholder="Enter first name"
-              >
-            </div>
-            <div>
-              <label for="tech_last_name" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">badge</span>
-                Last Name *
-              </label>
-              <input
-                type="text"
-                id="tech_last_name"
-                v-model="technicianForm.last_name"
-                required
-                class="form-input"
-                placeholder="Enter last name"
-              >
-            </div>
-          </div>
+      <!-- Email Row -->
+      <div class="grid grid-cols-1 gap-4">
+        <div>
+          <label for="tech_email" class="form-label flex items-center gap-2">
+            <span class="material-icon-sm text-gray-500">email</span>
+            Email Address *
+          </label>
+          <input
+            type="email"
+            id="tech_email"
+            v-model="technicianForm.email"
+            required
+            class="form-input"
+            placeholder="Enter email address"
+          >
+        </div>
+      </div>
 
           <!-- Phone Row -->
           <div class="grid grid-cols-1 gap-4">
@@ -1299,54 +1285,6 @@
 
         <!-- Form -->
         <form @submit.prevent="updateTechnician" class="p-6 space-y-6">
-          <!-- Username and Email Row -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label for="edit_username" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">person</span>
-                Username
-              </label>
-              <input
-                type="text"
-                id="edit_username"
-                v-model="technicianForm.username"
-                readonly
-                class="form-input bg-gray-50 cursor-not-allowed"
-                placeholder="Username cannot be changed"
-              >
-            </div>
-            <div>
-              <label for="edit_email" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">email</span>
-                Email Address
-              </label>
-              <input
-                type="email"
-                id="edit_email"
-                v-model="technicianForm.email"
-                class="form-input"
-                placeholder="Enter email address"
-              >
-            </div>
-          </div>
-
-          <!-- Phone Row -->
-          <div class="grid grid-cols-1 gap-4">
-            <div>
-              <label for="edit_phone" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">phone</span>
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                id="edit_phone"
-                v-model="technicianForm.phone"
-                class="form-input"
-                placeholder="Enter phone number"
-              >
-            </div>
-          </div>
-
           <!-- First Name and Last Name Row -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -1377,7 +1315,37 @@
             </div>
           </div>
 
-          <!-- Phone and Status Row -->
+          <!-- Email AND Phone Row -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="edit_email" class="form-label flex items-center gap-2">
+                <span class="material-icon-sm text-gray-500">email</span>
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="edit_email"
+                v-model="technicianForm.email"
+                class="form-input"
+                placeholder="Enter email address"
+              >
+            </div>
+            <div>
+              <label for="edit_phone" class="form-label flex items-center gap-2">
+                <span class="material-icon-sm text-gray-500">phone</span>
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                id="edit_phone"
+                v-model="technicianForm.phone"
+                class="form-input"
+                placeholder="Enter phone number"
+              >
+            </div>
+          </div>
+
+          <!-- Role and Status Row -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div v-if="userRole === 3">
               <label for="edit_role" class="form-label flex items-center gap-2">
@@ -1397,24 +1365,7 @@
                 You cannot change your own role
               </small>
             </div>
-            <div :class="userRole === 3 ? '' : 'md:col-span-2'">
-              <label for="edit_phone" class="form-label flex items-center gap-2">
-                <span class="material-icon-sm text-gray-500">phone</span>
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                id="edit_phone"
-                v-model="technicianForm.phone"
-                class="form-input"
-                placeholder="Enter phone number"
-              >
-            </div>
-          </div>
-
-          <!-- Status Row (for admin users) -->
-          <div v-if="userRole === 3" class="grid grid-cols-1 gap-4">
-            <div>
+            <div v-if="userRole === 3">
               <label for="edit_status" class="form-label flex items-center gap-2">
                 <span class="material-icon-sm text-gray-500">toggle_on</span>
                 Status
@@ -2240,7 +2191,7 @@ getCurrentUserName() {
     },
 
     async createTechnician() {
-      if (!this.technicianForm.username || !this.technicianForm.email ||
+      if (!this.technicianForm.email ||
           !this.technicianForm.first_name || !this.technicianForm.last_name) {
         alert('Please fill in all required fields')
         return

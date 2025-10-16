@@ -111,14 +111,13 @@ function addClientUser($client_id) {
 
     $data = json_decode(file_get_contents('php://input'), true);
 
-    if (!$data || !isset($data['username']) || !isset($data['email']) ||
+    if (!$data || !isset($data['email']) ||
         !isset($data['first_name']) || !isset($data['last_name']) || !isset($data['phone']) || !isset($data['role_id'])) {
         http_response_code(400);
-        echo json_encode(['error' => 'All fields are required: username, email, first_name, last_name, phone, role_id']);
+        echo json_encode(['error' => 'All fields are required: email, first_name, last_name, phone, role_id']);
         exit;
     }
 
-    $username = trim($data['username']);
     $email = trim($data['email']);
     $first_name = trim($data['first_name']);
     $last_name = trim($data['last_name']);
@@ -126,7 +125,7 @@ function addClientUser($client_id) {
     $role_id = (int)$data['role_id'];
 
     // Validation
-    if (empty($username) || empty($email) || empty($first_name) || empty($last_name) || empty($phone)) {
+    if (empty($email) || empty($first_name) || empty($last_name) || empty($phone)) {
         http_response_code(400);
         echo json_encode(['error' => 'All fields must be non-empty']);
         exit;
@@ -148,13 +147,27 @@ function addClientUser($client_id) {
     try {
         $pdo->beginTransaction();
 
-    // Check if username or email already exists
-    $stmt = $pdo->prepare("SELECT userId FROM users WHERE username = ? OR email = ?");
-    $stmt->execute([$username, $email]);
+    // Generate username from first and last names
+    $username = strtolower(trim($first_name) . '.' . trim($last_name));
+
+    // Ensure username is unique by adding a number if needed
+    $baseUsername = $username;
+    $counter = 1;
+    $stmt = $pdo->prepare("SELECT userId FROM users WHERE username = ?");
+    $stmt->execute([$username]);
+    while ($stmt->fetch()) {
+        $username = $baseUsername . $counter;
+        $stmt->execute([$username]);
+        $counter++;
+    }
+
+    // Check if email already exists
+    $stmt = $pdo->prepare("SELECT userId FROM users WHERE email = ?");
+    $stmt->execute([$email]);
         if ($stmt->fetch()) {
             $pdo->rollBack();
             http_response_code(409);
-            echo json_encode(['error' => 'Username or email already exists']);
+            echo json_encode(['error' => 'Email already exists']);
             exit;
         }
 
