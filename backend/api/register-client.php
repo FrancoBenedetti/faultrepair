@@ -82,13 +82,14 @@ try {
     $stmt->execute([$clientId]);
 
     // Get default role for clients (Client Admin - roleId = 2)
-    $stmt = $pdo->prepare("SELECT roleId as id FROM user_roles WHERE name = 'Client Admin'");
+    $stmt = $pdo->prepare("SELECT roleId as id FROM user_roles WHERE roleId = 2");
     $stmt->execute();
     $role = $stmt->fetch();
     if (!$role) {
+        error_log("[ERROR] Default role with roleId = 2 not found in user_roles table\n", 3, $_SERVER['DOCUMENT_ROOT'].'/all-logs/registration-debug.log');
         $pdo->rollBack();
         http_response_code(500);
-        echo json_encode(['error' => 'Default role not found']);
+        echo json_encode(['error' => 'Default role not found - roleId 2 missing from user_roles table']);
         exit;
     }
 
@@ -104,24 +105,11 @@ try {
     $stmt->execute([$username, $passwordHash, $email, $firstName, $lastName, $role['id'], $clientId, $verificationToken, $tokenExpires]);
     $userId = $pdo->lastInsertId();
 
-    $pdo->commit();
-
-    // Send verification email using user ID for proper name display
-    $emailSent = EmailService::sendVerificationEmail($email, $userId, $verificationToken);
-
-    if ($emailSent) {
-        echo json_encode(['message' => 'Client registered successfully. Please check your email to verify your account.']);
-    } else {
-        // Email failed, but registration succeeded - user can request resend
-        echo json_encode(['message' => 'Client registered successfully. Email verification could not be sent. Please contact support or try logging in to resend verification email.']);
-    }
-
-} catch (Exception $e) {
-    $pdo->rollBack();
-    http_response_code(500);
-    echo json_encode(['error' => 'Registration failed: ' . $e->getMessage()]);
-    // Handle invitation-based registration
+    // Handle invitation-based registration if token provided
+    $autoApproved = false;
     if (isset($data['invitationToken']) && !empty($data['invitationToken'])) {
+        error_log("[DEBUG] Processing client invitation-based registration: Token=" . substr($data['invitationToken'], 0, 10) . "...\n", 3, $_SERVER['DOCUMENT_ROOT'].'/all-logs/registration-debug.log');
+
         // Validate invitation token and get invitation details
         $stmt = $pdo->prepare("
             SELECT i.*, u.entity_id as inviter_entity_id
@@ -133,20 +121,35 @@ try {
         $invitation = $stmt->fetch();
 
         if ($invitation) {
+            error_log("[DEBUG] Invitation found: ID={$invitation['id']}, InviterEntityType={$invitation['inviter_entity_type']}, AutoApprovalAvailable={$invitation['auto_approval_available_for_invitee']}, InviterEntityID={$invitation['inviter_entity_id']}, ClientID={$clientId}\n", 3, $_SERVER['DOCUMENT_ROOT'].'/all-logs/registration-debug.log');
+
             // Mark invitation as completed
             $stmt = $pdo->prepare("UPDATE invitations SET invitation_status = 'completed', completed_at = NOW() WHERE id = ?");
             $stmt->execute([$invitation['id']]);
+            error_log("[DEBUG] Invitation marked as completed\n", 3, $_SERVER['DOCUMENT_ROOT'].'/all-logs/registration-debug.log');
 
-            // Check if there's auto-approval available for the invitee
-            if ((int)$invitation['auto_approval_available_for_invitee'] === 1 && isset($data['approveInvitingServiceProvider']) && $data['approveInvitingServiceProvider'] === true) {
+            // Check if there's auto-approval available for the invitee (NEW CLIENT)
+            if ((int)$invitation['auto_approval_available_for_invitee'] === 1) {
+                error_log("[DEBUG] Auto-approval available - approving inviting service provider for new client: ClientID={$clientId}, ProviderID={$invitation['inviter_entity_id']}\n", 3, $_SERVER['DOCUMENT_ROOT'].'/all-logs/registration-debug.log');
+
                 // Auto-approve the inviting service provider for this new client
                 $stmt = $pdo->prepare("
-                    INSERT INTO client_approved_providers (client_participant_id, provider_participant_id)
+                    INSERT INTO participant_approvals (client_participant_id, provider_participant_id)
                     VALUES (?, ?)
                     ON DUPLICATE KEY UPDATE client_participant_id = client_participant_id
                 ");
-                $stmt->execute([$clientId, $invitation['inviter_entity_id']]);
+                $result = $stmt->execute([$clientId, $invitation['inviter_entity_id']]);
+                $rowsAffected = $stmt->rowCount();
+
+                error_log("[DEBUG] participant_approvals INSERT result: Success=" . ($result ? 'YES' : 'NO') . ", RowsAffected={$rowsAffected}\n", 3, $_SERVER['DOCUMENT_ROOT'].'/all-logs/registration-debug.log');
+
+                $autoApproved = true;
+                error_log("[DEBUG] Client auto-approved for service provider - flow complete\n", 3, $_SERVER['DOCUMENT_ROOT'].'/all-logs/registration-debug.log');
+            } else {
+                error_log("[DEBUG] No auto-approval available for this invitation\n", 3, $_SERVER['DOCUMENT_ROOT'].'/all-logs/registration-debug.log');
             }
+        } else {
+            error_log("[DEBUG] No valid invitation found for token\n", 3, $_SERVER['DOCUMENT_ROOT'].'/all-logs/registration-debug.log');
         }
     }
 
@@ -158,13 +161,13 @@ try {
     if ($emailSent) {
         echo json_encode([
             'message' => 'Client registered successfully. Please check your email to verify your account.',
-            'autoApproved' => ($invitation['auto_approval_available_for_invitee'] ?? false) && ($data['approveInvitingServiceProvider'] ?? false)
+            'autoApproved' => $autoApproved
         ]);
     } else {
         // Email failed, but registration succeeded - user can request resend
         echo json_encode([
             'message' => 'Client registered successfully. Email verification could not be sent. Please contact support or try logging in to resend verification email.',
-            'autoApproved' => ($invitation['auto_approval_available_for_invitee'] ?? false) && ($data['approveInvitingServiceProvider'] ?? false)
+            'autoApproved' => $autoApproved
         ]);
     }
 

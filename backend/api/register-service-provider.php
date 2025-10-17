@@ -3,6 +3,9 @@ require_once '../config/database.php';
 require_once '../includes/JWT.php';
 require_once '../includes/email.php';
 
+$log_file = $_SERVER['DOCUMENT_ROOT'].'/all-logs/registration-debug.log';
+error_log("=== Registration Debug Script Started " . date('Y-m-d H:i:s') . " ===\n", 3, $log_file);
+
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -22,6 +25,7 @@ $data = json_decode(file_get_contents('php://input'), true);
 
 // Check for invitation token
 $invitationToken = isset($data['invitationToken']) ? trim($data['invitationToken']) : null;
+error_log("[DEBUG] Registration request: InvitationToken=" . ($invitationToken ? substr($invitationToken, 0, 10) . '...' : 'NONE') . ", Email={$email}, ProviderName={$providerName}\n", 3, $log_file);
 
 $requiredFields = ['providerName', 'firstName', 'lastName', 'address', 'email', 'password'];
 if (!$invitationToken) {
@@ -133,14 +137,49 @@ try {
             $stmt = $pdo->prepare("UPDATE invitations SET invitation_status = 'completed', completed_at = NOW() WHERE id = ?");
             $stmt->execute([$invitation['id']]);
 
-            // If invited by a client, auto-approve this service provider for that client
-            if ($invitation['inviter_entity_type'] === 'client') {
-                $stmt = $pdo->prepare("
-                    INSERT INTO participant_approvals (client_participant_id, provider_participant_id)
-                    VALUES (?, ?)
-                    ON DUPLICATE KEY UPDATE client_participant_id = client_participant_id
-                ");
-                $stmt->execute([$invitation['inviter_entity_id'], $providerId]);
+            error_log("[DEBUG] Processing invitation-based registration: InvitationID={$invitation['id']}, Status={$invitation['invitation_status']}, InviterEntityType={$invitation['inviter_entity_type']}, AutoApprovalApplied={$invitation['auto_approval_applied']}, AutoApprovalAvailableForInvitee={$invitation['auto_approval_available_for_invitee']}\n", 3, $log_file);
+
+            // If invited by a client and auto-approval is available, check invitation status
+            if ($invitation['inviter_entity_type'] === 'client' || $invitation['inviter_entity_type'] === 'C') {
+                error_log("[DEBUG] Client invited service provider: Checking approval logic\n", 3, $log_file);
+                if ($invitation['auto_approval_applied']) {
+                    error_log("[DEBUG] Auto-approval already applied during invitation creation - no further action needed\n", 3, $log_file);
+                    // Auto-approval was already applied when invitation was created
+                    // No action needed here
+                } elseif ($invitation['auto_approval_available_for_invitee']) {
+                    error_log("[DEBUG] Auto-approval available for invitee during registration - applying now with ClientID={$invitation['inviter_entity_id']}, ProviderID={$providerId}\n", 3, $log_file);
+                    // Auto-approval is available for the invitee to apply during registration
+                    $stmt = $pdo->prepare("
+                        INSERT INTO participant_approvals (client_participant_id, provider_participant_id)
+                        VALUES (?, ?)
+                        ON DUPLICATE KEY UPDATE client_participant_id = client_participant_id
+                    ");
+                    $insertResult = $stmt->execute([$invitation['inviter_entity_id'], $providerId]);
+                    $insertRowsAffected = $stmt->rowCount();
+                    error_log("[DEBUG] participant_approvals INSERT result during registration: Success=" . ($insertResult ? 'YES' : 'NO') . ", RowsAffected={$insertRowsAffected}, ClientID={$invitation['inviter_entity_id']}, ProviderID={$providerId}\n", 3, $log_file);
+                } else {
+                    // NEW: Apply auto-approval for client admins (roleId = 2) inviting existing service providers
+                    error_log("[DEBUG] Checking for auto-approval from client admin: retrieving inviter role\n", 3, $log_file);
+                    $stmt = $pdo->prepare("SELECT u.role_id FROM users u WHERE u.userId = ?");
+                    $stmt->execute([$invitation['inviter_user_id']]);
+                    $inviterUser = $stmt->fetch();
+
+                    if ($inviterUser && $inviterUser['role_id'] === 2) {
+                        error_log("[DEBUG] Inviter is client admin (roleId=2) - applying auto-approval with ClientID={$invitation['inviter_entity_id']}, ProviderID={$providerId}\n", 3, $log_file);
+                        $stmt = $pdo->prepare("
+                            INSERT INTO participant_approvals (client_participant_id, provider_participant_id)
+                            VALUES (?, ?)
+                            ON DUPLICATE KEY UPDATE client_participant_id = client_participant_id
+                        ");
+                        $insertResult = $stmt->execute([$invitation['inviter_entity_id'], $providerId]);
+                        $insertRowsAffected = $stmt->rowCount();
+                        error_log("[DEBUG] participant_approvals INSERT result for client admin auto-approval: Success=" . ($insertResult ? 'YES' : 'NO') . ", RowsAffected={$insertRowsAffected}, ClientID={$invitation['inviter_entity_id']}, ProviderID={$providerId}\n", 3, $log_file);
+                    } else {
+                        error_log("[DEBUG] Inviter roleId={$inviterUser['role_id']} is not client admin - no auto-approval applied\n", 3, $log_file);
+                    }
+                }
+            } else {
+                error_log("[DEBUG] Not a client invitation - no approval logic applied\n", 3, $log_file);
             }
         }
     }

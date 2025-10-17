@@ -4,9 +4,8 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 ini_set('log_errors', 1);
-ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/create-invitation.log');
-
-error_log("Script started - error reporting enabled");
+$log_file = $_SERVER['DOCUMENT_ROOT'].'/all-logs/invitation-debug.log';
+error_log("=== Create Invitation Debug Script Started " . date('Y-m-d H:i:s') . " ===\n", 3, $log_file);
 
 // Log the start of the request
 error_log("=== Create Invitation Request Started ===");
@@ -98,15 +97,15 @@ if (!$user_data) {
     exit;
 }
 
-// Check if user is admin (Client Admin or Service Provider Admin)
-error_log("User role check: " . $user_data['role_id']);
-if (!in_array($user_data['role_id'], [2, 3])) {  // 2 = Site Budget Controller (Client Admin), 3 = Service Provider Admin
-    error_log("User is NOT an admin - denying access");
-    http_response_code(403);
-    echo json_encode(['error' => 'Only administrators can create invitations']);
-    exit;
-}
-error_log("User is an admin - allowing invitation creation");
+// Check if user is admin (Client Admin: roleId = 2 OR Service Provider Admin: roleId = 3)
+error_log("[DEBUG] User role check: role_id={$user_data['role_id']}\n", 3, $log_file);
+    if (!in_array($user_data['role_id'], [2, 3])) {  // Allow Client Admins (2) and Service Provider Admins (3) to create invitations
+        error_log("[DEBUG] User is NOT an admin - role_id={$user_data['role_id']}, denying access\n", 3, $log_file);
+        http_response_code(403);
+        echo json_encode(['error' => 'Only administrators can create invitations']);
+        exit;
+    }
+    error_log("[DEBUG] User is a client or service provider admin - role_id={$user_data['role_id']}, role_name={$user_data['role_name']}, allowing invitation creation\n", 3, $log_file);
 
 $data = json_decode(file_get_contents('php://input'), true);
 
@@ -154,6 +153,7 @@ if (in_array($communicationMethod, ['whatsapp', 'telegram', 'sms']) && empty($in
 
 try {
     $pdo->beginTransaction();
+    error_log("[DEBUG] Started transaction\nInviter: UserID={$user_data['userId']}, Role={$user_data['role_name']}, EntityType={$user_data['entity_type']}, EntityID={$user_data['entity_id']}\nInvitee: FirstName={$inviteeFirstName}, LastName={$inviteeLastName}, Email={$inviteeEmail}, InvitationType={$invitationType}\n", 3, $log_file);
 
     // Check if invitee already exists as a user
     $existingUser = null;
@@ -166,6 +166,9 @@ try {
         ");
         $stmt->execute([$inviteeEmail]);
         $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
+        error_log("[DEBUG] Existing user lookup: Email={$inviteeEmail}, Found=" . ($existingUser ? "YES" : "NO") . ($existingUser ? ", UserID={$existingUser['userId']}, EntityID={$existingUser['entity_id']}, Role={$existingUser['role_name']}" : "") . "\n", 3, $log_file);
+    } else {
+        error_log("[DEBUG] No email provided - skipping existing user lookup\n", 3, $log_file);
     }
 
     // Get default expiry days from settings
@@ -200,19 +203,25 @@ try {
                 $invitationStatus = 'requires_authorization';
             }
         } elseif ($invitationType === 'service_provider' && $user_data['entity_type'] === 'client') {
+            error_log("[DEBUG] Client inviting existing service provider: InviterRoleID={$user_data['role_id']}, InviterRoleName={$user_data['role_name']}\n", 3, $log_file);
             // Client inviting existing service provider
-            // Rule 2 & Rule 4: Auto-approve if inviting user is budget controller
-            if ($user_data['role_name'] === 'Site Budget Controller') {
+            // Rule 2 & Rule 4: Auto-approve if inviting user is client admin (roleId = 2 or service provider admin = 3)
+            if ($user_data['role_id'] === 2) {
+                error_log("[DEBUG] Auto-approval logic triggered for client admin: Inserting into participant_approvals with ClientID={$user_data['entity_id']}, ProviderID={$existingUser['entity_id']}\n", 3, $log_file);
                 $stmt = $pdo->prepare("
-                    INSERT INTO client_approved_providers (client_id, service_provider_id)
+                    INSERT INTO participant_approvals (client_participant_id, provider_participant_id)
                     VALUES (?, ?)
-                    ON DUPLICATE KEY UPDATE client_id = client_id
+                    ON DUPLICATE KEY UPDATE client_participant_id = client_participant_id
                 ");
-                $stmt->execute([$user_data['entity_id'], $existingUser['entity_id']]);
+                $result = $stmt->execute([$user_data['entity_id'], $existingUser['entity_id']]);
+                $rowsAffected = $stmt->rowCount();
+                error_log("[DEBUG] participant_approvals INSERT result: Success=" . ($result ? 'YES' : 'NO') . ", RowsAffected={$rowsAffected}\n", 3, $log_file);
                 $autoApprovalApplied = true;
                 $invitationStatus = 'completed';
                 $accessMessage = "You have been added as an approved service provider for " . getClientName($pdo, $user_data['entity_id']) . ". No further action is required.";
+                error_log("[DEBUG] Auto-approval completed: Status='completed', AutoApprovalApplied=1\n", 3, $log_file);
             } else {
+                error_log("[DEBUG] Auto-approval NOT applied: Inviter roleId={$user_data['role_id']} is not client admin (roleId=2)\n", 3, $log_file);
                 // Rule 2: Inform that client needs to use dashboard to approve
                 $accessMessage = "No registration action was needed. However, " . getClientName($pdo, $user_data['entity_id']) . " should use their dashboard to formally approve you as a service provider.";
                 $invitationStatus = 'informational';
@@ -222,12 +231,26 @@ try {
 
     // Enhanced business logic for new (not existing) users
     if (!$existingUser) {
-        if ($invitationType === 'client' && $user_data['entity_type'] === 'service_provider') {
+        if ($invitationType === 'service_provider' && $user_data['entity_type'] === 'client') {
+            // Client inviting a new prospective service provider
+            // This is handled either during invitation creation (if roleId = 2) or during registration
+            // No special flag needed for new service providers - logic is in registration
+            error_log("[DEBUG] Client inviting new service provider: No special auto-approval needed - handled in registration logic\n", 3, $log_file);
+            $autoApprovalAvailableForInvitee = false; // Explicit false for clarity
+        } elseif ($invitationType === 'client' && $user_data['entity_type'] === 'S') {
             // Service Provider inviting a new prospective client
-            // This new client should have the option to auto-approve the inviting service provider
+            // Rule 3: New client should auto-approve the inviting service provider during registration
+            error_log("[DEBUG] Service provider inviting new client: Setting auto_approval_available_for_invitee = TRUE for automatic approval during client registration\n", 3, $log_file);
+            error_log("[DEBUG] Inviter entity_type: {$user_data['entity_type']}, Invitation type: {$invitationType}\n", 3, $log_file);
             $autoApprovalAvailableForInvitee = true;
             $accessMessage = null; // No message needed for new user invitations - handled at registration time
+            error_log("[DEBUG] autoApprovalAvailableForInvitee set to TRUE\n", 3, $log_file);
+        } else {
+            // Default case for new users - no auto-approval
+            $autoApprovalAvailableForInvitee = false;
+            error_log("[DEBUG] Default case: autoApprovalAvailableForInvitee set to FALSE for inviter_type={$user_data['entity_type']}, invitation_type={$invitationType}\n", 3, $log_file);
         }
+        error_log("[DEBUG] Final autoApprovalAvailableForInvitee value: " . ($autoApprovalAvailableForInvitee ? 'TRUE' : 'FALSE') . "\n", 3, $log_file);
     }
 
     // Generate unique invitation token
@@ -269,8 +292,8 @@ try {
     $stmt->execute([
         $invitationToken,
         $user_data['userId'],
-        $user_data['entity_id'],
-        $user_data['entity_id'],
+        $user_data['entity_type'],      // inviter_entity_type ✅ CORRECT!
+        $user_data['entity_id'],        // inviter_entity_id   ✅ CORRECT!
         $inviteeFirstName,
         $inviteeLastName,
         $inviteeEmail,
@@ -288,13 +311,14 @@ try {
         $notes
     ]);
 
-    // Update invitation with the auto_approval_available_for_invitee flag if applicable
+    $invitationId = $pdo->lastInsertId();
+
+    // Update invitation with the auto_approval_available_for_invitee flag if applicable (MUST happen AFTER insert!)
     if ($autoApprovalAvailableForInvitee) {
         $stmt = $pdo->prepare("UPDATE invitations SET auto_approval_available_for_invitee = 1 WHERE id = ?");
         $stmt->execute([$invitationId]);
+        error_log("[DEBUG] Updated invitation {$invitationId} with auto_approval_available_for_invitee = 1\n", 3, $log_file);
     }
-
-    $invitationId = $pdo->lastInsertId();
 
     $pdo->commit();
 
