@@ -100,9 +100,10 @@ try {
                 'entity_name' => $invitation['inviter_entity_name'],
                 'entity_type' => strtolower($invitation['inviter_entity_type_fixed'])
             ],
-            'invitee_first_name' => $invitation['invitee_first_name'],
-            'invitee_last_name' => $invitation['invitee_last_name'],
-            'notes' => $invitation['notes'],
+        'invitee_first_name' => $invitation['invitee_first_name'],
+        'invitee_last_name' => $invitation['invitee_last_name'],
+        'notes' => $invitation['notes'],
+        'auto_approval_available_for_invitee' => (int)$invitation['auto_approval_available_for_invitee'] === 1,
             'registration_data' => json_decode($invitation['registration_data'], true)
         ]
     ]);

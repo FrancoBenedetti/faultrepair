@@ -32,8 +32,8 @@ if (!$payload) {
 $stmt = $pdo->prepare("
     SELECT u.*, r.name as role_name
     FROM users u
-    JOIN roles r ON u.role_id = r.id
-    WHERE u.id = ?
+    JOIN user_roles r ON u.role_id = r.roleId
+    WHERE u.userId = ?
 ");
 $stmt->execute([$payload['user_id']]);
 $user_data = $stmt->fetch();
@@ -45,7 +45,7 @@ if (!$user_data) {
 }
 
 // Check if user is admin (Site Budget Controller or Service Provider Admin)
-if (!in_array($user_data['role_name'], ['Site Budget Controller', 'Service Provider Admin'])) {
+if (!in_array($user_data['role_id'], [2, 3])) {  // 2 = Site Budget Controller (Client Admin), 3 = Service Provider Admin
     http_response_code(403);
     echo json_encode(['error' => 'Only administrators can manage invitations']);
     exit;
@@ -57,7 +57,7 @@ try {
         $stmt = $pdo->prepare("
             SELECT i.*, u.first_name, u.last_name, u.email as inviter_email
             FROM invitations i
-            JOIN users u ON i.inviter_user_id = u.id
+            JOIN users u ON i.inviter_user_id = u.userId
             WHERE i.inviter_user_id = ?
             ORDER BY i.created_at DESC
         ");

@@ -122,7 +122,7 @@ try {
         $stmt = $pdo->prepare("
             SELECT i.*, u.entity_id as inviter_entity_id
             FROM invitations i
-            JOIN users u ON i.inviter_user_id = u.id
+            JOIN users u ON i.inviter_user_id = u.userId
             WHERE i.invitation_token = ? AND i.invitation_status = 'accessed'
         ");
         $stmt->execute([$invitationToken]);

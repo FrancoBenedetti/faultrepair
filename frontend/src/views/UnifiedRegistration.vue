@@ -241,6 +241,31 @@
             >
           </div>
 
+          <!-- Service Provider Approval Option (only for new clients invited by service providers) -->
+          <div v-if="showApprovalOption" class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 class="text-md font-semibold text-blue-900 mb-3">Invite Offer</h4>
+            <p class="text-sm text-blue-800 mb-4">
+              You have been invited by <strong>{{ invitingServiceProviderName }}</strong> to use our maintenance management platform.
+              Would you like to approve them as a service provider for your organization?
+            </p>
+
+            <div class="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="approveProvider"
+                v-model="form.approveInvitingServiceProvider"
+                class="mt-1"
+              >
+              <label for="approveProvider" class="text-sm text-blue-800 font-medium">
+                Yes, approve {{ invitingServiceProviderName }} as a service provider
+              </label>
+            </div>
+
+            <p class="text-xs text-blue-600 mt-2">
+              You can change this approval or add other service providers later through your dashboard.
+            </p>
+          </div>
+
           <!-- Terms Agreement -->
           <div class="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
             <input
@@ -297,6 +322,8 @@ export default {
       selectedRole: null,
       loading: false,
       invitationData: null,
+      showApprovalOption: false,
+      invitingServiceProviderName: '',
       form: {
         companyName: '',
         firstName: '',
@@ -305,7 +332,8 @@ export default {
         email: '',
         password: '',
         agreeToTerms: false,
-        invitationToken: null
+        invitationToken: null,
+        approveInvitingServiceProvider: false
       }
     }
   },
@@ -350,6 +378,13 @@ export default {
           }
           if (this.invitationData.invitee_phone && !this.form.phone) {
             // Phone field might be added later if needed
+          }
+
+          // Check if service provider approval should be offered
+          if (this.invitationData.auto_approval_available_for_invitee &&
+              this.invitationData.invitation_type === 'client') {
+            this.showApprovalOption = true
+            this.invitingServiceProviderName = this.invitationData.inviter_details.entity_name
           }
         }
       } catch (error) {

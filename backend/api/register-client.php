@@ -120,5 +120,57 @@ try {
     $pdo->rollBack();
     http_response_code(500);
     echo json_encode(['error' => 'Registration failed: ' . $e->getMessage()]);
+    // Handle invitation-based registration
+    if (isset($data['invitationToken']) && !empty($data['invitationToken'])) {
+        // Validate invitation token and get invitation details
+        $stmt = $pdo->prepare("
+            SELECT i.*, u.entity_id as inviter_entity_id
+            FROM invitations i
+            JOIN users u ON i.inviter_user_id = u.userId
+            WHERE i.invitation_token = ? AND i.invitation_status = 'accessed'
+        ");
+        $stmt->execute([$data['invitationToken']]);
+        $invitation = $stmt->fetch();
+
+        if ($invitation) {
+            // Mark invitation as completed
+            $stmt = $pdo->prepare("UPDATE invitations SET invitation_status = 'completed', completed_at = NOW() WHERE id = ?");
+            $stmt->execute([$invitation['id']]);
+
+            // Check if there's auto-approval available for the invitee
+            if ((int)$invitation['auto_approval_available_for_invitee'] === 1 && isset($data['approveInvitingServiceProvider']) && $data['approveInvitingServiceProvider'] === true) {
+                // Auto-approve the inviting service provider for this new client
+                $stmt = $pdo->prepare("
+                    INSERT INTO client_approved_providers (client_participant_id, provider_participant_id)
+                    VALUES (?, ?)
+                    ON DUPLICATE KEY UPDATE client_participant_id = client_participant_id
+                ");
+                $stmt->execute([$clientId, $invitation['inviter_entity_id']]);
+            }
+        }
+    }
+
+    $pdo->commit();
+
+    // Send verification email using user ID for proper name display
+    $emailSent = EmailService::sendVerificationEmail($email, $userId, $verificationToken);
+
+    if ($emailSent) {
+        echo json_encode([
+            'message' => 'Client registered successfully. Please check your email to verify your account.',
+            'autoApproved' => ($invitation['auto_approval_available_for_invitee'] ?? false) && ($data['approveInvitingServiceProvider'] ?? false)
+        ]);
+    } else {
+        // Email failed, but registration succeeded - user can request resend
+        echo json_encode([
+            'message' => 'Client registered successfully. Email verification could not be sent. Please contact support or try logging in to resend verification email.',
+            'autoApproved' => ($invitation['auto_approval_available_for_invitee'] ?? false) && ($data['approveInvitingServiceProvider'] ?? false)
+        ]);
+    }
+
+} catch (Exception $e) {
+    $pdo->rollBack();
+    http_response_code(500);
+    echo json_encode(['error' => 'Registration failed: ' . $e->getMessage()]);
 }
 ?>

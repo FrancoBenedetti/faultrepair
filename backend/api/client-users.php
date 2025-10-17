@@ -112,9 +112,9 @@ function addClientUser($client_id) {
     $data = json_decode(file_get_contents('php://input'), true);
 
     if (!$data || !isset($data['email']) ||
-        !isset($data['first_name']) || !isset($data['last_name']) || !isset($data['phone']) || !isset($data['role_id'])) {
+        !isset($data['first_name']) || !isset($data['last_name']) || !isset($data['role_id'])) {
         http_response_code(400);
-        echo json_encode(['error' => 'All fields are required: email, first_name, last_name, phone, role_id']);
+        echo json_encode(['error' => 'Required fields missing: email, first_name, last_name, role_id']);
         exit;
     }
 
@@ -124,10 +124,10 @@ function addClientUser($client_id) {
     $phone = trim($data['phone']);
     $role_id = (int)$data['role_id'];
 
-    // Validation
-    if (empty($email) || empty($first_name) || empty($last_name) || empty($phone)) {
+    // Validation - phone is optional, convert empty to null
+    if (empty($email) || empty($first_name) || empty($last_name)) {
         http_response_code(400);
-        echo json_encode(['error' => 'All fields must be non-empty']);
+        echo json_encode(['error' => 'Required fields must be non-empty: email, first_name, last_name']);
         exit;
     }
 
@@ -137,12 +137,15 @@ function addClientUser($client_id) {
         exit;
     }
 
-    // Validate phone number (basic validation)
-    if (!preg_match('/^[0-9+\-\s()]+$/', $phone)) {
+    // Validate phone number only if provided (optional field)
+    if ($phone !== '' && !preg_match('/^[0-9+\-\s()]+$/', $phone)) {
         http_response_code(400);
         echo json_encode(['error' => 'Invalid phone number format']);
         exit;
     }
+
+    // Convert empty phone to null for database storage
+    $phone = ($phone === '') ? null : $phone;
 
     try {
         $pdo->beginTransaction();
@@ -171,8 +174,8 @@ function addClientUser($client_id) {
             exit;
         }
 
-        // Verify role exists and is appropriate for clients (using new user_roles table)
-        $stmt = $pdo->prepare("SELECT roleId as id, name FROM user_roles WHERE roleId = ? AND name IN ('Client User', 'Client Admin')");
+        // Verify role exists (role ID is the authoritative identifier - names are just display labels)
+        $stmt = $pdo->prepare("SELECT roleId as id, name FROM user_roles WHERE roleId = ?");
         $stmt->execute([$role_id]);
         $role = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$role) {
@@ -314,8 +317,8 @@ function updateClientUser($client_id) {
         if (isset($data['role_id'])) {
             $new_role_id = (int)$data['role_id'];
 
-            // Verify role exists and is appropriate for clients (using new user_roles table)
-            $stmt = $pdo->prepare("SELECT roleId as id, name FROM user_roles WHERE roleId = ? AND name IN ('Client User', 'Client Admin')");
+            // Verify role exists (role ID is the authoritative identifier - names are just display labels)
+            $stmt = $pdo->prepare("SELECT roleId as id, name FROM user_roles WHERE roleId = ?");
             $stmt->execute([$new_role_id]);
             $role = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$role) {
@@ -351,6 +354,36 @@ function updateClientUser($client_id) {
 
             $updateFields[] = "role_id = ?";
             $updateValues[] = $new_role_id;
+        }
+
+        // Handle first_name update
+        if (isset($data['first_name'])) {
+            $first_name = trim($data['first_name']);
+            // Required field cannot be empty
+            if (empty($first_name)) {
+                $pdo->rollBack();
+                http_response_code(400);
+                echo json_encode(['error' => 'First name cannot be empty']);
+                exit;
+            }
+
+            $updateFields[] = "first_name = ?";
+            $updateValues[] = $first_name;
+        }
+
+        // Handle last_name update
+        if (isset($data['last_name'])) {
+            $last_name = trim($data['last_name']);
+            // Required field cannot be empty
+            if (empty($last_name)) {
+                $pdo->rollBack();
+                http_response_code(400);
+                echo json_encode(['error' => 'Last name cannot be empty']);
+                exit;
+            }
+
+            $updateFields[] = "last_name = ?";
+            $updateValues[] = $last_name;
         }
 
         // Handle phone/mobile update

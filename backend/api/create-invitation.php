@@ -99,8 +99,8 @@ if (!$user_data) {
 }
 
 // Check if user is admin (Client Admin or Service Provider Admin)
-error_log("User role check: " . $user_data['role_name']);
-if (!in_array($user_data['role_name'], ['Client Admin', 'Service Provider Admin'])) {
+error_log("User role check: " . $user_data['role_id']);
+if (!in_array($user_data['role_id'], [2, 3])) {  // 2 = Site Budget Controller (Client Admin), 3 = Service Provider Admin
     error_log("User is NOT an admin - denying access");
     http_response_code(403);
     echo json_encode(['error' => 'Only administrators can create invitations']);
@@ -181,6 +181,7 @@ try {
     $invitationStatus = 'pending';
     $accessMessage = null;
     $autoApprovalApplied = false;
+    $autoApprovalAvailableForInvitee = false;
 
     if ($existingUser) {
         $inviteeUserId = $existingUser['userId'];
@@ -216,6 +217,16 @@ try {
                 $accessMessage = "No registration action was needed. However, " . getClientName($pdo, $user_data['entity_id']) . " should use their dashboard to formally approve you as a service provider.";
                 $invitationStatus = 'informational';
             }
+        }
+    }
+
+    // Enhanced business logic for new (not existing) users
+    if (!$existingUser) {
+        if ($invitationType === 'client' && $user_data['entity_type'] === 'service_provider') {
+            // Service Provider inviting a new prospective client
+            // This new client should have the option to auto-approve the inviting service provider
+            $autoApprovalAvailableForInvitee = true;
+            $accessMessage = null; // No message needed for new user invitations - handled at registration time
         }
     }
 
@@ -276,6 +287,12 @@ try {
         json_encode($registrationData),
         $notes
     ]);
+
+    // Update invitation with the auto_approval_available_for_invitee flag if applicable
+    if ($autoApprovalAvailableForInvitee) {
+        $stmt = $pdo->prepare("UPDATE invitations SET auto_approval_available_for_invitee = 1 WHERE id = ?");
+        $stmt->execute([$invitationId]);
+    }
 
     $invitationId = $pdo->lastInsertId();
 

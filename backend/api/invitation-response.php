@@ -38,8 +38,8 @@ if (!$payload) {
 $stmt = $pdo->prepare("
     SELECT u.*, r.name as role_name
     FROM users u
-    JOIN roles r ON u.role_id = r.id
-    WHERE u.id = ?
+    JOIN user_roles r ON u.role_id = r.roleId
+    WHERE u.userId = ?
 ");
 $stmt->execute([$payload['user_id']]);
 $user_data = $stmt->fetch();
@@ -74,7 +74,7 @@ try {
     $stmt = $pdo->prepare("
         SELECT i.*, u.role_id as inviter_role_id
         FROM invitations i
-        JOIN users u ON i.inviter_user_id = u.id
+        JOIN users u ON i.inviter_user_id = u.userId
         WHERE i.invitation_token = ?
     ");
     $stmt->execute([$invitationToken]);

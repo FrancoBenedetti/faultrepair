@@ -1657,6 +1657,8 @@ export default {
         const updateData = {
           user_id: this.editingUser.id,
           email: this.editingUser.email,
+          first_name: this.editingUser.first_name,
+          last_name: this.editingUser.last_name,
           mobile: this.editingUser.phone || null,
           role_id: this.editingUser.role_id
         }

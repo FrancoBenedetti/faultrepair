@@ -62,7 +62,7 @@ if ($role_id === 4) {
     $stmt = $pdo->prepare("
         SELECT u.id
         FROM users u
-        WHERE u.id = ? AND u.role_id = 4 AND u.entity_type = 'service_provider' AND u.entity_id = ?
+        WHERE u.userId = ? AND u.role_id = 4 AND u.entity_type = 'service_provider' AND u.entity_id = ?
     ");
     $stmt->execute([$technician_id, $entity_id]);
     if (!$stmt->fetch()) {
@@ -85,7 +85,7 @@ try {
             u.is_active,
             CONCAT(u.first_name, ' ', u.last_name) as full_name
         FROM users u
-        WHERE u.id = ? AND u.role_id = 4 AND u.entity_type = 'service_provider'
+        WHERE u.userId = ? AND u.role_id = 4 AND u.entity_type = 'service_provider'
     ");
     $stmt->execute([$technician_id]);
     $technician = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -115,7 +115,7 @@ try {
         JOIN locations l ON j.client_location_id = l.id
         JOIN clients c ON l.client_id = c.id
         JOIN service_providers sp ON j.assigned_provider_participant_id = sp.id
-        LEFT JOIN users u ON j.reporting_user_id = u.id
+        LEFT JOIN users u ON j.reporting_user_id = u.userId
         WHERE j.assigned_technician_user_id = ?
         ORDER BY j.created_at DESC
     ");
@@ -131,7 +131,7 @@ try {
                 jsh.changed_at,
                 u.username as changed_by
             FROM job_status_history jsh
-            LEFT JOIN users u ON jsh.changed_by_user_id = u.id
+            LEFT JOIN users u ON jsh.changed_by_user_id = u.userId
             WHERE jsh.job_id = ?
             ORDER BY jsh.changed_at DESC
         ");
