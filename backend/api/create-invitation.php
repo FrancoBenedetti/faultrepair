@@ -338,6 +338,9 @@ try {
             'expires_at' => $expiresAt,
             'invitation_url' => $invitationUrl,
             'whatsapp_url' => generateWhatsAppUrl($inviteePhone, $invitationUrl),
+            'telegram_url' => generateTelegramUrl($inviteePhone, $invitationUrl),
+            'sms_url' => generateSMSUrl($inviteePhone, $invitationUrl),
+            'email_url' => generateEmailUrl($inviteeEmail, $invitationUrl, $inviteeFirstName),
             'registration_data' => $registrationData
         ]
     ]);
@@ -397,5 +400,41 @@ function generateWhatsAppUrl($phone, $invitationUrl) {
     $encodedMessage = urlencode($message);
 
     return "https://wa.me/{$cleanPhone}?text={$encodedMessage}";
+}
+
+function generateTelegramUrl($phone, $invitationUrl) {
+    $message = "Hi! You've been invited to join our Snappy service request platform. Click here to register: " . $invitationUrl;
+    $encodedMessage = urlencode($message);
+
+    return "https://t.me/share/url?url=" . urlencode($invitationUrl) . "&text={$encodedMessage}";
+}
+
+function generateSMSUrl($phone, $invitationUrl) {
+    if (!$phone) return null;
+
+    // Remove any non-digit characters from phone
+    $cleanPhone = preg_replace('/\D/', '', $phone);
+
+    // Add country code if not present (assuming South Africa +27)
+    if (strlen($cleanPhone) === 10) {
+        $cleanPhone = '27' . substr($cleanPhone, 1);
+    } elseif (strlen($cleanPhone) === 9) {
+        $cleanPhone = '27' . $cleanPhone;
+    }
+
+    $message = "Hi! You've been invited to join our Snappy service request platform. Click here to register: {$invitationUrl}";
+    $encodedMessage = urlencode($message);
+
+    return "sms:{$cleanPhone}?body={$encodedMessage}";
+}
+
+function generateEmailUrl($email, $invitationUrl, $inviteeName = '') {
+    if (!$email) return null;
+
+    $greeting = $inviteeName ? "Hi {$inviteeName}," : "Hello,";
+    $subject = "You're invited to join Snappy!";
+    $body = "{$greeting}%0A%0AYou've been invited to join our Snappy service request platform. Click the link below to register:%0A%0A{$invitationUrl}%0A%0ARegards,%0AThe Snappy Team";
+
+    return "mailto:{$email}?subject=" . urlencode($subject) . "&body={$body}";
 }
 ?>

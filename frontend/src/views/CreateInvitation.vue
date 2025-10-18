@@ -230,16 +230,53 @@
               <p class="text-sm font-mono break-all">{{ invitationData.invitation_url }}</p>
             </div>
 
-            <!-- WhatsApp Button -->
-            <div v-if="invitationData.whatsapp_url" class="mb-4">
-              <a
-                :href="invitationData.whatsapp_url"
-                target="_blank"
-                class="btn-filled w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700"
-              >
-                <span class="w-4 h-4 bg-white rounded-full"></span>
-                Share via WhatsApp
-              </a>
+            <!-- Sharing Buttons -->
+            <div class="flex gap-3 flex-wrap">
+              <!-- WhatsApp Button -->
+              <div v-if="invitationData.whatsapp_url" class="flex-1 min-w-0">
+                <a
+                  :href="invitationData.whatsapp_url"
+                  target="_blank"
+                  class="btn-filled w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
+                >
+                  <span class="w-4 h-4 bg-white rounded-full flex-shrink-0"></span>
+                  WhatsApp
+                </a>
+              </div>
+
+              <!-- Telegram Button -->
+              <div v-if="invitationData.telegram_url" class="flex-1 min-w-0">
+                <a
+                  :href="invitationData.telegram_url"
+                  target="_blank"
+                  class="btn-filled w-full flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-800 text-xs sm:text-sm"
+                >
+                  <span class="w-4 h-4 bg-white rounded-full flex-shrink-0"></span>
+                  Telegram
+                </a>
+              </div>
+
+              <!-- SMS Button -->
+              <div v-if="invitationData.sms_url" class="flex-1 min-w-0">
+                <a
+                  :href="invitationData.sms_url"
+                  class="btn-filled w-full flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-xs sm:text-sm"
+                >
+                  <span class="material-icon-sm text-white">#</span>
+                  SMS
+                </a>
+              </div>
+
+              <!-- Email Button -->
+              <div v-if="invitationData.email_url" class="flex-1 min-w-0">
+                <a
+                  :href="invitationData.email_url"
+                  class="btn-filled w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-xs sm:text-sm"
+                >
+                  <span class="material-icon-sm text-white">email</span>
+                  Email
+                </a>
+              </div>
             </div>
 
             <!-- Action Buttons -->
