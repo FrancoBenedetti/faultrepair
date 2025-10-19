@@ -373,6 +373,39 @@ try {
                 $updates[] = "archived_by_client = ?";
                 $params[] = $input['archived_by_client'] ? 1 : 0;
             }
+
+            // Handle quote request workflow
+            if (isset($input['request_quote']) && $input['request_quote'] === true) {
+                if (!$input['assigned_provider_id']) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Service provider must be selected to request a quote']);
+                    exit;
+                }
+
+                // Verify provider is approved for this client
+                $stmt = $pdo->prepare("
+                    SELECT id FROM participant_approvals
+                    WHERE client_participant_id = ? AND provider_participant_id = ?
+                ");
+                $stmt->execute([$entity_id, $input['assigned_provider_id']]);
+                if (!$stmt->fetch()) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Service provider is not approved for this client']);
+                    exit;
+                }
+
+                $updates[] = "assigned_provider_participant_id = ?";
+                $params[] = $input['assigned_provider_id'];
+
+                // Set status to Quote Requested instead of Assigned
+                $status_index = array_search("job_status = ?", $updates);
+                if ($status_index !== false) {
+                    $params[$status_index] = 'Quote Requested';
+                } else {
+                    $updates[] = "job_status = ?";
+                    $params[] = 'Quote Requested';
+                }
+            }
         }
 
         if (isset($input['job_status'])) {

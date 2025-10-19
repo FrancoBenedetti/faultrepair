@@ -72,6 +72,12 @@ try {
         $params[] = $_GET['client_id'];
     }
 
+    // Filter for quote-related jobs if requested
+    if (isset($_GET['quote_jobs']) && $_GET['quote_jobs'] === 'true') {
+        $where_conditions[] = "j.job_status IN ('Quote Requested', 'Quote Provided')";
+        $params[] = $_GET['quote_jobs'];
+    }
+
     $where_clause = implode(" AND ", $where_conditions);
     error_log("service-provider-jobs.php - WHERE clause: $where_clause, params: " . json_encode($params));
 

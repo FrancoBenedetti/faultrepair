@@ -5,7 +5,7 @@
 These service providers receive the jobs and interact with the Snappy system using the frontend service provider dashboard. The role changes are as defined by the Status System defined below
 
 ### Jobs for non-subscribed service providers (type B)
-These service providers have independent job management using their own system or have a manula system. For these jobs, the state is changed by the Client Role 2 user. 
+These service providers have independent job management using their own system or have a manual system. For these jobs, the state is changed by the Client Role 2 user.
 
 ## User Roles
 ### Client/Asset owner
@@ -25,10 +25,10 @@ These service providers have independent job management using their own system o
    - Allowed next states:
       - `Rejected` - the request is terminated. No further action is needed. A reason must be provided
       - `Quote Requested` - A quote is required from the service provider
-      - `Assigned` - the job is assigned to to a provider to delier a service directly
+      - `Assigned` - the job is assigned to a provider to deliver a service directly
    - Rules:
       - A service provider selection is required before the `Quote Requested` or `Assigned` state can be selected. The default state set on service provider selection is `Assigned`
-   - UI Implemntation - Client Dashboard
+   - UI Implementation - Client Dashboard
       - User (role 2) selects a service provider (when applicable) using a drop down and/or then clicks a radio button with options to "Request a":
          - Service (backend sets state to `Assigned`)
          - Quote (backend sets state to `Quote Requested`)
@@ -75,48 +75,47 @@ These service providers have independent job management using their own system o
       - `Completed` A note of explanation is required, images could be added
 
 6. **Cannot repair** - Service Provider Role 4 and Role 3 (Technician) marks work as unrepairable.
-   - Permissions 
+   - Permissions
       - Service provider (role 3 and 4) view only
       - Client role 1 (view only)
       - Client role 2 can change state and edit
    - Allowed next states:
-      - `Confirmed` teminate the job
+      - `Confirmed` terminate the job
       - `Incomplete` ask service provider to review
 
-7. **Confirmed** - Client representatie (role 1 or 2) accepts that the job is completed. This is a terminal state.
+7. **Confirmed** - Client representative (role 1 or 2) accepts that the job is completed. This is a terminal state.
    - No further state changes are possible
    - The job can be archived respectively by Client Role 2 or Service Provider Role 3
    - The job can be viewed by any of the roles
 
 8. **Declined** - The Service provider (role 3) has declined the job
    - Permissions
-      - Service Provider (role 3 and 4 ) can view the job while allocated to the service provider
+      - Service Provider (role 3 and 4) can view the job while allocated to the service provider
       - Client Role 1 can view
       - Client Role 2 can reallocate the job to another service provider
-   - A job in this state must be treated in the same way as the reported state, The difference is that the notes or comments by service providers must be deleted is the job is reassigned to a different service provider
-   - Allowed next states 
+   - A job in this state must be treated in the same way as the reported state. The difference is that the notes or comments by service providers must be deleted if the job is reassigned to a different service provider
+   - Allowed next states
       - `Rejected`
       - `Quote Requested`
       - `Assigned`
 
 9. **Rejected** - This is a terminal state. The service request is not accepted by the Client admin and no further action is needed
 
-6. **Quote Requested** - The Client has requested a quote
+10. **Quote Requested** - The Client has requested a quote
    - Permissions
       - Client (view only)
       - Service Provider (role 3) can change state
-   - Allowed next states 
-      - `Quote Provided` The quote must be selected before quote can be provided. Use a separate quote view to create quotes and record these, As it it created, it should be automatically linked to this job.
-      - `Unable to quote` Optional can be provided
+   - Allowed next states
+      - `Quote Provided` The quote must be created before it can be provided. Use a separate quote view to create quotes and record these. As it is created, it should be automatically linked to this job.
+      - `Unable to quote` A reason should be provided
 
-10. **Quote Provided** - 
+11. **Quote Provided** - Service Provider has submitted a quotation
    - Permissions
       - Client (role 2) can change state and view quote
       - Client (role 1) can view job but cannot view quote
-      - Service Provider (role 1) can view job and quote
+      - Service Provider (role 3) can view job and quote
    - Allowed next states
       - `Assigned` The quote is accepted and the service provider can continue with the job
-      - `Quote Requested` The quote details are being quiried. The service provider is asked to revisit the quote. A note to the service provider is required
+      - `Quote Requested` The quote details are being queried. The service provider is asked to revisit the quote. A note to the service provider is required
       - `Rejected` Terminate this job with no further action
-      - Re-assign to another service provider by resetting the quote information. In this case it is identical to returning to the initial `Reported`state with cleared service provider quote information. A message is sent to the service provider that his quote was not accepted.
-
+      - Re-assign to another service provider by resetting the quote information. In this case it is identical to returning to the initial `Reported` state with cleared service provider quote information. A message is sent to the service provider that their quote was not accepted.

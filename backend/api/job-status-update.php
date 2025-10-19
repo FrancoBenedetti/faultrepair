@@ -2,6 +2,7 @@
 require_once '../config/database.php';
 require_once '../includes/JWT.php';
 require_once '../includes/subscription.php';
+require_once '../includes/job-status-validation.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: PUT, OPTIONS');
@@ -57,12 +58,26 @@ $new_status = $input['status'];
 $technician_notes = isset($input['technician_notes']) ? trim($input['technician_notes']) : '';
 $technician_id = isset($input['technician_id']) ? (int)$input['technician_id'] : null;
 
-// Validate technician assignment for "In Progress" status
-if ($new_status === 'In Progress' && !$technician_id) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Technician assignment is required when setting job status to "In Progress"']);
-    exit;
-}
+    // Validate technician assignment for "In Progress" status
+    if ($new_status === 'In Progress' && !$technician_id) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Technician assignment is required when setting job status to "In Progress"']);
+        exit;
+    }
+
+    // Validate "Cannot repair" status requires a reason
+    if ($new_status === 'Cannot repair' && empty($technician_notes)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'A reason must be provided when marking a job as "Cannot repair"']);
+        exit;
+    }
+
+    // Validate "Incomplete" status requires notes when service provider is making changes
+    if ($new_status === 'Incomplete' && $entity_type === 'service_provider' && empty($technician_notes)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Notes are required when service provider updates an incomplete job']);
+        exit;
+    }
 
 try {
     // Verify the job exists and belongs to the user's service provider
@@ -91,6 +106,28 @@ try {
     if ($role_id === 3 && $job['service_provider_id'] !== $entity_id) {
         http_response_code(403);
         echo json_encode(['error' => 'Access denied. Job does not belong to your service provider.']);
+        exit;
+    }
+
+    // Validate status transition using business rules
+    $validator = new JobStatusValidator($pdo);
+    $validationData = [
+        'notes' => $technician_notes,
+        'technician_id' => $technician_id
+    ];
+
+    $validation = $validator->validateTransition(
+        $job_id,
+        $job['job_status'],
+        $new_status,
+        $role_id,
+        $entity_type,
+        $validationData
+    );
+
+    if (!$validation['valid']) {
+        http_response_code(400);
+        echo json_encode(['error' => $validation['error']]);
         exit;
     }
 
