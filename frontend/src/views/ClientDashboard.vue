@@ -668,6 +668,15 @@
                 <button v-else @click="viewJobDetails(job)" class="btn-outlined btn-small">
                   <span class="material-icon-sm">visibility</span>
                 </button>
+                <!-- Confirmation/Rejection buttons for completed jobs -->
+                <button v-if="job.job_status === 'Completed' && userRole === 2" @click="showJobConfirmationModal(job)" class="btn-filled btn-small bg-green-600 hover:bg-green-700">
+                  <span class="material-icon-sm">check_circle</span>
+                  Confirm
+                </button>
+                <button v-if="job.job_status === 'Completed' && userRole === 2" @click="showJobRejectionModal(job)" class="btn-outlined btn-small border-red-600 text-red-600 hover:bg-red-50">
+                  <span class="material-icon-sm">cancel</span>
+                  Reject
+                </button>
                 <!-- Archive/Unarchive button for budget controllers -->
                 <button v-if="userRole === 2" @click="toggleArchiveJob(job)" class="btn-outlined btn-small" :class="{ 'text-orange-600 border-orange-600': job.archived_by_client }">
                   <span class="material-icon-sm">{{ job.archived_by_client ? 'unarchive' : 'archive' }}</span>
@@ -1339,6 +1348,94 @@
       </div>
     </div>
 
+    <!-- Job Confirmation Modal -->
+    <div v-if="showJobConfirmationModal" class="modal-overlay" @click="closeJobConfirmationModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>Confirm Job Completion</h3>
+          <button @click="closeJobConfirmationModal" class="close-btn">&times;</button>
+        </div>
+
+        <div v-if="confirmationJob" class="confirmation-form">
+          <div class="job-summary">
+            <h4>{{ confirmationJob.item_identifier || 'No Item ID' }}</h4>
+            <p class="job-description">{{ confirmationJob.fault_description }}</p>
+            <div class="job-meta">
+              <span><strong>Client:</strong> {{ confirmationJob.client_name }}</span>
+              <span><strong>Location:</strong> {{ confirmationJob.location_name }}</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="confirmation-notes">Confirmation Notes (Optional)</label>
+            <textarea id="confirmation-notes" v-model="confirmationNotes" rows="3"
+                      placeholder="Add any notes about confirming this work..."></textarea>
+          </div>
+
+          <div class="confirmation-info">
+            <div class="info-banner">
+              <div class="info-icon">ℹ️</div>
+              <div class="info-content">
+                <p><strong>What happens when you confirm?</strong></p>
+                <p>This job will be marked as "Confirmed" and archived for both parties. This action cannot be undone.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button @click="closeJobConfirmationModal" class="btn-secondary">Cancel</button>
+            <button @click="confirmJob" class="btn-primary" :disabled="confirmingJob">
+              {{ confirmingJob ? 'Confirming...' : 'Confirm Job' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Job Rejection Modal -->
+    <div v-if="showJobRejectionModal" class="modal-overlay" @click="closeJobRejectionModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>Reject Job Completion</h3>
+          <button @click="closeJobRejectionModal" class="close-btn">&times;</button>
+        </div>
+
+        <div v-if="rejectionJob" class="rejection-form">
+          <div class="job-summary">
+            <h4>{{ rejectionJob.item_identifier || 'No Item ID' }}</h4>
+            <p class="job-description">{{ rejectionJob.fault_description }}</p>
+            <div class="job-meta">
+              <span><strong>Client:</strong> {{ rejectionJob.client_name }}</span>
+              <span><strong>Location:</strong> {{ rejectionJob.location_name }}</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="rejection-notes">Reason for Rejection *</label>
+            <textarea id="rejection-notes" v-model="rejectionNotes" rows="4" required
+                      placeholder="Please explain why you're rejecting this completed work..."></textarea>
+          </div>
+
+          <div class="rejection-info">
+            <div class="warning-banner">
+              <div class="warning-icon">⚠️</div>
+              <div class="warning-content">
+                <p><strong>What happens when you reject?</strong></p>
+                <p>This job will be marked as "Incomplete" and returned to the service provider for rework. Please provide clear feedback about what needs to be addressed.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button @click="closeJobRejectionModal" class="btn-secondary">Cancel</button>
+            <button @click="rejectJob" class="btn-danger" :disabled="rejectingJob">
+              {{ rejectingJob ? 'Rejecting...' : 'Reject Job' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Image Modal for Full Size View -->
     <div v-if="selectedImage" class="modal-overlay" @click="selectedImage = null">
       <div class="image-modal-content" @click.stop>
@@ -1412,6 +1509,12 @@ export default {
       },
       showJobDetailsModal: false,
       showEditJobModal: false,
+      showJobConfirmationModal: false,
+      showJobRejectionModal: false,
+      confirmationJob: null,
+      rejectionJob: null,
+      confirmationNotes: '',
+      rejectionNotes: '',
       addingUser: false,
       updatingUser: false,
       creatingJob: false,
@@ -1828,7 +1931,10 @@ export default {
         'Reported': 'reported',
         'Assigned': 'assigned',
         'In Progress': 'in-progress',
-        'Completed': 'completed'
+        'Completed': 'completed',
+        'Confirmed': 'confirmed',
+        'Incomplete': 'incomplete',
+        'Cannot repair': 'cannot-repair'
       }
       return statusClasses[status] || 'reported'
     },
@@ -2634,6 +2740,108 @@ export default {
     onProviderSelected() {
       if (this.editingJob.assigned_provider_id && this.editingJob.job_status !== 'Assigned' && this.editingJob.job_status !== 'Quote Requested') {
         this.editingJob.job_status = 'Assigned'
+      }
+    },
+
+    // Job Confirmation/Rejection Methods
+    showJobConfirmationModal(job) {
+      this.confirmationJob = job
+      this.confirmationNotes = ''
+      this.showJobConfirmationModal = true
+    },
+
+    closeJobConfirmationModal() {
+      this.showJobConfirmationModal = false
+      this.confirmationJob = null
+      this.confirmationNotes = ''
+    },
+
+    showJobRejectionModal(job) {
+      this.rejectionJob = job
+      this.rejectionNotes = ''
+      this.showJobRejectionModal = true
+    },
+
+    closeJobRejectionModal() {
+      this.showJobRejectionModal = false
+      this.rejectionJob = null
+      this.rejectionNotes = ''
+    },
+
+    async confirmJob() {
+      if (!this.confirmationJob) return
+
+      this.confirmingJob = true
+      try {
+        const response = await apiFetch('/backend/api/job-completion-confirmation.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            job_id: this.confirmationJob.id,
+            action: 'confirm',
+            notes: this.confirmationNotes
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          // Update the job in the local array
+          const jobIndex = this.jobs.findIndex(j => j.id === this.confirmationJob.id)
+          if (jobIndex !== -1) {
+            this.jobs[jobIndex].job_status = 'Confirmed'
+            this.jobs[jobIndex].updated_at = new Date().toISOString()
+          }
+
+          this.closeJobConfirmationModal()
+          alert('Job confirmed successfully!')
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert('Failed to confirm job')
+      } finally {
+        this.confirmingJob = false
+      }
+    },
+
+    async rejectJob() {
+      if (!this.rejectionJob) return
+
+      if (!this.rejectionNotes.trim()) {
+        alert('Please provide a reason for rejecting this job.')
+        return
+      }
+
+      this.rejectingJob = true
+      try {
+        const response = await apiFetch('/backend/api/job-completion-confirmation.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            job_id: this.rejectionJob.id,
+            action: 'reject',
+            notes: this.rejectionNotes
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          // Update the job in the local array
+          const jobIndex = this.jobs.findIndex(j => j.id === this.rejectionJob.id)
+          if (jobIndex !== -1) {
+            this.jobs[jobIndex].job_status = 'Incomplete'
+            this.jobs[jobIndex].updated_at = new Date().toISOString()
+          }
+
+          this.closeJobRejectionModal()
+          alert('Job rejected and returned for rework!')
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert('Failed to reject job')
+      } finally {
+        this.rejectingJob = false
       }
     }
 

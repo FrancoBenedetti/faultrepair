@@ -1,7 +1,7 @@
 # Snappy Project TODO
 
 ## In Progress 🚧
-- [ ] Phase 1: Quote System Implementation - Backend APIs Complete ✅
+- [ ] Phase 3: Role Permission Corrections
 
 ## Up Next 📋
 
@@ -23,17 +23,17 @@
 - [ ] Add quote response UI to Client Dashboard
 - [ ] Update job creation flow to support quote requests
 
-### PHASE 2: Missing Terminal States Implementation
+### PHASE 2: Missing Terminal States Implementation (Complete ✅)
 #### Backend Tasks
-- [ ] Update `job-status-update.php` to handle "Cannot repair" transitions
-- [ ] Create client confirmation API for "Completed" → "Confirmed" workflow
-- [ ] Add "Incomplete" state handling for client rejection of completed work
-- [ ] Implement proper state transition validation
+- [x] Update `job-status-update.php` to handle "Cannot repair" transitions
+- [x] Create client confirmation API for "Completed" → "Confirmed" workflow
+- [x] Add "Incomplete" state handling for client rejection of completed work
+- [x] Implement proper state transition validation
 
 #### Frontend Tasks
-- [ ] Add "Cannot repair" option to Technician Dashboard
-- [ ] Add confirmation/rejection UI to Client Dashboard for completed jobs
-- [ ] Update status displays across all dashboards
+- [x] Add "Cannot repair" option to Technician Dashboard
+- [x] Add confirmation/rejection UI to Client Dashboard for completed jobs
+- [x] Update status displays across all dashboards
 
 ### PHASE 3: Role Permission Corrections
 #### Backend Tasks

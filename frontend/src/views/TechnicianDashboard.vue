@@ -211,9 +211,9 @@
           <div class="form-group">
             <label for="newStatus">New Status</label>
             <select id="newStatus" v-model="newStatus" class="status-select">
-              <option value="Assigned">Assigned</option>
               <option value="In Progress">In Progress</option>
               <option value="Completed">Completed</option>
+              <option value="Cannot repair">Cannot repair</option>
               <option value="On Hold">On Hold</option>
             </select>
           </div>
@@ -373,6 +373,9 @@ export default {
         'Assigned': 'assigned',
         'In Progress': 'in-progress',
         'Completed': 'completed',
+        'Confirmed': 'confirmed',
+        'Incomplete': 'incomplete',
+        'Cannot repair': 'cannot-repair',
         'On Hold': 'on-hold',
         'Cancelled': 'cancelled'
       }
@@ -595,6 +598,21 @@ export default {
 }
 
 .status-badge.on-hold {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge.confirmed {
+  background: #d1e7dd;
+  color: #0f5132;
+}
+
+.status-badge.incomplete {
+  background: #fff3cd;
+  color: #664d03;
+}
+
+.status-badge.cannot-repair {
   background: #f8d7da;
   color: #721c24;
 }

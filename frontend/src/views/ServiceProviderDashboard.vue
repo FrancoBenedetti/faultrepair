@@ -82,15 +82,13 @@
                 <option value="Reported">Reported</option>
                 <option value="Assigned">Assigned</option>
                 <option value="Quote Requested">Quote Requested</option>
-                <option value="Quote Accepted">Quote Accepted</option>
-                <option value="Completion Confirmed">Completion Confirmed</option>
+                <option value="Quote Provided">Quote Provided</option>
                 <option value="Declined">Declined</option>
                 <option value="In Progress">In Progress</option>
-                <option value="Quote Provided">Quote Provided</option>
-                <option value="Repaired">Repaired</option>
-                <option value="Not repairable">Not repairable</option>
-                <option value="Payment Requested">Payment Requested</option>
                 <option value="Completed">Completed</option>
+                <option value="Confirmed">Confirmed</option>
+                <option value="Incomplete">Incomplete</option>
+                <option value="Cannot repair">Cannot repair</option>
               </select>
             </div>
             <div v-if="userRole === 3" class="filter-group min-w-40">
@@ -651,6 +649,129 @@
             </div>
             <h3 class="text-xl font-semibold text-gray-900 mb-2">No Approved Clients Yet</h3>
             <p class="text-gray-600">Clients will appear here once they approve your services.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quote Management Section - Only for service provider admins -->
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8" v-if="userRole === 3">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('quotes')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.quotes }">
+              <span class="material-icon-sm">expand_more</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+              <span class="material-icon text-green-600">request_quote</span>
+              Quote Management
+            </h2>
+          </div>
+          <button @click.stop="loadQuotes" class="btn-outlined flex items-center gap-2">
+            <span class="material-icon-sm">refresh</span>
+            Refresh Quotes
+          </button>
+        </div>
+
+        <div v-show="sectionsExpanded.quotes" class="section-content transition-all duration-300 ease-in-out">
+          <!-- Quote Filters -->
+          <div class="quote-filters flex flex-wrap gap-4 mb-6 p-4 bg-green-50 rounded-lg">
+            <div class="filter-group min-w-40">
+              <label for="quote-status-filter" class="form-label mb-1">Quote Status:</label>
+              <select id="quote-status-filter" v-model="quoteFilters.status" @change="loadQuotes" class="form-input">
+                <option value="">All Quotes</option>
+                <option value="draft">Draft</option>
+                <option value="submitted">Submitted</option>
+                <option value="accepted">Accepted</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            <div class="filter-group min-w-40">
+              <label for="quote-job-filter" class="form-label mb-1">Job:</label>
+              <select id="quote-job-filter" v-model="quoteFilters.job_id" @change="loadQuotes" class="form-input">
+                <option value="">All Jobs</option>
+                <option v-for="job in quoteJobs" :key="job.id" :value="job.id">
+                  {{ job.item_identifier || 'Job #' + job.id }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Loading state -->
+          <div v-if="quotes === null" class="loading-state text-center py-16">
+            <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-body-large text-on-surface-variant">Loading quotes...</p>
+          </div>
+
+          <!-- Quotes Grid -->
+          <div v-else-if="quotes && quotes.length > 0" class="quotes-grid grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div v-for="quote in quotes" :key="quote.id" class="quote-card card overflow-hidden">
+              <div class="quote-header card-header">
+                <div class="quote-status">
+                  <span class="status-badge" :class="getQuoteStatusClass(quote.status)">
+                    {{ quote.status }}
+                  </span>
+                </div>
+                <div class="quote-actions flex gap-2">
+                  <button v-if="quote.status === 'draft'" @click="editQuote(quote)" class="btn-outlined btn-small">
+                    <span class="material-icon-sm">edit</span>
+                  </button>
+                  <button v-if="quote.status === 'draft'" @click="submitQuote(quote)" class="btn-filled btn-small">
+                    <span class="material-icon-sm">send</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="quote-content card-content">
+                <h3 class="quote-title text-title-medium text-on-surface mb-2">
+                  {{ quote.item_identifier || 'Job #' + quote.job_id }}
+                </h3>
+                <p class="quote-description text-body-medium text-on-surface-variant mb-2 line-clamp-2">
+                  {{ quote.fault_description }}
+                </p>
+
+                <div class="quote-amount text-lg font-bold text-green-600 mb-2">
+                  R {{ formatCurrency(quote.quotation_amount) }}
+                </div>
+
+                <div class="quote-meta space-y-1 text-sm">
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Client:</span>
+                    <span class="font-medium">{{ quote.client_name }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Location:</span>
+                    <span class="font-medium">{{ quote.location_name }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Valid Until:</span>
+                    <span class="font-medium">{{ formatDate(quote.valid_until) }}</span>
+                  </div>
+                  <div v-if="quote.submitted_at" class="flex justify-between">
+                    <span class="text-gray-600">Submitted:</span>
+                    <span class="font-medium">{{ formatDate(quote.submitted_at) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="quote-footer card-footer">
+                <div class="quote-description-preview text-sm text-gray-600 italic">
+                  "{{ quote.quotation_description?.substring(0, 100) }}{{ quote.quotation_description?.length > 100 ? '...' : '' }}"
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- No quotes state -->
+          <div v-else-if="quotes && quotes.length === 0" class="no-quotes text-center py-16">
+            <div class="no-quotes-icon material-icon-xl text-neutral-400 mb-4">request_quote</div>
+            <h3 class="text-title-large text-on-surface mb-2">No quotes found</h3>
+            <p class="text-body-large text-on-surface-variant">No quotes match your current filters.</p>
+          </div>
+
+          <!-- Error state -->
+          <div v-else class="error-state text-center py-16">
+            <div class="error-icon material-icon-xl text-error-400 mb-4">error</div>
+            <h3 class="text-title-large text-on-surface mb-2">Failed to load quotes</h3>
+            <p class="text-body-large text-on-surface-variant">Please try refreshing the page.</p>
           </div>
         </div>
       </div>
@@ -1734,6 +1855,119 @@
       </div>
     </div>
 
+    <!-- Edit Quote Modal -->
+    <div v-if="showEditQuoteModal" class="fixed inset-0 z-50 flex items-center justify-center">
+      <!-- Overlay -->
+      <div class="absolute inset-0 bg-black/50" @click="closeEditQuoteModal"></div>
+
+      <!-- Modal Content -->
+      <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" @click.stop>
+        <!-- Header -->
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+          <h3 class="text-xl font-semibold text-gray-900 flex items-center gap-3">
+            <span class="material-icon text-green-600">edit</span>
+            Edit Quote: {{ editingQuote?.item_identifier || 'Job #' + editingQuote?.job_id }}
+          </h3>
+          <button @click="closeEditQuoteModal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+
+        <!-- Form -->
+        <form @submit.prevent="updateQuote" class="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+          <!-- Quote Details -->
+          <div class="bg-gray-50 rounded-lg p-6 space-y-6">
+            <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
+              <span class="material-icon-sm text-green-600">request_quote</span>
+              Quote Information
+            </h4>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-2">
+                <label for="quote-amount" class="form-label flex items-center gap-2">
+                  <span class="material-icon-sm text-gray-500">attach_money</span>
+                  Quote Amount (R) *
+                </label>
+                <input
+                  type="number"
+                  id="quote-amount"
+                  v-model="quoteForm.quotation_amount"
+                  required
+                  step="0.01"
+                  min="0"
+                  class="form-input"
+                  placeholder="0.00"
+                >
+              </div>
+              <div class="space-y-2">
+                <label for="quote-valid-until" class="form-label flex items-center gap-2">
+                  <span class="material-icon-sm text-gray-500">event_available</span>
+                  Valid Until
+                </label>
+                <input
+                  type="date"
+                  id="quote-valid-until"
+                  v-model="quoteForm.valid_until"
+                  class="form-input"
+                >
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label for="quote-description" class="form-label flex items-center gap-2">
+                <span class="material-icon-sm text-gray-500">description</span>
+                Quote Description *
+              </label>
+              <textarea
+                id="quote-description"
+                v-model="quoteForm.quotation_description"
+                required
+                rows="4"
+                class="form-input resize-none"
+                placeholder="Detailed description of work to be performed and quote breakdown..."
+              ></textarea>
+            </div>
+
+            <div class="space-y-2">
+              <label for="quote-document-url" class="form-label flex items-center gap-2">
+                <span class="material-icon-sm text-gray-500">link</span>
+                Quote Document URL
+              </label>
+              <input
+                type="url"
+                id="quote-document-url"
+                v-model="quoteForm.quotation_document_url"
+                class="form-input"
+                placeholder="https://example.com/quote-document.pdf"
+              >
+              <small class="form-help text-sm text-gray-600">Optional: Link to detailed quote document (PDF, etc.)</small>
+            </div>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              @click="closeEditQuoteModal"
+              class="btn-filled flex items-center gap-2"
+              :disabled="loading"
+            >
+              <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
+              <span v-else class="material-icon-sm">close</span>
+              {{ loading ? 'Canceling...' : 'Cancel' }}
+            </button>
+            <button
+              type="submit"
+              class="btn-filled flex items-center gap-2"
+              :disabled="loading"
+            >
+              <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
+              <span v-else class="material-icon-sm">save</span>
+              {{ loading ? 'Updating...' : 'Update Quote' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Image Modal for Full Size View -->
     <div v-if="selectedImage" class="modal-overlay" @click="selectedImage = null">
       <div class="image-modal-content" @click.stop>
@@ -1824,7 +2058,25 @@ export default {
       regions: false, // Regions collapsed by default
       technicians: false, // Technicians collapsed by default
       clients: false, // Clients collapsed by default
-      jobs: true // Jobs section expanded by default
+      jobs: true, // Jobs section expanded by default
+      quotes: false // Quote management collapsed by default
+    },
+    // Quote Management Data
+    quotes: null,
+    quoteJobs: [],
+    quoteFilters: {
+      status: '',
+      job_id: ''
+    },
+    editingQuote: null,
+    showEditQuoteModal: false,
+    showCreateQuoteModal: false,
+    quoteForm: {
+      job_id: '',
+      quotation_amount: '',
+      quotation_description: '',
+      quotation_document_url: '',
+      valid_until: ''
     },
       technicianForm: {
         username: '',
@@ -1860,6 +2112,11 @@ export default {
     // Technicians (role 4) need to load technicians only for their own profile
     if (this.userRole === 3 || this.userRole === 4) {
       await this.loadTechnicians()
+    }
+
+    // Load quote jobs for service provider admins
+    if (this.userRole === 3) {
+      await this.loadQuoteJobs()
     }
   },
   methods: {
@@ -2332,9 +2589,445 @@ getCurrentUserName() {
         'Reported': 'reported',
         'Assigned': 'assigned',
         'In Progress': 'in-progress',
-        'Completed': 'completed'
+        'Completed': 'completed',
+        'Confirmed': 'confirmed',
+        'Incomplete': 'incomplete',
+        'Cannot repair': 'cannot-repair',
+        'Declined': 'declined',
+        'Quote Requested': 'quote-requested',
+        'Quote Provided': 'quote-provided'
       }
       return statusClasses[status] || 'reported'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
     },
 
     async viewJobDetails(job) {
@@ -2698,6 +3391,146 @@ getCurrentUserName() {
       }
 
       return availableStatuses
+    },
+
+    // Quote Management Methods
+    async loadQuotes() {
+      try {
+        const params = new URLSearchParams()
+        if (this.quoteFilters.status) params.append('status', this.quoteFilters.status)
+        if (this.quoteFilters.job_id) params.append('job_id', this.quoteFilters.job_id)
+
+        const response = await apiFetch(`/backend/api/job-quotations.php?${params}`)
+
+        if (response.ok) {
+          const data = await response.json()
+          this.quotes = data.quotes
+        } else {
+          console.error('Failed to load quotes')
+          this.quotes = []
+        }
+      } catch (error) {
+        console.error('Failed to load quotes:', error)
+        this.quotes = []
+      }
+    },
+
+    async loadQuoteJobs() {
+      // Load jobs that can have quotes (Quote Requested or Assigned status)
+      try {
+        const response = await apiFetch('/backend/api/service-provider-jobs.php?status=Quote%20Requested,Assigned')
+
+        if (response.ok) {
+          const data = await response.json()
+          this.quoteJobs = data.jobs || []
+        } else {
+          console.error('Failed to load quote jobs')
+          this.quoteJobs = []
+        }
+      } catch (error) {
+        console.error('Failed to load quote jobs:', error)
+        this.quoteJobs = []
+      }
+    },
+
+    editQuote(quote) {
+      this.editingQuote = quote
+      this.quoteForm = {
+        job_id: quote.job_id,
+        quotation_amount: quote.quotation_amount,
+        quotation_description: quote.quotation_description,
+        quotation_document_url: quote.quotation_document_url,
+        valid_until: quote.valid_until
+      }
+      this.showEditQuoteModal = true
+    },
+
+    async updateQuote() {
+      if (!this.editingQuote) return
+
+      this.loading = true
+      try {
+        const response = await apiFetch('/backend/api/job-quotations.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            quote_id: this.editingQuote.id,
+            ...this.quoteForm
+          })
+        })
+
+        if (response.ok) {
+          this.closeEditQuoteModal()
+          this.loadQuotes()
+          alert('Quote updated successfully!')
+        } else {
+          this.handleError(await response.json())
+        }
+      } catch (error) {
+        alert('Failed to update quote')
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async submitQuote(quote) {
+      if (!confirm('Are you sure you want to submit this quote? You won\'t be able to edit it after submission.')) {
+        return
+      }
+
+      this.loading = true
+      try {
+        const response = await apiFetch('/backend/api/job-quotations.php', {
+          method: 'POST',
+          body: JSON.stringify({
+            job_id: quote.job_id,
+            quotation_amount: quote.quotation_amount,
+            quotation_description: quote.quotation_description,
+            quotation_document_url: quote.quotation_document_url,
+            valid_until: quote.valid_until
+          })
+        })
+
+        if (response.ok) {
+          this.loadQuotes()
+          this.loadJobs() // Refresh jobs to show status change
+          alert('Quote submitted successfully!')
+        } else {
+          this.handleError(await response.json())
+        }
+      } catch (error) {
+        alert('Failed to submit quote')
+      } finally {
+        this.loading = false
+      }
+    },
+
+    closeEditQuoteModal() {
+      this.showEditQuoteModal = false
+      this.editingQuote = null
+      this.quoteForm = {
+        job_id: '',
+        quotation_amount: '',
+        quotation_description: '',
+        quotation_document_url: '',
+        valid_until: ''
+      }
+    },
+
+    getQuoteStatusClass(status) {
+      const statusClasses = {
+        'draft': 'quote-draft',
+        'submitted': 'quote-submitted',
+        'accepted': 'quote-accepted',
+        'rejected': 'quote-rejected'
+      }
+      return statusClasses[status] || 'quote-draft'
+    },
+
+    formatCurrency(amount) {
+      return parseFloat(amount || 0).toLocaleString('en-ZA', {
+        style: 'currency',
+        currency: 'ZAR'
+      })
     }
   }
 }
