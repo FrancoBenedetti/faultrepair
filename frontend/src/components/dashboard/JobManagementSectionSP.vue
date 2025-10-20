@@ -77,37 +77,35 @@
             </div>
           </template>
 
-          <div class="job-content">
-            <h3 class="job-title text-title-medium text-on-surface mb-2">{{ job.item_identifier || 'No Item ID' }}</h3>
-            <p class="job-description text-body-medium text-on-surface-variant mb-2 line-clamp-2">{{ job.fault_description }}</p>
-            <p class="job-location text-body-small text-on-surface-variant mb-4">
-              <span class="material-icon-sm mr-1">location_on</span>
-              <a :href="`https://maps.google.com/maps?q=${encodeURIComponent(job.location_coordinates || job.location_name)}`"
-                 target="_blank"
-                 class="location-link text-blue-600 hover:text-blue-800 underline">
-                {{ job.location_name }}
-              </a>
-            </p>
+          <template #content>
+            <div class="job-content p-4">
+              <h3 class="job-title font-bold text-lg mb-2">{{ job.item_identifier || 'No Item ID' }}</h3>
+              <p class="job-description mb-2 text-gray-700">{{ job.fault_description }}</p>
+              <p class="job-location mb-2">
+                <span class="mr-1">📍</span>
+                <span class="text-blue-600">{{ job.location_name }}</span>
+              </p>
 
-            <div class="job-meta grid grid-cols-2 gap-3 text-sm">
-              <div class="meta-item">
-                <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">Client:</span>
-                <span class="meta-value text-body-small text-on-surface font-medium">{{ job.client_name }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">Date:</span>
-                <span class="meta-value text-body-small text-on-surface font-medium">{{ formatDate(job.created_at) }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">Technician:</span>
-                <span class="meta-value text-body-small text-on-surface font-medium">{{ job.assigned_technician || 'Not assigned' }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">Images:</span>
-                <span class="meta-value text-body-small text-on-surface font-medium">{{ job.image_count }}</span>
+              <div class="job-meta grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span class="font-medium">Client:</span>
+                  <span>{{ job.client_name }}</span>
+                </div>
+                <div>
+                  <span class="font-medium">Date:</span>
+                  <span>{{ formatDate(job.created_at) }}</span>
+                </div>
+                <div>
+                  <span class="font-medium">Technician:</span>
+                  <span>{{ job.assigned_technician || 'Not assigned' }}</span>
+                </div>
+                <div>
+                  <span class="font-medium">Images:</span>
+                  <span>{{ job.image_count }}</span>
+                </div>
               </div>
             </div>
-          </div>
+          </template>
 
           <template #footer>
             <div class="job-date text-label-medium text-on-surface-variant">
@@ -173,6 +171,10 @@ export default {
       required: true
     }
   },
+  data() {
+    return {}
+  },
+
   computed: {
     currentUserId() {
       const token = localStorage.getItem('token')

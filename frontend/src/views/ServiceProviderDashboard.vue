@@ -44,19 +44,151 @@
         @toggle="sectionsExpanded.jobs = !sectionsExpanded.jobs"
         @update-job-filters="jobFilters = $event; loadJobs()"
         @refresh-jobs="loadJobs"
-        @view-job-details="$emit('view-job-details', $event)"
-        @edit-job="$emit('edit-job', $event)"
+        @view-job-details="selectedJob = $event; showJobDetailsModal = true"
+        @edit-job="editingJob = $event; selectedTechnicianId = $event.assigned_technician_user_id; originalJobStatus = $event.job_status; showEditJobModal = true"
       />
 
-      <!-- Business Profile Section (Admins Only) -->
-      <BusinessProfileSectionSP
-        v-if="userRole === 3"
-        :expanded="sectionsExpanded.profile"
-        :profile="profile"
-        :profile-completeness="profileCompleteness"
-        @toggle="sectionsExpanded.profile = !sectionsExpanded.profile"
-        @edit-profile="showProfileModal = true"
-      />
+      <!-- Business Profile Section (Admins Only) - Replaced with inline for testing -->
+      <div v-if="userRole === 3" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('profile')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.profile }">
+              <span class="material-icon-sm">expand_more</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+              <span class="material-icon text-blue-600">business</span>
+              Business Profile
+              <span v-if="profile && profile.name" class="text-sm font-normal text-gray-500">({{ profile.name }})</span>
+            </h2>
+          </div>
+          <button @click.stop="showProfileModal = true" class="btn-filled flex items-center gap-2">
+            <span class="material-icon-sm">edit</span>
+            Edit Profile
+          </button>
+        </div>
+
+        <div v-show="sectionsExpanded.profile" class="section-content transition-all duration-300 ease-in-out">
+          <!-- Loading state -->
+          <LoadingState v-if="!profile" message="Loading business profile..." />
+
+          <!-- Profile content -->
+          <div v-else-if="profile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Basic Information Card -->
+            <div class="profile-card bg-gray-50 rounded-lg p-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                <span class="material-icon-sm text-blue-600">business_center</span>
+                Basic Information
+              </h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-sm font-medium text-gray-600">Business Name:</label>
+                  <p class="text-base text-gray-900">{{ profile.name || 'Not specified' }}</p>
+                </div>
+                <div>
+                  <label class="text-sm font-medium text-gray-600">Address:</label>
+                  <p class="text-base text-gray-900">{{ profile.address || 'Not specified' }}</p>
+                </div>
+                <div>
+                  <label class="text-sm font-medium text-gray-600">Description:</label>
+                  <p class="text-base text-gray-900">{{ profile.description || 'Not specified' }}</p>
+                </div>
+                <div>
+                  <label class="text-sm font-medium text-gray-600">Website:</label>
+                  <p class="text-base text-gray-900">
+                    <a v-if="profile.website" :href="profile.website" target="_blank" class="text-blue-600 hover:text-blue-800 underline">{{ profile.website }}</a>
+                    <span v-else>Not specified</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Manager Contact Card -->
+            <div class="profile-card bg-gray-50 rounded-lg p-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                <span class="material-icon-sm text-green-600">contact_phone</span>
+                Manager Contact
+              </h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-sm font-medium text-gray-600">Manager Name:</label>
+                  <p class="text-base text-gray-900">{{ profile.manager_name || 'Not specified' }}</p>
+                </div>
+                <div>
+                  <label class="text-sm font-medium text-gray-600">Manager Email:</label>
+                  <p class="text-base text-gray-900">{{ profile.manager_email || 'Not specified' }}</p>
+                </div>
+                <div>
+                  <label class="text-sm font-medium text-gray-600">Manager Phone:</label>
+                  <p class="text-base text-gray-900">{{ profile.manager_phone || 'Not specified' }}</p>
+                </div>
+                <div>
+                  <label class="text-sm font-medium text-gray-600">VAT Number:</label>
+                  <p class="text-base text-gray-900">{{ profile.vat_number || 'Not specified' }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Status & Account Card -->
+            <div class="profile-card bg-gray-50 rounded-lg p-6">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                <span class="material-icon-sm text-purple-600">assignment</span>
+                Account Information
+              </h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-sm font-medium text-gray-600">Status:</label>
+                  <span :class="[
+                    'px-2 py-1 rounded-full text-xs font-medium',
+                    profile.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  ]">
+                    {{ profile.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
+                <div>
+                  <label class="text-sm font-medium text-gray-600">Member Since:</label>
+                  <p class="text-base text-gray-900">{{ formatDate(profile.created_at) }}</p>
+                </div>
+                <div>
+                  <label class="text-sm font-medium text-gray-600">Registration:</label>
+                  <p class="text-base text-gray-900">{{ profile.business_registration_number || 'Not specified' }}</p>
+                </div>
+                <div>
+                  <label class="text-sm font-medium text-gray-600">Profile Completeness:</label>
+                  <p class="text-base font-semibold">{{ profileCompleteness }}%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- No profile state when data is loaded but empty -->
+          <div v-else class="text-center py-16 bg-gray-50 rounded-lg border border-gray-200">
+            <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-6">
+              <span class="material-icon text-gray-400">business</span>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Profile Not Set Up</h3>
+            <p class="text-gray-600 mb-6">Your business profile hasn't been configured yet. This is normal for new accounts.</p>
+            <button @click="showProfileModal = true" class="btn-filled">
+              <span class="material-icon-sm mr-2">edit</span>
+              Set Up Profile
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- No Business Profile Section for this user role -->
+      <div v-else-if="!profile && userRole === 3" class="bg-white rounded-xl shadow-lg border border-red-300 bg-red-50 p-6 mb-8">
+        <div class="text-center">
+          <div class="mb-4">
+            <span class="material-icon text-4xl text-red-600">error</span>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">Business Profile Not Available</h3>
+          <p class="text-gray-700 mb-4">Unable to load your business profile. Please try refreshing the page or contact support.</p>
+          <button @click="loadProfile" class="btn-filled">
+            <span class="material-icon-sm mr-2">refresh</span>
+            Retry Loading Profile
+          </button>
+        </div>
+      </div>
 
       <!-- Technician Profile Section (Technicians Only) -->
       <div v-else-if="userRole === 4 && currentTechnician" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
@@ -907,7 +1039,7 @@
                 <div v-for="serviceId in selectedServices" :key="serviceId" class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
                   <div class="flex-1">
                     <div class="font-medium text-gray-900">{{ getServiceName(serviceId) }}</div>
-                    <div class="text-sm text-gray-600">{{ getServiceCategory(serviceId) }}</div>
+                    <div class="text-sm text-gray-600">Service Category</div>
                   </div>
                   <button
                     type="button"
@@ -1758,9 +1890,21 @@ import UserIdentityBar from '@/components/shared/UserIdentityBar.vue'
 import JobManagementSectionSP from '@/components/dashboard/JobManagementSectionSP.vue'
 import BusinessProfileSectionSP from '@/components/dashboard/BusinessProfileSectionSP.vue'
 import TechnicianManagementSection from '@/components/dashboard/TechnicianManagementSection.vue'
+import CollapsibleSection from '@/components/shared/CollapsibleSection.vue'
+import LoadingState from '@/components/shared/LoadingState.vue'
+import StatusBadge from '@/components/shared/StatusBadge.vue'
 
 export default {
   name: 'ServiceProviderDashboard',
+  components: {
+    UserIdentityBar,
+    JobManagementSectionSP,
+    BusinessProfileSectionSP,
+    TechnicianManagementSection,
+    CollapsibleSection,
+    LoadingState,
+    StatusBadge
+  },
   computed: {
     currentTechnician() {
       if (this.userRole !== 4 || !this.technicians || !this.currentUserId) return null
@@ -1964,7 +2108,13 @@ export default {
 
     toggleSection(sectionName) {
       // In Vue 3, direct assignment works for reactive object properties
-      this.sectionsExpanded[sectionName] = !this.sectionsExpanded[sectionName]
+      const wasExpanded = this.sectionsExpanded[sectionName]
+      this.sectionsExpanded[sectionName] = !wasExpanded
+
+      // Load quotes when the quotes section is expanded
+      if (sectionName === 'quotes' && !wasExpanded && this.userRole === 3) {
+        this.loadQuotes()
+      }
     },
 
     async loadSubscription() {
@@ -2363,32 +2513,58 @@ getCurrentUserName() {
 
     // Job Management Methods
     async loadJobs() {
+      console.log('🏗️ loadJobs: Starting job loading process')
+
       try {
         const token = localStorage.getItem('token')
         const params = new URLSearchParams()
 
         // For technicians, always filter by their own ID
         if (this.userRole === 4) {
+          console.log('🏗️ loadJobs: Loading as technician (role 4)')
           const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
           params.append('technician_id', payload.user_id)
+          console.log('🏗️ loadJobs: Technician ID:', payload.user_id)
         } else {
+          console.log('🏗️ loadJobs: Loading as service provider admin (role 3)')
           // For admins, use the filter selections
           if (this.jobFilters.status) params.append('status', this.jobFilters.status)
           if (this.jobFilters.client_id) params.append('client_id', this.jobFilters.client_id)
           if (this.jobFilters.technician_id) params.append('technician_id', this.jobFilters.technician_id)
         }
 
-        const response = await apiFetch(`/backend/api/service-provider-jobs.php?${params}`)
+        const apiUrl = `/backend/api/service-provider-jobs.php?${params}`
+        console.log('🏗️ loadJobs: Fetching from:', apiUrl)
+        console.log('🏗️ loadJobs: Current filters:', this.jobFilters)
+
+        const response = await apiFetch(apiUrl)
+
+        console.log('🏗️ loadJobs: Response received, ok:', response.ok)
+        console.log('🏗️ loadJobs: Response status:', response.status)
 
         if (response.ok) {
           const data = await response.json()
-          this.jobs = data.jobs
+          console.log('🏗️ loadJobs: Response data:', data)
+          console.log('🏗️ loadJobs: Jobs found:', data.jobs?.length || 0)
+
+          if (data.jobs && Array.isArray(data.jobs)) {
+            this.jobs = data.jobs
+            console.log('🏗️ loadJobs: Successfully loaded', this.jobs.length, 'jobs')
+          } else {
+            console.warn('🏗️ loadJobs: No jobs array in response, setting jobs to empty array')
+            this.jobs = []
+          }
         } else {
-          console.error('Failed to load jobs')
+          const errorText = await response.text()
+          console.error('🏗️ loadJobs: API call failed with status:', response.status)
+          console.error('🏗️ loadJobs: Error response:', errorText)
+          alert(`Failed to load jobs: ${response.status} - ${errorText}`)
           this.jobs = []
         }
       } catch (error) {
-        console.error('Failed to load jobs:', error)
+        console.error('🏗️ loadJobs: Exception occurred:', error)
+        console.error('🏗️ loadJobs: Full error details:', error.stack)
+        alert(`Failed to load jobs: ${error.message}`)
         this.jobs = []
       }
     },
