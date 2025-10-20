@@ -34,19 +34,33 @@
       </div>
 
       <!-- Jobs Section -->
-      <JobManagementSectionSP
-        :expanded="sectionsExpanded.jobs"
-        :jobs="jobs"
-        :job-filters="jobFilters"
-        :approved-clients="approvedClients"
-        :technicians="technicians"
-        :user-role="userRole"
-        @toggle="sectionsExpanded.jobs = !sectionsExpanded.jobs"
-        @update-job-filters="jobFilters = $event; loadJobs()"
-        @refresh-jobs="loadJobs"
-        @view-job-details="selectedJob = $event; showJobDetailsModal = true"
-        @edit-job="editingJob = $event; selectedTechnicianId = $event.assigned_technician_user_id; originalJobStatus = $event.job_status; showEditJobModal = true"
-      />
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <CollapsibleSection
+          title="Job Management"
+          :expanded="sectionsExpanded.jobs"
+          :completeness="jobs?.length ? 'loaded' : null"
+          @toggle="sectionsExpanded.jobs = !sectionsExpanded.jobs"
+        >
+          <template #header-actions>
+            <button @click="loadJobs()" class="btn-outlined flex items-center gap-2">
+              <span class="material-icon-sm">refresh</span>
+              Refresh
+            </button>
+          </template>
+
+          <JobManagementSectionSP
+            :jobs="jobs"
+            :job-filters="jobFilters"
+            :approved-clients="approvedClients"
+            :technicians="technicians"
+            :user-role="userRole"
+            @update-job-filters="jobFilters = $event; loadJobs()"
+            @refresh-jobs="loadJobs"
+            @view-job-details="selectedJob = $event; showJobDetailsModal = true"
+            @edit-job="editingJob = $event; selectedTechnicianId = $event.assigned_technician_user_id; originalJobStatus = $event.job_status; showEditJobModal = true"
+          />
+        </CollapsibleSection>
+      </div>
 
       <!-- Business Profile Section (Admins Only) - Replaced with inline for testing -->
       <div v-if="userRole === 3" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
@@ -2676,6 +2690,28 @@ getCurrentUserName() {
       }
 
       return availableStatuses
+    },
+
+    // Determine if job details are editable based on status and user permissions
+    canEditJobDetails(job) {
+      if (!job) return false
+
+      // Allow editing if status is 'Reported' (not progressed) or job is assigned to current user
+      if (job.job_status === 'Reported') {
+        return true
+      }
+
+      // For other statuses, allow if the job is assigned to the current user
+      if (job.assigned_technician_user_id === this.currentUserId) {
+        return true
+      }
+
+      // Service provider admins can edit most jobs
+      if (this.userRole === 3) {
+        return true
+      }
+
+      return false
     },
 
     // Quote Management Methods

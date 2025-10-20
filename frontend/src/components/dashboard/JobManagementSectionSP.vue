@@ -63,7 +63,7 @@
         <Card v-else-if="jobs && jobs.length > 0" v-for="job in jobs" :key="job.id" class="job-card overflow-hidden transition-all duration-200 hover:shadow-elevation-3">
           <template #header>
             <div class="job-status">
-              <StatusBadge>{{ job.job_status }}</StatusBadge>
+              <StatusBadge :status="job.job_status" />
             </div>
             <div class="job-actions flex gap-2">
               <button v-if="userRole === 3 || (userRole === 4 && (job.assigned_technician_user_id == currentUserId || job.job_status !== 'In Progress'))"

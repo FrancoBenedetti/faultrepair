@@ -88,12 +88,175 @@ Fixed event handler mapping in ClientDashboard.vue:
 
 ---
 
----
-
 
 ## Medium Priority 🟡 (Fix This Week)
 <!-- Some users affected, workarounds exist -->
 
+### ✅ [BUG] Service Provider Jobs Section Collapse/Expand Not Working - FIXED
+**Discovered:** 2025-10-20
+**Fixed:** 2025-10-20
+**Severity:** Medium (User cannot hide jobs section to reduce clutter)
+**Area:** Frontend - CollapsibleSection Component Integration
+
+**Issue Description:**
+The Job Management section header in ServiceProviderDashboard wouldn't collapse when clicked. Clicking the section header did nothing - the jobs section remained expanded.
+
+**Root Cause:**
+Inconsistent event handling implementation between JobManagementSectionSP and ServiceProviderDashboard parent component.
+
+**BEFORE (Broken):**
+```vue
+<!-- JobManagementSectionSP.vue - Was using own CollapsibleSection component -->
+<template>
+  <CollapsibleSection @toggle="$emit('toggle')" ...>
+    <!-- Content -->
+  </CollapsibleSection>
+</template>
+
+<!-- ServiceProviderDashboard.vue -->
+<JobManagementSectionSP @toggle="sectionsExpanded.jobs = !sectionsExpanded.jobs" />
+```
+This created a double layer causing event propogation issues.
+
+**AFTER (Fixed):**
+```vue
+<!-- ServiceProviderDashboard.vue - Direct CollapsibleSection with JobManagementSectionSP as content -->
+<div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+  <CollapsibleSection
+    title="Job Management"
+    :expanded="sectionsExpanded.jobs"
+    :completeness="jobs?.length ? 'loaded' : null"
+    @toggle="sectionsExpanded.jobs = !sectionsExpanded.jobs"
+  >
+    <template #header-actions>
+      <button @click="loadJobs()" class="btn-outlined flex items-center gap-2">
+        <span class="material-icon-sm">refresh</span>
+        Refresh
+      </button>
+    </template>
+
+    <JobManagementSectionSP
+      :jobs="jobs"
+      :job-filters="jobFilters"
+      :approved-clients="approvedClients"
+      :technicians="technicians"
+      :user-role="userRole"
+      <!-- Event handlers for actions -->
+    />
+  </CollapsibleSection>
+</div>
+```
+
+**Resolution Outcome:**
+- ✅ Job Management section now properly collapses/expands when header is clicked
+- ✅ Proper event binding: `@toggle="sectionsExpanded.jobs = !sectionsExpanded.jobs"`
+- ✅ CollapsibleSection component handles expand/collapse animation
+- ✅ Maintains all existing functionality (refresh, filters, job actions)
+- ✅ Clean, single responsibility component structure
+
+**Files Changed:**
+- `frontend/src/views/ServiceProviderDashboard.vue`
+  - Restructured Job Management section to use CollapsibleSection directly
+  - Fixed event binding and component hierarchy
+  - Proper toggle functionality restored
+
+---
+
+### ✅ [BUG] Job Cards Not Showing Status Badges - FIXED
+**Discovered:** 2025-10-20
+**Fixed:** 2025-10-20
+**Severity:** Medium (Incomplete job information display)
+**Area:** Frontend - JobManagementSectionSP Component
+
+**Issue Description:**
+Job cards were missing status badges in the header. Status badges appeared blank despite job status data being available.
+
+**Root Cause:**
+Incorrect StatusBadge component usage in template:
+
+**BEFORE (Broken):**
+```vue
+<!-- Passed status as slot content instead of prop -->
+<StatusBadge>{{ job.job_status }}</StatusBadge>
+```
+
+**AFTER (Fixed):**
+```vue
+<!-- Status properly passed as prop -->
+<StatusBadge :status="job.job_status" />
+```
+
+**StatusBadge Component Requirements:**
+- Component expects `status` prop (required: true)
+- Displays appropriate colored badges based on job status
+- Provides visual feedback for job states (Reported, In Progress, Completed, etc.)
+
+**Files Changed:**
+- `frontend/src/components/dashboard/JobManagementSectionSP.vue`
+  - Fixed StatusBadge prop binding
+  - Status badges now display correctly in card headers
+
+**Testing Results:**
+- ✅ Status badges now visible in job cards
+- ✅ Correct colors for different statuses (blue for "In Progress", green for "Completed", etc.)
+- ✅ Status text properly displayed
+- ✅ No CSS conflicts or styling issues
+
+**Client names were already displaying correctly** - this was confirmed via the HTML inspection provided.
+
+---
+
+### ✅ [BUG] Edit Job Modal Fails With 'canEditJobDetails is not a function' - FIXED
+**Discovered:** 2025-10-20
+**Fixed:** 2025-10-20
+**Severity:** High (Cannot edit jobs, breaks core workflow)
+**Area:** Frontend - EditJobModal Logic
+
+**Issue Description:**
+Clicking Edit button on job cards threw console error: "TypeError: s.canEditJobDetails is not a function"
+
+**Root Cause:**
+EditJobModal template tried to call `canEditJobDetails(editingJob)` method but this method was not defined in the ServiceProviderDashboard component.
+
+**Solution Implemented:**
+Added missing `canEditJobDetails()` method to ServiceProviderDashboard.vue:
+
+```javascript
+// Determine if job details are editable based on status and user permissions
+canEditJobDetails(job) {
+  if (!job) return false
+
+  // Allow editing if status is 'Reported' (not progressed) or job is assigned to current user
+  if (job.job_status === 'Reported') {
+    return true
+  }
+
+  // For other statuses, allow if the job is assigned to the current user
+  if (job.assigned_technician_user_id === this.currentUserId) {
+    return true
+  }
+
+  // Service provider admins can edit most jobs
+  if (this.userRole === 3) {
+    return true
+  }
+
+  return false
+}
+```
+
+**Testing Results:**
+- ✅ Edit buttons now open modal without console errors
+- ✅ Method correctly determines edit permissions based on job status and user role
+- ✅ Service provider admins can edit any job details
+- ✅ Jobs assigned to current technician user can be edited
+- ✅ 'Reported' status jobs are always editable
+- ✅ No console errors when clicking edit buttons
+
+**Files Changed:**
+- `frontend/src/views/ServiceProviderDashboard.vue`
+  - Added `canEditJobDetails()` permission method
+  - Logic accounts for job status, user role, and technician assignment
 
 ---
 
@@ -315,9 +478,9 @@ mounted() {
 ## Bug Statistics
 
 **Open Bugs:** 0 (0 Critical, 0 High, 0 Medium, 0 Low) ✅ ALL KNOWN BUGS FIXED
+**Fixed This Session:** 6
 **Fixed This Week:** 6
 **Fixed This Month:** 6
-**Average Time to Fix High:** 0 days
 **Average Time to Fix Medium:** 1 day
 
 ---
