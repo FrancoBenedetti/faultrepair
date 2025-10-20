@@ -1,1455 +1,246 @@
 <template>
     <div class="client-dashboard max-w-7xl mx-auto px-6 py-8">
-      <!-- User Identity Bar -->
-      <div class="user-identity-bar bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6 shadow-sm">
-        <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div class="user-info flex items-center gap-4">
-            <div class="user-avatar flex-shrink-0">
-              <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                <span class="material-icon text-white">{{ getCurrentUserName().charAt(0).toUpperCase() }}</span>
+      <!-- Dashboard Header (keeping existing) -->
+      <div class="dashboard-header flex justify-between items-center mb-8 pb-6 border-b border-gray-200">
+        <div class="left">
+          <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ getOrganizationName() }}</h1>
+          <div class="profile-completeness">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-20 h-4 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  class="h-full bg-green-500 transition-all duration-300"
+                  :style="{ width: profileCompleteness + '%' }"
+                ></div>
               </div>
+              <span class="text-xs font-medium text-gray-600">{{ profileCompleteness }}% Complete</span>
             </div>
-            <div class="identity-details">
-              <div class="signed-in-user flex items-center gap-2 mb-1">
-                <span class="material-icon-sm text-blue-600">person</span>
-                <span class="text-sm font-medium text-gray-700">Signed in as:</span>
-                <span class="text-sm font-semibold text-gray-900">{{ getCurrentUserName() }}</span>
-                <span class="user-role-badge" :class="getRoleBadgeClass(userRole)">
-                  {{ roleDisplayNames && roleDisplayNames[userRole] ? roleDisplayNames[userRole] : getFallbackRoleName(userRole) }}
-                </span>
-              </div>
-              <div class="organization-info flex items-center gap-2">
-                <span class="material-icon-sm text-indigo-600">business</span>
-                <span class="text-sm font-medium text-gray-700">Organization:</span>
-                <span class="text-sm font-semibold text-gray-900">{{ getOrganizationName() }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="subscription-info flex items-center gap-4">
-            <div class="subscription-badge flex items-center gap-2 px-3 py-1 bg-white border border-gray-300 rounded-full">
-              <span class="material-icon-sm text-green-600">workspace_premium</span>
-              <span class="text-xs font-medium text-gray-700">Free Plan</span>
-            </div>
-            <!-- Upgrade button for admin users only -->
-            <button
-              v-if="isAdmin"
-              @click="handleUpgradeClick"
-              class="upgrade-btn flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm transform hover:scale-105"
-            >
-              <span class="material-icon-sm">upgrade</span>
-              Upgrade to Premium
-            </button>
+            <p class="text-sm text-gray-600">Complete your profile to unlock all features</p>
           </div>
         </div>
-      </div>
-
-      <!-- Dashboard Header -->
-      <div class="dashboard-header flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6 mb-8 p-6 bg-white rounded-xl border border-gray-200 shadow-lg">
-        <div class="header-left flex items-center gap-4">
-          <div class="dashboard-title">
-            <h1 class="text-3xl font-bold text-gray-900">
-              {{ getOrganizationName() }} - {{ userRole === 1 ? 'Report Dashboard' : 'Client Dashboard' }}
-            </h1>
-          </div>
-          <!-- Profile completeness bar - hidden for reporting employees -->
-          <div v-if="userRole === 2" class="profile-completeness flex items-center gap-4">
-            <div class="completeness-bar w-64 h-3 bg-gray-200 rounded-full overflow-hidden">
-              <div class="completeness-fill h-full bg-blue-600 transition-all duration-500 ease-out" :style="{ width: profileCompleteness + '%' }"></div>
-            </div>
-            <span class="completeness-text text-lg font-medium text-gray-900">{{ profileCompleteness }}% Complete</span>
-          </div>
-        </div>
-        <div class="header-right flex gap-3">
-          <button v-if="isAdmin" @click="showEditProfileModal = true" class="btn-outline flex items-center gap-2">
-            <span class="material-icon-sm">business</span>
-            Edit Business Profile
-          </button>
-          <button @click="$router.push('/create-invitation')" class="btn-filled flex items-center gap-2">
+        <div class="right flex items-center gap-4">
+          <button
+            @click="$router.push('/create-invitation')"
+            class="btn-secondary flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
             <span class="material-icon-sm">person_add</span>
-            Create Invitation
+            Invite Users
           </button>
-          <button @click="signOut" class="btn-filled flex items-center gap-2">
+          <button
+            v-if="isAdmin"
+            @click="handleUpgradeClick"
+            class="btn-primary flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <span class="material-icon-sm">upgrade</span>
+            Upgrade
+          </button>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-600">Role:</span>
+            <span class="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+              {{ roleDisplayNames && roleDisplayNames[userRole] ? roleDisplayNames[userRole] : getFallbackRoleName(userRole) }}
+            </span>
+          </div>
+          <button
+            @click="signOut()"
+            class="btn-secondary flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
             <span class="material-icon-sm">logout</span>
             Sign Out
           </button>
         </div>
       </div>
 
-    <div class="dashboard-content grid gap-8">
-      <!-- Business Profile Section - Only for budget controllers -->
-      <div v-if="userRole === 2" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('profile')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.profile }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-              <span class="material-icon text-blue-600">business</span>
-              Business Profile
-            </h2>
-            <div class="profile-completeness-badge">
-              <span class="completeness-percentage">{{ clientProfileCompleteness }}%</span>
-              <span class="completeness-label">Complete</span>
-            </div>
-          </div>
-          <button v-if="isAdmin" @click.stop="showEditProfileModal = true" class="btn-filled flex items-center gap-2">
-            <span class="material-icon-sm">edit</span>
-            Edit Profile
-          </button>
-        </div>
-
-        <div v-show="sectionsExpanded.profile" class="section-content transition-all duration-300 ease-in-out">
-          <!-- Loading state -->
-          <div v-if="clientProfile === null" class="loading-state text-center py-16">
-            <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p class="text-body-large text-on-surface-variant">Loading profile...</p>
-          </div>
-
-          <!-- Profile content -->
-          <div v-else-if="clientProfile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Basic Information Card -->
-            <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div class="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
-                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span class="material-icon-sm text-white">business_center</span>
+      <div class="dashboard-content grid gap-8">
+        <!-- User Identity Bar -->
+        <div class="user-identity-bar bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6 shadow-sm">
+          <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+            <div class="user-info flex items-center gap-4">
+              <div class="user-avatar flex-shrink-0">
+                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span class="material-icon text-white">{{ getCurrentUserName().charAt(0).toUpperCase() }}</span>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-900">Basic Information</h3>
               </div>
-              <div class="space-y-3">
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">store</span>
-                    Business Name:
-                  </span>
-                  <span class="text-sm text-gray-900 text-right">{{ clientProfile.name || 'Not specified' }}</span>
-                </div>
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">location_on</span>
-                    Address:
-                  </span>
-                  <span class="text-sm text-gray-900 text-right">{{ clientProfile.address || 'Not specified' }}</span>
-                </div>
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">link</span>
-                    Website:
-                  </span>
-                  <span class="text-sm text-right">
-                    <span v-if="clientProfile.website">
-                      <a :href="clientProfile.website"
-                         target="_blank"
-                         class="text-blue-600 hover:text-blue-800 underline break-all">
-                        {{ clientProfile.website }}
-                      </a>
-                    </span>
-                    <span v-else class="text-gray-900">Not specified</span>
+              <div class="identity-details">
+                <div class="signed-in-user flex items-center gap-2 mb-1">
+                  <span class="material-icon-sm text-blue-600">person</span>
+                  <span class="text-sm font-medium text-gray-700">Signed in as:</span>
+                  <span class="text-sm font-semibold text-gray-900">{{ getCurrentUserName() }}</span>
+                  <span class="user-role-badge" :class="getRoleBadgeClass(userRole)">
+                    {{ roleDisplayNames && roleDisplayNames[userRole] ? roleDisplayNames[userRole] : getFallbackRoleName(userRole) }}
                   </span>
                 </div>
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">description</span>
-                    Description:
-                  </span>
-                  <span class="text-sm text-gray-900 text-right">{{ clientProfile.description || 'Not specified' }}</span>
+                <div class="organization-info flex items-center gap-2">
+                  <span class="material-icon-sm text-indigo-600">business</span>
+                  <span class="text-sm font-medium text-gray-700">Organization:</span>
+                  <span class="text-sm font-semibold text-gray-900">{{ getOrganizationName() }}</span>
                 </div>
               </div>
             </div>
-
-            <!-- Manager Contact Card -->
-            <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div class="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
-                <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span class="material-icon-sm text-white">contact_phone</span>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-900">Manager Contact</h3>
+            <div class="subscription-info flex items-center gap-4">
+              <div class="subscription-badge flex items-center gap-2 px-3 py-1 bg-white border border-gray-300 rounded-full">
+                <span class="material-icon-sm text-green-600">workspace_premium</span>
+                <span class="text-xs font-medium text-gray-700">Free Plan</span>
               </div>
-              <div class="space-y-3">
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">person</span>
-                    Manager Name:
-                  </span>
-                  <span class="text-sm text-gray-900 text-right">{{ clientProfile.manager_name || 'Not specified' }}</span>
-                </div>
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">email</span>
-                    Manager Email:
-                  </span>
-                  <span class="text-sm text-right">
-                    <span v-if="clientProfile.manager_email">
-                      <a :href="`mailto:${clientProfile.manager_email}`"
-                         class="text-blue-600 hover:text-blue-800 underline break-all">
-                        {{ clientProfile.manager_email }}
-                      </a>
-                    </span>
-                    <span v-else class="text-gray-900">Not specified</span>
-                  </span>
-                </div>
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">phone</span>
-                    Manager Phone:
-                  </span>
-                  <span class="text-sm text-right">
-                    <span v-if="clientProfile.manager_phone">
-                      <a :href="`tel:${clientProfile.manager_phone}`"
-                         class="text-blue-600 hover:text-blue-800 underline">
-                        {{ clientProfile.manager_phone }}
-                      </a>
-                    </span>
-                    <span v-else class="text-gray-900">Not specified</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Business Details Card -->
-            <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div class="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
-                <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span class="material-icon-sm text-white">assignment</span>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-900">Business Details</h3>
-              </div>
-              <div class="space-y-3">
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">receipt</span>
-                    VAT Number:
-                  </span>
-                  <span class="text-sm text-gray-900 text-right">{{ clientProfile.vat_number || 'Not specified' }}</span>
-                </div>
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">business</span>
-                    Registration:
-                  </span>
-                  <span class="text-sm text-gray-900 text-right">{{ clientProfile.business_registration_number || 'Not specified' }}</span>
-                </div>
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">toggle_on</span>
-                    Status:
-                  </span>
-                  <span class="px-2 py-1 rounded-full text-xs font-medium text-right"
-                        :class="clientProfile.is_active
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'">
-                    {{ clientProfile.is_active ? 'Active' : 'Inactive' }}
-                  </span>
-                </div>
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <span class="material-icon-sm w-4 h-4 flex-shrink-0">event_available</span>
-                    Member Since:
-                  </span>
-                  <span class="text-sm text-gray-900 text-right">{{ formatDate(clientProfile.created_at) }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- No profile state -->
-          <div v-else class="no-profile text-center py-16">
-            <div class="no-profile-icon material-icon-xl text-neutral-400 mb-4">business</div>
-            <h3 class="text-title-large text-on-surface mb-2">Profile Not Set Up</h3>
-            <p class="text-body-large text-on-surface-variant mb-4">Complete your business profile to help service providers understand your organization better.</p>
-            <button @click="showEditProfileModal = true" class="btn-filled">
-              <span class="material-icon-sm mr-2">edit</span>
-              Set Up Profile
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- User Management Section - Hidden for reporting employees -->
-      <div v-if="userRole === 2" class="users-section card p-6">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('users')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.users }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0">User Management</h2>
-          </div>
-          <button v-if="isAdmin" @click.stop="showAddUserModal = true" class="btn-filled">
-            <span class="material-icon-sm mr-2">person_add</span>
-            Add New User
-          </button>
-        </div>
-
-        <div v-show="sectionsExpanded.users" class="section-content transition-all duration-300 ease-in-out">
-          <div class="users-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <!-- Loading state -->
-            <div v-if="users === null" class="loading-state col-span-full text-center py-16">
-              <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
-              <p class="text-body-large text-on-surface-variant">Loading users...</p>
-            </div>
-
-            <!-- User cards -->
-            <div v-else-if="users && users.length > 0" v-for="user in users" :key="user.id" class="user-card card overflow-hidden transition-all duration-200 hover:shadow-elevation-3">
-              <div class="user-header card-header flex justify-between items-center">
-                <div class="user-avatar w-12 h-12 bg-primary-600 rounded-full flex items-center justify-center">
-                  <span class="material-icon text-on-primary">{{ user.username.charAt(0).toUpperCase() }}</span>
-                </div>
-                <div class="user-actions flex gap-2" v-if="isAdmin">
-                  <button @click="editUser(user)" class="btn-outlined btn-small">
-                    <span class="material-icon-sm">edit</span>
-                  </button>
-                  <button v-if="canDeleteUser(user)" @click="deleteUser(user)" class="btn-outlined btn-small text-error-600 border-error-600 hover:bg-error-50">
-                    <span class="material-icon-sm">delete</span>
-                  </button>
-                </div>
-              </div>
-
-              <div class="user-content card-content">
-                <h3 class="user-name text-title-medium text-on-surface mb-2">{{ user.first_name }} {{ user.last_name }}</h3>
-                <p class="user-email text-body-medium text-on-surface-variant mb-3">{{ user.email }}</p>
-                <div class="user-role">
-                  <span class="role-badge status-badge" :class="getRoleClass(user.role_name)">
-                    {{ user.role_name }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="user-footer card-footer">
-                <div class="user-date text-label-medium text-on-surface-variant">
-                  Added {{ formatDate(user.created_at) }}
-                </div>
-              </div>
-            </div>
-
-            <!-- No users state -->
-            <div v-else-if="users && users.length === 0" class="no-users col-span-full text-center py-16">
-              <div class="no-users-icon material-icon-xl text-neutral-400 mb-4">group</div>
-              <h3 class="text-title-large text-on-surface mb-2">No users found</h3>
-              <p class="text-body-large text-on-surface-variant">Get started by adding your first user.</p>
-            </div>
-
-            <!-- Error state -->
-            <div v-else class="error-state col-span-full text-center py-16">
-              <div class="error-icon material-icon-xl text-error-400 mb-4">error</div>
-              <h3 class="text-title-large text-on-surface mb-2">Failed to load users</h3>
-              <p class="text-body-large text-on-surface-variant">Please try refreshing the page.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Locations Section - Hidden for reporting employees -->
-      <div v-if="userRole === 2" class="locations-section card p-6">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('locations')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.locations }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0">Locations</h2>
-          </div>
-          <div class="header-right flex items-center gap-4">
-            <!-- View Mode Toggle -->
-            <div class="view-mode-toggle flex border border-gray-300 rounded-lg overflow-hidden">
-              <button @click.stop="locationsViewMode = 'cards'" :class="{ 'bg-blue-600 text-white': locationsViewMode === 'cards', 'bg-white text-gray-700 hover:bg-gray-50': locationsViewMode !== 'cards' }" class="px-4 py-2 text-sm font-medium transition-colors">
-                <span class="material-icon-sm mr-1">grid_view</span>
-                Cards
-              </button>
-              <button @click.stop="locationsViewMode = 'table'" :class="{ 'bg-blue-600 text-white': locationsViewMode === 'table', 'bg-white text-gray-700 hover:bg-gray-50': locationsViewMode !== 'table' }" class="px-4 py-2 text-sm font-medium transition-colors">
-                <span class="material-icon-sm mr-1">table_chart</span>
-                Table
+              <!-- Upgrade button for admin users only -->
+              <button
+                v-if="isAdmin"
+                @click="handleUpgradeClick"
+                class="upgrade-btn flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm transform hover:scale-105"
+              >
+                <span class="material-icon-sm">upgrade</span>
+                Upgrade to Premium
               </button>
             </div>
-            <button v-if="isAdmin" @click.stop="showAddLocationModal = true" class="btn-filled">
-              <span class="material-icon-sm mr-2">add</span>
-              Add Location
-            </button>
           </div>
         </div>
 
-        <div v-show="sectionsExpanded.locations" class="section-content transition-all duration-300 ease-in-out">
+        <!-- User Management Section - Only for budget controllers -->
+        <UserManagementSection
+          v-if="userRole === 2"
+          :expanded="sectionsExpanded.users"
+          :users="users"
+          :available-roles="availableRoles"
+          :is-admin="isAdmin"
+          :current-user-id="userId"
+          @toggle="sectionsExpanded = {...sectionsExpanded, users: !sectionsExpanded.users}"
+          @add-user="showAddUserModal = true"
+          @edit-user="handleEditUser"
+        />
 
-        <!-- Cards View -->
-        <div v-if="locationsViewMode === 'cards'" class="locations-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <!-- Loading state -->
-          <div v-if="locations === null" class="loading-state col-span-full text-center py-16">
-            <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p class="text-body-large text-on-surface-variant">Loading locations...</p>
+        <!-- Locations Section - Only for budget controllers -->
+        <LocationManagementSection
+          v-if="userRole === 2"
+          :expanded="sectionsExpanded.locations"
+          :locations="locations"
+          :locations-view-mode="locationsViewMode"
+          :is-admin="isAdmin"
+          @toggle="sectionsExpanded = {...sectionsExpanded, locations: !sectionsExpanded.locations}"
+          @view-mode-changed="locationsViewMode = $event"
+          @edit-location="handleEditLocation"
+          @filter-jobs="filterJobsByLocation"
+        />
+
+        <!-- Approved Providers Section - Only for budget controllers -->
+        <ProviderManagementSection
+          v-if="userRole === 2"
+          :expanded="sectionsExpanded.providers"
+          :approved-providers="approvedProviders"
+          :is-admin="isAdmin"
+          @toggle="sectionsExpanded = {...sectionsExpanded, providers: !sectionsExpanded.providers}"
+          @view-provider-jobs="handleViewProviderJobs"
+          @browse-providers="$router.push('/browse-providers')"
+        />
+
+        <!-- Jobs Section - For all user roles -->
+        <JobManagementSection
+          :jobs="jobs"
+          :job-filters="jobFilters"
+          :locations="locations"
+          :approved-providers="approvedProviders"
+        :user-role="userRole"
+        :client-profile="clientProfile"
+        @update-job-filters="updateJobFilters"
+        @load-jobs="loadJobs"
+        @create-job="$emit('show-create-job')"
+        @view-job-details="handleViewJobDetails"
+        @edit-job="handleEditJob"
+        @toggle-archive-job="toggleArchiveJob"
+        @confirm-job="console.log('EVENT RECEIVED: confirm-job', $event); showJobConfirmationModal = true; confirmationJob = $event; console.log('ClientDashboard: AFTER event handler - showJobConfirmationModal:', showJobConfirmationModal, 'confirmationJob:', confirmationJob)"
+        @reject-job="showJobRejectionModal = true; rejectionJob = $event"
+        @accept-quote="showQuoteResponseModal = true; quoteResponseJob = $event; quoteResponseAction = 'accept'"
+        @reject-quote="showQuoteRejectionModal = true; quoteRejectionJob = $event; quoteRejectionAction = 'reject'"
+        />
+      </div>
+
+      <!-- Modals -->
+      <AddUserModal
+        v-if="showAddUserModal"
+        :available-roles="availableRoles"
+        :adding-user="addingUser"
+        @close="showAddUserModal = false"
+        @submit="handleAddUser"
+      />
+
+      <EditUserModal
+        v-if="showEditUserModal"
+        :user="editingUser"
+        :available-roles="availableRoles"
+        :updating-user="updatingUser"
+        @close="showEditUserModal = false"
+        @submit="handleUpdateUser"
+      />
+
+      <CreateJobModal
+        v-if="showCreateJobModal"
+        :locations="locations"
+        :creating-job="creatingJob"
+        :new-job="newJob"
+        @close="closeCreateJobModal"
+        @submit="handleCreateJob"
+        @qr-detected="handleQrDetected"
+      />
+
+      <JobDetailsModal
+        v-if="showJobDetailsModal"
+        :job="selectedJob"
+        @close="showJobDetailsModal = false"
+        @image-click="selectedImage = $event"
+      />
+
+      <!-- Job Confirmation Modal -->
+      <!-- EMERGENCY: Force modal OFF to test if template condition is driving it -->
+      <div v-if="false && showJobConfirmationModal" class="modal-overlay" @click="console.log('ClientDashboard: Modal overlay clicked'); closeJobConfirmationModal()">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>Confirm Job Completion</h3>
+            <button @click="console.log('ClientDashboard: Close button clicked'); closeJobConfirmationModal()" class="close-btn">&times;</button>
           </div>
-
-          <!-- Default location state -->
-          <div v-else-if="locations && locations.length === 0" class="default-location col-span-full text-center py-16">
-            <div class="material-icon-xl text-neutral-400 mb-4">business</div>
-            <h3 class="text-title-large text-on-surface mb-2">Default Location</h3>
-            <p class="text-body-large text-on-surface-variant">Using client name as default location. Add specific locations if needed.</p>
-          </div>
-
-          <!-- Location cards -->
-          <div v-else-if="locations && locations.length > 0" v-for="location in locations" :key="location.id" class="location-card card overflow-hidden transition-all duration-200 hover:shadow-elevation-3 cursor-pointer" @click="filterJobsByLocation(location)">
-            <div class="location-header card-header flex justify-between items-center">
-              <div class="location-icon w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                <span class="material-icon text-white">location_on</span>
-              </div>
-              <div class="location-actions flex gap-2" v-if="isAdmin">
-                <button @click.stop="editLocation(location)" class="btn-outlined btn-small">
-                  <span class="material-icon-sm">edit</span>
-                </button>
-                <button v-if="location.job_count === 0" @click.stop="deleteLocation(location)" class="btn-outlined btn-small text-error-600 border-error-600 hover:bg-error-50">
-                  <span class="material-icon-sm">delete</span>
-                </button>
+          <div v-if="confirmationJob" class="confirmation-form">
+            <div class="job-summary">
+              <h4>{{ confirmationJob.item_identifier || 'No Item ID' }}</h4>
+              <p class="job-description">{{ confirmationJob.fault_description }}</p>
+              <div class="job-meta">
+                <span><strong>Client:</strong> {{ confirmationJob.client_name }}</span>
+                <span><strong>Location:</strong> {{ confirmationJob.location_name }}</span>
               </div>
             </div>
-
-            <div class="location-content card-content">
-              <h3 class="location-name text-title-medium text-on-surface mb-2">{{ location.name }}</h3>
-              <p class="location-address text-body-medium text-on-surface-variant mb-2">{{ location.address || 'No address specified' }}</p>
-
-              <!-- GPS Coordinates -->
-              <div v-if="location.coordinates" class="location-coordinates mb-2">
-                <a :href="`https://maps.google.com/maps?q=${encodeURIComponent(location.coordinates)}`"
-                   target="_blank"
-                   class="coordinates-link text-blue-600 hover:text-blue-800 font-medium">
-                  📍 {{ location.coordinates }}
-                </a>
-              </div>
-
-              <!-- Access Rules Link -->
-              <div v-if="location.access_rules" class="location-access mb-2">
-                <a :href="location.access_rules"
-                   target="_blank"
-                   class="access-link text-green-600 hover:text-green-800 font-medium">
-                  🔗 Site Information
-                </a>
-              </div>
-
-              <!-- Access Instructions -->
-              <div v-if="location.access_instructions" class="location-instructions mb-3">
-                <p class="text-sm text-gray-600 line-clamp-2">
-                  <span class="font-medium text-gray-700">Instructions:</span> {{ location.access_instructions }}
-                </p>
-              </div>
-
-              <div class="location-stats">
-                <div class="stat-item">
-                  <span class="stat-number text-2xl font-bold text-on-surface">{{ location.job_count }}</span>
-                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Service Requests</span>
+            <div class="form-group">
+              <label for="confirmation-notes">Confirmation Notes (Optional)</label>
+              <textarea id="confirmation-notes" v-model="confirmationNotes" rows="3"
+                        placeholder="Add any notes about confirming this work..."></textarea>
+            </div>
+            <div class="confirmation-info">
+              <div class="info-banner">
+                <div class="info-icon">ℹ️</div>
+                <div class="info-content">
+                  <p><strong>What happens when you confirm?</strong></p>
+                  <p>This job will be marked as "Confirmed" and archived for both parties. This action cannot be undone.</p>
                 </div>
               </div>
             </div>
-
-            <div class="location-footer card-footer">
-              <div class="location-click-hint text-label-medium text-on-surface-variant">
-                <span class="material-icon-sm mr-1">filter_list</span>
-                Click to filter jobs
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Table View -->
-        <div v-else-if="locationsViewMode === 'table'" class="locations-table-container">
-          <!-- Loading state -->
-          <div v-if="locations === null" class="loading-state">
-            <div class="loading-spinner"></div>
-            <p>Loading locations...</p>
-          </div>
-
-          <!-- Default location state -->
-          <div v-else-if="locations && locations.length === 0" class="default-location">
-            <div class="default-location-icon">🏢</div>
-            <h3>Default Location</h3>
-            <p>Using client name as default location. Add specific locations if needed.</p>
-          </div>
-
-          <!-- Locations table -->
-          <div v-else-if="locations && locations.length > 0" class="locations-table-wrapper">
-            <table class="locations-table">
-              <thead>
-                <tr>
-                  <th class="col-name">Location Name</th>
-                  <th class="col-address">Address</th>
-                  <th class="col-jobs">Service Requests</th>
-                  <th class="col-actions" v-if="isAdmin">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="location in locations" :key="location.id" class="location-row" @click="filterJobsByLocation(location)">
-                  <td class="col-name">
-                    <div class="location-name-cell">
-                      <span class="location-icon">📍</span>
-                      <span class="location-name-text">{{ location.name }}</span>
-                    </div>
-                  </td>
-                  <td class="col-address">{{ location.address || 'No address specified' }}</td>
-                  <td class="col-jobs">
-                    <span class="job-count-badge">{{ location.job_count }}</span>
-                  </td>
-                  <td class="col-actions" v-if="isAdmin">
-                    <div class="table-actions">
-                      <button @click.stop="editLocation(location)" class="btn-secondary btn-small">
-                        Edit
-                      </button>
-                      <button v-if="location.job_count === 0" @click.stop="deleteLocation(location)" class="btn-danger btn-small">
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        </div>
-      </div>
-
-      <!-- Approved Providers Section - Hidden for reporting employees -->
-      <div v-if="userRole === 2" class="providers-section card p-6">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('providers')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.providers }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0">Approved Service Providers</h2>
-          </div>
-          <router-link v-if="isAdmin" to="/browse-providers" class="btn-outlined" @click.stop>
-            <span class="material-icon-sm mr-2">search</span>
-            Browse Providers
-          </router-link>
-        </div>
-
-        <div v-show="sectionsExpanded.providers" class="section-content transition-all duration-300 ease-in-out">
-
-        <div class="providers-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <!-- Loading state -->
-          <div v-if="approvedProviders === null" class="loading-state col-span-full text-center py-16">
-            <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p class="text-body-large text-on-surface-variant">Loading providers...</p>
-          </div>
-
-          <!-- Provider cards -->
-          <div v-else-if="approvedProviders && approvedProviders.length > 0" v-for="provider in approvedProviders" :key="provider.id" class="provider-card card overflow-hidden transition-all duration-200 hover:shadow-elevation-3">
-            <div class="provider-header card-header flex justify-between items-center">
-              <div class="provider-logo w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                <span class="material-icon text-on-primary">{{ provider.name.charAt(0).toUpperCase() }}</span>
-              </div>
-              <div class="provider-actions flex gap-2">
-                <button @click="viewProviderJobs(provider)" class="btn-outlined btn-small">
-                  <span class="material-icon-sm">visibility</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="provider-content card-content">
-              <h3 class="provider-name text-title-medium text-on-surface mb-2">{{ provider.name }}</h3>
-              <p class="provider-address text-body-medium text-on-surface-variant mb-4">{{ provider.address }}</p>
-
-              <div class="provider-stats grid grid-cols-3 gap-3">
-                <div class="stat-item text-center">
-                  <span class="stat-number text-xl font-bold text-on-surface">{{ provider.total_jobs }}</span>
-                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Total</span>
-                </div>
-                <div class="stat-item text-center">
-                  <span class="stat-number text-xl font-bold text-on-surface">{{ provider.active_jobs }}</span>
-                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Active</span>
-                </div>
-                <div class="stat-item text-center">
-                  <span class="stat-number text-xl font-bold text-on-surface">{{ provider.completed_jobs }}</span>
-                  <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Completed</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="provider-footer card-footer">
-              <div class="approval-date text-label-medium text-on-surface-variant">
-                <span class="material-icon-sm mr-1">check_circle</span>
-                Approved {{ formatDate(provider.approved_at) }}
-              </div>
-            </div>
-          </div>
-
-          <!-- No providers state -->
-          <div v-else-if="approvedProviders && approvedProviders.length === 0" class="no-providers col-span-full text-center py-16">
-            <div class="material-icon-xl text-neutral-400 mb-4">handshake</div>
-            <h3 class="text-title-large text-on-surface mb-2">No approved providers</h3>
-            <p class="text-body-large text-on-surface-variant">Browse and approve service providers to get started.</p>
-          </div>
-
-          <!-- Error state -->
-          <div v-else class="error-state col-span-full text-center py-16">
-            <div class="error-icon material-icon-xl text-error-400 mb-4">error</div>
-            <h3 class="text-title-large text-on-surface mb-2">Failed to load providers</h3>
-            <p class="text-body-large text-on-surface-variant">Please try refreshing the page.</p>
-          </div>
-        </div>
-        </div>
-      </div>
-
-      <!-- Jobs Section -->
-      <div class="jobs-section card p-6">
-        <!-- Jobs Section Header -->
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
-          <div class="flex-1">
-            <h2 class="text-title-large text-on-surface mb-0">Job Management</h2>
-            <div v-if="clientProfile && (clientProfile.is_enabled === false || clientProfile.is_enabled === 0 || clientProfile.is_enabled === '0')" class="admin-disabled-warning mt-3">
-              <div class="disabled-banner">
-                <div class="disabled-icon">⚠️</div>
-                <div class="disabled-content">
-                  <h4>Account Administratively Disabled</h4>
-                  <p>Service request creation is restricted. {{ clientProfile.disabled_reason || 'Please contact support for assistance.' }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <button @click="showCreateJobModal = true" class="btn-filled" :disabled="!clientProfile?.is_enabled">
-            <span class="material-icon-sm mr-2">add</span>
-            Service Request
-          </button>
-        </div>
-
-        <!-- Job Filters -->
-        <div class="job-filters flex flex-wrap gap-4 mb-6 p-4 bg-neutral-50 rounded-lg">
-          <div class="filter-group min-w-40">
-            <label for="status-filter" class="form-label mb-1">Status:</label>
-            <select id="status-filter" v-model="jobFilters.status" @change="loadJobs" class="form-input">
-              <option value="">All Statuses</option>
-              <option value="Reported">Reported</option>
-              <option value="Assigned">Assigned</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Completed">Completed</option>
-            </select>
-          </div>
-          <!-- Archive filter only for budget controllers -->
-          <div v-if="userRole === 2" class="filter-group min-w-40">
-            <label for="archive-filter" class="form-label mb-1">Archive Status:</label>
-            <select id="archive-filter" v-model="jobFilters.archive_status" @change="loadJobs" class="form-input">
-              <option value="">All Jobs</option>
-              <option value="active">Active Jobs</option>
-              <option value="archived">Archived Jobs</option>
-            </select>
-          </div>
-          <!-- Location and Provider filters only for budget controllers -->
-          <div v-if="userRole === 2" class="filter-group min-w-40">
-            <label for="location-filter" class="form-label mb-1">Location:</label>
-            <select id="location-filter" v-model="jobFilters.location_id" @change="loadJobs" class="form-input">
-              <option value="">All Locations</option>
-              <option v-for="location in locations" :key="location.id" :value="location.id">
-                {{ location.name }}
-              </option>
-            </select>
-          </div>
-          <div v-if="userRole === 2" class="filter-group min-w-40">
-            <label for="provider-filter" class="form-label mb-1">Provider:</label>
-            <select id="provider-filter" v-model="jobFilters.provider_id" @change="loadJobs" class="form-input">
-              <option value="">All Providers</option>
-              <option v-for="provider in approvedProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
-                {{ provider.name }}
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <div class="jobs-grid grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          <!-- Loading state -->
-          <div v-if="jobs === null" class="loading-state col-span-full text-center py-16">
-            <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p class="text-body-large text-on-surface-variant">Loading jobs...</p>
-          </div>
-
-          <!-- Job cards -->
-          <div v-else-if="jobs && jobs.length > 0" v-for="job in jobs" :key="job.id" class="job-card card overflow-hidden transition-all duration-200 hover:shadow-elevation-3">
-            <div class="job-header card-header flex justify-between items-center">
-              <div class="job-status">
-                <span class="status-badge" :class="getStatusClass(job.job_status)">
-                  {{ job.job_status }}
-                </span>
-              </div>
-              <div class="job-actions flex gap-2">
-                <button v-if="canEditJob(job)" @click="editJob(job)" class="btn-outlined btn-small">
-                  <span class="material-icon-sm">edit</span>
-                </button>
-                <button v-else @click="viewJobDetails(job)" class="btn-outlined btn-small">
-                  <span class="material-icon-sm">visibility</span>
-                </button>
-                <!-- Confirmation/Rejection buttons for completed jobs -->
-                <button v-if="job.job_status === 'Completed' && userRole === 2" @click="showJobConfirmationModal(job)" class="btn-filled btn-small bg-green-600 hover:bg-green-700">
-                  <span class="material-icon-sm">check_circle</span>
-                  Confirm
-                </button>
-                <button v-if="job.job_status === 'Completed' && userRole === 2" @click="showJobRejectionModal(job)" class="btn-outlined btn-small border-red-600 text-red-600 hover:bg-red-50">
-                  <span class="material-icon-sm">cancel</span>
-                  Reject
-                </button>
-                <!-- Archive/Unarchive button for budget controllers -->
-                <button v-if="userRole === 2" @click="toggleArchiveJob(job)" class="btn-outlined btn-small" :class="{ 'text-orange-600 border-orange-600': job.archived_by_client }">
-                  <span class="material-icon-sm">{{ job.archived_by_client ? 'unarchive' : 'archive' }}</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="job-content card-content">
-              <h3 class="job-title text-title-medium text-on-surface mb-2">{{ job.item_identifier || 'No Item ID' }}</h3>
-              <p class="job-description text-body-medium text-on-surface-variant mb-2 line-clamp-2">{{ job.fault_description }}</p>
-              <p class="job-location text-body-small text-on-surface-variant mb-4">
-                <span class="material-icon-sm mr-1">location_on</span>
-                {{ job.location_name }}
-              </p>
-
-              <div class="job-meta grid grid-cols-2 gap-3 text-sm">
-                <div class="meta-item">
-                  <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">Reported by:</span>
-                  <span class="meta-value text-body-small text-on-surface font-medium">{{ job.reporting_user }}</span>
-                </div>
-                <div class="meta-item">
-                  <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">Date:</span>
-                  <span class="meta-value text-body-small text-on-surface font-medium">{{ formatDate(job.created_at) }}</span>
-                </div>
-                <div class="meta-item">
-                  <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">Provider:</span>
-                  <span class="meta-value text-body-small text-on-surface font-medium">{{ job.assigned_provider_name || 'Not assigned' }}</span>
-                </div>
-                <div class="meta-item">
-                  <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">Images:</span>
-                  <span class="meta-value text-body-small text-on-surface font-medium">{{ job.image_count }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="job-footer card-footer">
-              <div class="job-date text-label-medium text-on-surface-variant">
-                <span class="material-icon-sm mr-1">schedule</span>
-                Last updated {{ formatDate(job.updated_at) }}
-              </div>
-            </div>
-          </div>
-
-          <!-- No jobs state -->
-          <div v-else-if="jobs && jobs.length === 0" class="no-jobs col-span-full text-center py-16">
-            <div class="no-jobs-icon material-icon-xl text-neutral-400 mb-4">build</div>
-            <h3 class="text-title-large text-on-surface mb-2">No jobs found</h3>
-            <p class="text-body-large text-on-surface-variant">Report your first fault to get started.</p>
-          </div>
-
-          <!-- Error state -->
-          <div v-else class="error-state col-span-full text-center py-16">
-            <div class="error-icon material-icon-xl text-error-400 mb-4">error</div>
-            <h3 class="text-title-large text-on-surface mb-2">Failed to load jobs</h3>
-            <p class="text-body-large text-on-surface-variant">Please try refreshing the page.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Add User Modal -->
-    <div v-if="showAddUserModal" class="modal-overlay" @click="showAddUserModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>Add New User</h3>
-          <button @click="showAddUserModal = false" class="close-btn">&times;</button>
-        </div>
-
-        <form @submit.prevent="addUser" class="user-form">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="email">Email Address *</label>
-              <input type="email" id="email" v-model="newUser.email" required>
-            </div>
-            <div class="form-group">
-              <label for="first_name">First Name *</label>
-              <input type="text" id="first_name" v-model="newUser.first_name" required>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="last_name">Last Name *</label>
-              <input type="text" id="last_name" v-model="newUser.last_name" required>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="role">Role *</label>
-              <select id="role" v-model="newUser.role_id" required>
-                <option value="">Select Role</option>
-                <option v-for="role in availableRoles" :key="role.id" :value="role.id">
-                  {{ role.name }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" @click="showAddUserModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary" :disabled="addingUser">
-              {{ addingUser ? 'Adding User...' : 'Add User' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Edit User Modal -->
-    <div v-if="showEditUserModal" class="modal-overlay" @click="showEditUserModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>Edit User: {{ editingUser.first_name }} {{ editingUser.last_name }}</h3>
-          <button @click="showEditUserModal = false" class="close-btn">&times;</button>
-        </div>
-
-        <form @submit.prevent="updateUser" class="user-form">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="edit-first-name">First Name</label>
-              <input type="text" id="edit-first-name" v-model="editingUser.first_name" placeholder="Enter first name">
-            </div>
-            <div class="form-group">
-              <label for="edit-last-name">Last Name</label>
-              <input type="text" id="edit-last-name" v-model="editingUser.last_name" placeholder="Enter last name">
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="edit-email">Email Address *</label>
-              <input type="email" id="edit-email" v-model="editingUser.email" required>
-            </div>
-            <div class="form-group">
-              <label for="edit-phone">Phone Number</label>
-              <input type="tel" id="edit-phone" v-model="editingUser.phone"
-                     placeholder="+27 12 345 6789">
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="edit-role">Role *</label>
-              <select id="edit-role" v-model="editingUser.role_id" required>
-                <option v-for="role in availableRoles" :key="role.id" :value="role.id">
-                  {{ role.name }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="edit-password">New Password (leave blank to keep current)</label>
-            <input type="password" id="edit-password" v-model="editingUser.newPassword"
-                   minlength="6">
-            <small class="form-help">Minimum 6 characters</small>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" @click="showEditUserModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary" :disabled="updatingUser">
-              {{ updatingUser ? 'Updating...' : 'Update User' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Create Job Modal -->
-    <div v-if="showCreateJobModal" class="modal-overlay" @click="showCreateJobModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>New Service Request</h3>
-          <button @click="showCreateJobModal = false" class="close-btn">&times;</button>
-        </div>
-
-        <form @submit.prevent="createJob" class="job-form">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="item-identifier">Item Identifier *</label>
-              <div class="input-with-button">
-                <input type="text" id="item-identifier" v-model="newJob.item_identifier" required
-                       placeholder="e.g., Computer-001, Printer-ABC or scan QR code">
-                <QrScanner
-                  :client-id="getClientId()"
-                  @qr-detected="handleQrDetected"
-                  class="qr-scanner-inline"
-                />
-              </div>
-              <small class="form-help">Required: Unique identifier for the item (scan QR or enter manually)</small>
-            </div>
-            <div class="form-group">
-              <label for="location">Location</label>
-              <select v-if="locations && locations.length > 0" id="location" v-model="newJob.client_location_id">
-                <option value="">Select Location (optional)</option>
-                <option v-for="location in locations" :key="location.id" :value="location.id">
-                  {{ location.name }}
-                </option>
-              </select>
-              <div v-else class="default-location-display">
-                <span class="default-location-text">Default Location (Client Name)</span>
-                <input type="hidden" v-model="newJob.client_location_id" value="">
-              </div>
-              <small class="form-help">
-                Optional: Can be auto-filled from QR code. If no custom locations defined, this service request will be associated with your client name.
-              </small>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="fault-description">Service Description *</label>
-            <textarea id="fault-description" v-model="newJob.fault_description" required
-                      rows="4" placeholder="Describe the service request in detail..."></textarea>
-          </div>
-
-          <div class="form-group">
-              <label for="contact-person">Contact Person</label>
-              <input type="text" id="contact-person" v-model="newJob.contact_person"
-                   placeholder="Person to contact about this service request">
-            <small class="form-help">Optional: Who should the technician contact?</small>
-          </div>
-
-          <!-- Image Upload Section -->
-          <ImageUpload
-            ref="imageUpload"
-            :max-images="10"
-            :max-file-size="10 * 1024 * 1024"
-            @images-changed="handleImagesChanged"
-          />
-
-          <div class="form-actions">
-            <button type="button" @click="showCreateJobModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary" :disabled="creatingJob">
-              {{ creatingJob ? 'Requesting Service...' : 'Request Service' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Add Location Modal -->
-    <div v-if="showAddLocationModal" class="modal-overlay" @click="showAddLocationModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>Add New Location</h3>
-          <button @click="showAddLocationModal = false" class="close-btn">&times;</button>
-        </div>
-
-        <form @submit.prevent="addLocation" class="location-form">
-          <div class="form-group">
-            <label for="location-name">Location Name *</label>
-            <input type="text" id="location-name" v-model="newLocation.name" required
-                   placeholder="e.g., Main Office, Warehouse, Branch Office">
-          </div>
-
-          <div class="form-group">
-            <label for="location-address">Address</label>
-            <textarea id="location-address" v-model="newLocation.address"
-                      rows="3" placeholder="Street address, city, postal code"></textarea>
-            <small class="form-help">Optional: Physical address of the location</small>
-          </div>
-
-          <div class="form-group">
-            <label for="location-coordinates">GPS Coordinates</label>
-            <input type="text" id="location-coordinates" v-model="newLocation.coordinates"
-                   placeholder="e.g., -26.1234,28.5678 or 2FGJ+4Q villes, France">
-            <small class="form-help">Optional: Latitude,longitude format or Google Plus Code for mapping integration</small>
-          </div>
-
-          <div class="form-group">
-            <label for="location-access-rules">Site Information URL</label>
-            <input type="url" id="location-access-rules" v-model="newLocation.access_rules"
-                   placeholder="https://example.com/access-rules">
-            <small class="form-help">Optional: Link to online safety and security protocols</small>
-          </div>
-
-          <div class="form-group">
-            <label for="location-access-instructions">Access Instructions</label>
-            <textarea id="location-access-instructions" v-model="newLocation.access_instructions"
-                      rows="4" placeholder="Additional instructions for accessing this location (contact details, parking, etc.)"></textarea>
-            <small class="form-help">Optional: Any additional information that technicians should know</small>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" @click="showAddLocationModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary" :disabled="addingLocation">
-              {{ addingLocation ? 'Adding Location...' : 'Add Location' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Edit Location Modal -->
-    <div v-if="showEditLocationModal" class="modal-overlay" @click="showEditLocationModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>Edit Location</h3>
-          <button @click="showEditLocationModal = false" class="close-btn">&times;</button>
-        </div>
-
-        <form @submit.prevent="updateLocation" class="location-form">
-          <div class="form-group">
-            <label for="edit-location-name">Location Name *</label>
-            <input type="text" id="edit-location-name" v-model="editingLocation.name" required
-                   placeholder="e.g., Main Office, Warehouse, Branch Office">
-          </div>
-
-          <div class="form-group">
-            <label for="edit-location-address">Address</label>
-            <textarea id="edit-location-address" v-model="editingLocation.address"
-                      rows="3" placeholder="Street address, city, postal code"></textarea>
-            <small class="form-help">Optional: Physical address of the location</small>
-          </div>
-
-          <div class="form-group">
-            <label for="edit-location-coordinates">GPS Coordinates</label>
-            <input type="text" id="edit-location-coordinates" v-model="editingLocation.coordinates"
-                   placeholder="e.g., -26.1234,28.5678 or 2FGJ+4Q villes, France">
-            <small class="form-help">Optional: Latitude,longitude format or Google Plus Code for mapping integration</small>
-          </div>
-
-          <div class="form-group">
-            <label for="edit-location-site-information">Site Information URL</label>
-            <input type="url" id="edit-location-site-information" v-model="editingLocation.access_rules"
-                   placeholder="https://example.com/site-information">
-            <small class="form-help">Optional: Link to online site information or access protocols</small>
-          </div>
-
-          <div class="form-group">
-            <label for="edit-location-access-instructions">Access Instructions</label>
-            <textarea id="edit-location-access-instructions" v-model="editingLocation.access_instructions"
-                      rows="4" placeholder="Additional instructions for accessing this location (contact details, parking, etc.)"></textarea>
-            <small class="form-help">Optional: Any additional information that technicians should know</small>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" @click="showEditLocationModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary">
-              Update Location
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Job Details Modal -->
-    <div v-if="showJobDetailsModal" class="modal-overlay" @click="showJobDetailsModal = false">
-      <div class="modal-content large-modal" @click.stop>
-        <div class="modal-header">
-          <h3>Job Details: {{ selectedJob?.item_identifier || 'No Item ID' }}</h3>
-          <button @click="showJobDetailsModal = false" class="close-btn">&times;</button>
-        </div>
-
-        <div v-if="selectedJob" class="job-details-content">
-          <!-- Job Information -->
-          <div class="job-info-section">
-            <div class="info-grid">
-              <div class="info-item">
-                <label>Status:</label>
-                <span class="status-badge" :class="getStatusClass(selectedJob.job_status)">
-                  {{ selectedJob.job_status }}
-                </span>
-              </div>
-              <div class="info-item">
-                <label>Location:</label>
-                <span>{{ selectedJob.location_name }}</span>
-              </div>
-              <div class="info-item">
-                <label>Reported By:</label>
-                <span>{{ selectedJob.reporting_user }}</span>
-              </div>
-              <div class="info-item">
-                <label>Date Reported:</label>
-                <span>{{ formatDate(selectedJob.created_at) }}</span>
-              </div>
-              <div v-if="selectedJob.assigned_provider_name" class="info-item">
-                <label>Assigned Provider:</label>
-                <span>{{ selectedJob.assigned_provider_name }}</span>
-              </div>
-              <div class="info-item">
-                <label>Last Updated:</label>
-                <span>{{ formatDate(selectedJob.updated_at) }}</span>
-              </div>
-            </div>
-
-            <div class="description-section">
-              <label>Fault Description:</label>
-              <p class="fault-description">{{ selectedJob.fault_description }}</p>
-            </div>
-
-            <div v-if="selectedJob.contact_person" class="contact-section">
-              <label>Contact Person:</label>
-              <span>{{ selectedJob.contact_person }}</span>
-            </div>
-          </div>
-
-          <!-- Images Gallery -->
-          <div class="images-section">
-            <h4>Attached Images ({{ selectedJob.images?.length || 0 }})</h4>
-
-            <div v-if="!selectedJob.images || selectedJob.images.length === 0" class="no-images">
-              <div class="no-images-icon">📷</div>
-              <p>No images attached to this job</p>
-            </div>
-
-            <div v-else class="images-gallery">
-              <div class="gallery-grid">
-                <div v-for="image in selectedJob.images" :key="image.id" class="gallery-item">
-                  <img :src="generateImageUrl(image)"
-                       :alt="image.original_filename"
-                       class="gallery-image"
-                       @click="openImageModal(image)">
-                  <div class="image-overlay">
-                    <span class="image-filename">{{ image.original_filename }}</span>
-                  </div>
-                </div>
-              </div>
+            <div class="form-actions">
+              <button @click="closeJobConfirmationModal" class="btn-secondary">Cancel</button>
+              <button @click="confirmJob" class="btn-primary" :disabled="confirmingJob">
+                {{ confirmingJob ? 'Confirming...' : 'Confirm Job' }}
+              </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Edit Job Modal -->
-    <div v-if="showEditJobModal" class="modal-overlay" @click="showEditJobModal = false">
-      <div class="modal-content large-modal" @click.stop>
-        <div class="modal-header">
-          <h3>Edit Job: {{ editingJob?.item_identifier || 'No Item ID' }}</h3>
-          <button @click="showEditJobModal = false" class="close-btn">&times;</button>
-        </div>
-
-        <form v-if="editingJob" @submit.prevent="updateJob" class="job-form">
-          <!-- Status and Provider (provider assignment restricted to budget controllers) -->
-          <div class="form-row">
-            <!-- Provider assignment only for budget controllers -->
-            <div class="form-group" v-if="userRole === 2">
-              <label for="edit-provider">Assigned Provider</label>
-              <select id="edit-provider" v-model="editingJob.assigned_provider_id" @change="onProviderSelected">
-                <option value="">No Provider Assigned</option>
-                <option v-for="provider in approvedProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
-                  {{ provider.name }}
-                </option>
-              </select>
-            </div>
-            <!-- Show current provider for reporting employees (read-only) -->
-            <div class="form-group" v-else-if="editingJob.assigned_provider_name">
-              <label>Assigned Provider</label>
-              <div class="readonly-field">{{ editingJob.assigned_provider_name }}</div>
-              <small class="form-help">Only Budget Controllers can change provider assignments</small>
-            </div>
-            <div class="form-group">
-              <label for="edit-status">Status *</label>
-              <select id="edit-status" v-model="editingJob.job_status" required>
-                <option value="Reported">Reported</option>
-                <option value="Assigned" :disabled="!editingJob.assigned_provider_id">Assigned</option>
-                <option value="In Progress" disabled>In Progress</option>
-                <option value="Completed" disabled>Completed</option>
-                <option value="Declined" disabled>Declined</option>
-                <option value="Quote Requested" :disabled="!editingJob.assigned_provider_id">Quote Requested</option>
-              </select>
-              <small v-if="!editingJob.assigned_provider_id && (editingJob.job_status === 'Assigned' || editingJob.job_status === 'Quote Requested')" class="form-help text-red-600">
-                A service provider must be selected to set this status
-              </small>
-            </div>
+      <!-- Image Modal for Full Size View -->
+      <div v-if="selectedImage" class="modal-overlay" @click="selectedImage = null">
+        <div class="image-modal-content" @click.stop>
+          <div class="image-modal-header">
+            <h3>{{ selectedImage.original_filename }}</h3>
+            <button @click="selectedImage = null" class="close-btn">&times;</button>
           </div>
-
-          <!-- Full details (only editable when status is 'Reported') -->
-          <div v-if="canEditJobDetails(editingJob)" class="edit-details-section">
-            <h4>Job Details</h4>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="edit-item-identifier">Item Identifier</label>
-                <input type="text" id="edit-item-identifier" v-model="editingJob.item_identifier"
-                       placeholder="e.g., Computer-001, Printer-ABC">
-                <small class="form-help">Optional: Unique identifier for the item</small>
-              </div>
-              <div class="form-group">
-                <label for="edit-contact-person">Contact Person</label>
-                <input type="text" id="edit-contact-person" v-model="editingJob.contact_person"
-                       placeholder="Person to contact about this fault">
-                <small class="form-help">Optional: Who should the technician contact?</small>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="edit-fault-description">Fault Description *</label>
-              <textarea id="edit-fault-description" v-model="editingJob.fault_description" required
-                        rows="4" placeholder="Describe the fault in detail..."></textarea>
-            </div>
-
-            <!-- Image Upload Section for editing -->
-            <div class="form-group">
-              <label>Attach Additional Images</label>
-              <ImageUpload
-                ref="editImageUpload"
-                :max-images="10"
-                :max-file-size="10 * 1024 * 1024"
-                @images-changed="handleEditImagesChanged"
-              />
-            </div>
-          </div>
-
-          <!-- Read-only details when not fully editable -->
-          <div v-else class="readonly-details-section">
-            <h4>Job Details (Read Only)</h4>
-
-            <div class="readonly-info">
-              <div class="info-row">
-                <label>Item Identifier:</label>
-                <span>{{ editingJob.item_identifier || 'Not specified' }}</span>
-              </div>
-              <div class="info-row">
-                <label>Contact Person:</label>
-                <span>{{ editingJob.contact_person || 'Not specified' }}</span>
-              </div>
-              <div class="info-row">
-                <label>Fault Description:</label>
-                <span>{{ editingJob.fault_description }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Existing Images Gallery -->
-          <div class="images-section">
-            <h4>Attached Images ({{ editingJob.images?.length || 0 }})</h4>
-
-            <div v-if="!editingJob.images || editingJob.images.length === 0" class="no-images">
-              <div class="no-images-icon">📷</div>
-              <p>No images attached to this job</p>
-            </div>
-
-            <div v-else class="images-gallery">
-              <div class="gallery-grid">
-                <div v-for="image in editingJob.images" :key="image.id" class="gallery-item">
-                  <img :src="generateImageUrl(image)"
-                       :alt="image.original_filename"
-                       class="gallery-image"
-                       @click="openImageModal(image)">
-                  <div class="image-overlay">
-                    <span class="image-filename">{{ image.original_filename }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" @click="showEditJobModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary" :disabled="!clientProfile?.is_enabled">
-              Update Job
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-
-
-    <!-- Edit Business Profile Modal -->
-    <div v-if="showEditProfileModal" class="modal-overlay" @click="showEditProfileModal = false">
-      <div class="modal-content large-modal" @click.stop>
-        <div class="modal-header">
-          <h3>Edit Business Profile</h3>
-          <button @click="showEditProfileModal = false" class="close-btn">&times;</button>
-        </div>
-
-        <!-- Admin Disabled Notice -->
-        <div v-if="editingProfile && !editingProfile.is_enabled" class="admin-disabled-notice">
-          <div class="disabled-banner">
-            <div class="disabled-icon">⚠️</div>
-            <div class="disabled-content">
-              <h4>Account Administratively Disabled</h4>
-              <p>{{ editingProfile.disabled_reason || 'This account has been disabled by an administrator. Business profile edits are restricted.' }}</p>
-            </div>
-          </div>
-        </div>
-
-        <form @submit.prevent="updateClientProfile" class="profile-form">
-          <!-- Basic Information -->
-          <div class="form-section">
-            <h4 class="section-title">Basic Information</h4>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="business-name">Business Name *</label>
-                <input type="text" id="business-name" v-model="editingProfile.name" required
-                       placeholder="Your business name">
-              </div>
-              <div class="form-group">
-                <label for="business-website">Website</label>
-                <input type="url" id="business-website" v-model="editingProfile.website"
-                       placeholder="https://yourbusiness.com">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="business-address">Address</label>
-              <textarea id="business-address" v-model="editingProfile.address" rows="3"
-                        placeholder="Business address"></textarea>
-            </div>
-
-            <div class="form-group">
-              <label for="business-description">Description</label>
-              <textarea id="business-description" v-model="editingProfile.description" rows="4"
-                        placeholder="Brief description of your business"></textarea>
-            </div>
-          </div>
-
-          <!-- Manager Contact -->
-          <div class="form-section">
-            <h4 class="section-title">Manager Contact Information</h4>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="manager-name">Manager Name</label>
-                <input type="text" id="manager-name" v-model="editingProfile.manager_name"
-                       placeholder="Primary contact person">
-              </div>
-              <div class="form-group">
-                <label for="manager-email">Manager Email</label>
-                <input type="email" id="manager-email" v-model="editingProfile.manager_email"
-                       placeholder="manager@yourbusiness.com">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="manager-phone">Manager Phone</label>
-              <input type="tel" id="manager-phone" v-model="editingProfile.manager_phone"
-                     placeholder="+27 12 345 6789">
-            </div>
-          </div>
-
-          <!-- Business Details -->
-          <div class="form-section">
-            <h4 class="section-title">Business Registration Details</h4>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="vat-number">VAT Number</label>
-                <input type="text" id="vat-number" v-model="editingProfile.vat_number"
-                       placeholder="VAT registration number">
-              </div>
-              <div class="form-group">
-                <label for="business-registration">Business Registration Number</label>
-                <input type="text" id="business-registration" v-model="editingProfile.business_registration_number"
-                       placeholder="Company registration number">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="business-status">Status</label>
-              <select id="business-status" v-model="editingProfile.is_active" :disabled="!editingProfile.is_enabled">
-                <option :value="true">Active</option>
-                <option :value="false">Inactive</option>
-              </select>
-              <small v-if="!editingProfile.is_enabled" class="form-help text-red-600">
-                Status changes are restricted when account is administratively disabled
-              </small>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" @click="showEditProfileModal = false" class="btn-secondary">Cancel</button>
-            <button type="submit" class="btn-primary" :disabled="updatingProfile || !editingProfile?.is_enabled">
-              {{ updatingProfile ? 'Updating Profile...' : 'Update Profile' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Job Confirmation Modal -->
-    <div v-if="showJobConfirmationModal" class="modal-overlay" @click="closeJobConfirmationModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>Confirm Job Completion</h3>
-          <button @click="closeJobConfirmationModal" class="close-btn">&times;</button>
-        </div>
-
-        <div v-if="confirmationJob" class="confirmation-form">
-          <div class="job-summary">
-            <h4>{{ confirmationJob.item_identifier || 'No Item ID' }}</h4>
-            <p class="job-description">{{ confirmationJob.fault_description }}</p>
-            <div class="job-meta">
-              <span><strong>Client:</strong> {{ confirmationJob.client_name }}</span>
-              <span><strong>Location:</strong> {{ confirmationJob.location_name }}</span>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="confirmation-notes">Confirmation Notes (Optional)</label>
-            <textarea id="confirmation-notes" v-model="confirmationNotes" rows="3"
-                      placeholder="Add any notes about confirming this work..."></textarea>
-          </div>
-
-          <div class="confirmation-info">
-            <div class="info-banner">
-              <div class="info-icon">ℹ️</div>
-              <div class="info-content">
-                <p><strong>What happens when you confirm?</strong></p>
-                <p>This job will be marked as "Confirmed" and archived for both parties. This action cannot be undone.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button @click="closeJobConfirmationModal" class="btn-secondary">Cancel</button>
-            <button @click="confirmJob" class="btn-primary" :disabled="confirmingJob">
-              {{ confirmingJob ? 'Confirming...' : 'Confirm Job' }}
-            </button>
+          <div class="image-modal-body">
+            <img :src="generateImageUrl(selectedImage)"
+                 :alt="selectedImage.original_filename"
+                 class="full-size-image">
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Job Rejection Modal -->
-    <div v-if="showJobRejectionModal" class="modal-overlay" @click="closeJobRejectionModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>Reject Job Completion</h3>
-          <button @click="closeJobRejectionModal" class="close-btn">&times;</button>
-        </div>
-
-        <div v-if="rejectionJob" class="rejection-form">
-          <div class="job-summary">
-            <h4>{{ rejectionJob.item_identifier || 'No Item ID' }}</h4>
-            <p class="job-description">{{ rejectionJob.fault_description }}</p>
-            <div class="job-meta">
-              <span><strong>Client:</strong> {{ rejectionJob.client_name }}</span>
-              <span><strong>Location:</strong> {{ rejectionJob.location_name }}</span>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="rejection-notes">Reason for Rejection *</label>
-            <textarea id="rejection-notes" v-model="rejectionNotes" rows="4" required
-                      placeholder="Please explain why you're rejecting this completed work..."></textarea>
-          </div>
-
-          <div class="rejection-info">
-            <div class="warning-banner">
-              <div class="warning-icon">⚠️</div>
-              <div class="warning-content">
-                <p><strong>What happens when you reject?</strong></p>
-                <p>This job will be marked as "Incomplete" and returned to the service provider for rework. Please provide clear feedback about what needs to be addressed.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button @click="closeJobRejectionModal" class="btn-secondary">Cancel</button>
-            <button @click="rejectJob" class="btn-danger" :disabled="rejectingJob">
-              {{ rejectingJob ? 'Rejecting...' : 'Reject Job' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Image Modal for Full Size View -->
-    <div v-if="selectedImage" class="modal-overlay" @click="selectedImage = null">
-      <div class="image-modal-content" @click.stop>
-        <div class="image-modal-header">
-          <h3>{{ selectedImage.original_filename }}</h3>
-          <button @click="selectedImage = null" class="close-btn">&times;</button>
-        </div>
-        <div class="image-modal-body">
-          <img :src="generateImageUrl(selectedImage)"
-               :alt="selectedImage.original_filename"
-               class="full-size-image">
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -1458,11 +249,32 @@ import ImageUpload from '@/components/ImageUpload.vue'
 import QrScanner from '@/components/QrScanner.vue'
 import { apiFetch, handleTokenExpiration, loadRoleSettings } from '@/utils/api.js'
 
+// New component imports
+import BusinessProfileSection from '@/components/dashboard/BusinessProfileSection.vue'
+import UserManagementSection from '@/components/dashboard/UserManagementSection.vue'
+import ProviderManagementSection from '@/components/dashboard/ProviderManagementSection.vue'
+import LocationManagementSection from '@/components/dashboard/LocationManagementSection.vue'
+import JobManagementSection from '@/components/dashboard/JobManagementSection.vue'
+import AddUserModal from '@/components/modals/AddUserModal.vue'
+import EditUserModal from '@/components/modals/EditUserModal.vue'
+import CreateJobModal from '@/components/modals/CreateJobModal.vue'
+import JobDetailsModal from '@/components/modals/JobDetailsModal.vue'
+
 export default {
   name: 'ClientDashboard',
   components: {
     ImageUpload,
-    QrScanner
+    QrScanner,
+    // New components
+    BusinessProfileSection,
+    UserManagementSection,
+    ProviderManagementSection,
+    LocationManagementSection,
+    JobManagementSection,
+    AddUserModal,
+    EditUserModal,
+    CreateJobModal,
+    JobDetailsModal
   },
   data() {
     return {
@@ -1511,14 +323,22 @@ export default {
       showEditJobModal: false,
       showJobConfirmationModal: false,
       showJobRejectionModal: false,
+      showQuoteResponseModal: false,
+      showQuoteRejectionModal: false,
       confirmationJob: null,
       rejectionJob: null,
+      quoteResponseJob: null,
+      quoteRejectionJob: null,
       confirmationNotes: '',
       rejectionNotes: '',
+      quoteResponseNotes: '',
+      quoteRejectionNotes: '',
       addingUser: false,
       updatingUser: false,
       creatingJob: false,
       updatingProfile: false, // Client profile update loading state
+      acceptingQuote: false,
+      rejectingQuote: false,
       jobFilters: {
         status: '',
         location_id: '',
@@ -1570,7 +390,10 @@ export default {
         locations: false,
         providers: false,
         jobs: true // Jobs section expanded by default
-      }
+      },
+
+      // EMERGENCY DEBUG FLAG - For testing modal blocking
+      forceModalReset: true
     }
   },
   async mounted() {
@@ -1579,7 +402,46 @@ export default {
       return // Stop execution if token was expired and user was redirected
     }
 
+    // CRITICAL FIX: Explicitly reset all modals on component mount to prevent modal state bleeding
+    console.log('ClientDashboard: Forcing modal reset before mount, previous states:', {
+      showJobDetailsModal: this.showJobDetailsModal,
+      showEditJobModal: this.showEditJobModal,
+      showAddUserModal: this.showAddUserModal,
+      showCreateJobModal: this.showCreateJobModal,
+      showJobConfirmationModal: this.showJobConfirmationModal,
+      showJobRejectionModal: this.showJobRejectionModal,
+      showQuoteResponseModal: this.showQuoteResponseModal,
+      showQuoteRejectionModal: this.showQuoteRejectionModal
+    })
+
+    // Force reset all modals to false on every component mount
+    this.showJobDetailsModal = false
+    this.showEditJobModal = false
+    this.showAddUserModal = false
+    this.showEditUserModal = false
+    this.showCreateJobModal = false
+    this.showAddLocationModal = false
+    this.showEditLocationModal = false
+    this.showEditProfileModal = false
+    this.showJobConfirmationModal = false
+    this.showJobRejectionModal = false
+    this.showQuoteResponseModal = false
+    this.showQuoteRejectionModal = false
+
     this.checkUserPermissions()
+
+    // DEBUG: Log modal state after force reset
+    console.log('ClientDashboard: Modal state AFTER force reset:', {
+      showJobDetailsModal: this.showJobDetailsModal,
+      showEditJobModal: this.showEditJobModal,
+      showAddUserModal: this.showAddUserModal,
+      showCreateJobModal: this.showCreateJobModal,
+      showJobConfirmationModal: this.showJobConfirmationModal,
+      showJobRejectionModal: this.showJobRejectionModal,
+      showQuoteResponseModal: this.showQuoteResponseModal,
+      showQuoteRejectionModal: this.showQuoteRejectionModal,
+      confirmationJob: this.confirmationJob ? 'SET' : 'NULL'
+    })
 
     // Load role settings first so they're available for role display
     try {
@@ -1589,6 +451,12 @@ export default {
       console.warn('Failed to load role settings, using defaults:', error)
       this.roleDisplayNames = {}
     }
+
+    // DEBUG: Check immediately after loading that modal state hasn't changed
+    console.log('ClientDashboard: Post-role-settings modal state:', {
+      showJobConfirmationModal: this.showJobConfirmationModal,
+      confirmationJob: this.confirmationJob
+    })
 
     this.loadClientProfile()
     this.loadUsers()
@@ -1822,6 +690,160 @@ export default {
       // Prevent deletion of the current user and ensure at least one admin remains
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
       return user.id !== currentUser.id
+    },
+
+    // New component event handlers
+    handleEditUser(user) {
+      this.editingUser = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone || '',
+        role_id: user.role_id,
+        newPassword: ''
+      }
+      this.showEditUserModal = true
+    },
+
+    async handleAddUser(userData) {
+      this.addingUser = true
+      try {
+        const response = await apiFetch('/backend/api/client-users.php', {
+          method: 'POST',
+          body: JSON.stringify(userData)
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          alert(data.message)
+          this.showAddUserModal = false
+          this.loadUsers()
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert('Failed to add user')
+      } finally {
+        this.addingUser = false
+      }
+    },
+
+    async handleUpdateUser(userData) {
+      this.updatingUser = true
+      try {
+        const response = await apiFetch('/backend/api/client-users.php', {
+          method: 'PUT',
+          body: JSON.stringify(userData)
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          alert(data.message)
+          this.showEditUserModal = false
+          this.loadUsers()
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert('Failed to update user')
+      } finally {
+        this.updatingUser = false
+      }
+    },
+
+    handleEditLocation(location) {
+      this.editingLocation = {
+        id: location.id,
+        name: location.name,
+        address: location.address || '',
+        coordinates: location.coordinates || '',
+        access_rules: location.access_rules || '',
+        access_instructions: location.access_instructions || ''
+      }
+      this.showEditLocationModal = true
+    },
+
+    handleViewProviderJobs(provider) {
+      // Filter jobs to show only those for the selected provider
+      this.jobFilters.provider_id = provider.service_provider_id
+      this.loadJobs()
+    },
+
+    async handleViewJobDetails(job) {
+      this.selectedJob = job
+      this.showJobDetailsModal = true
+
+      // Load job images if not already loaded
+      if (!job.images) {
+        try {
+          const response = await apiFetch(`/backend/api/job-images.php?job_id=${job.id}`)
+          if (response.ok) {
+            const data = await response.json()
+            this.selectedJob.images = data.images || []
+          }
+        } catch (error) {
+          console.error('Failed to load job images:', error)
+          this.selectedJob.images = []
+        }
+      }
+    },
+
+    async handleEditJob(job) {
+      // Set the job being edited and store original values for comparison
+      this.editingJob = { ...job }
+      this.originalJobStatus = job.job_status
+      this.originalProviderId = job.assigned_provider_id
+      this.originalItemIdentifier = job.item_identifier
+      this.originalFaultDescription = job.fault_description
+      this.originalContactPerson = job.contact_person
+
+      // Load job images if not already loaded
+      if (!job.images) {
+        try {
+          const response = await apiFetch(`/backend/api/job-images.php?job_id=${job.id}`)
+          if (response.ok) {
+            const data = await response.json()
+            this.editingJob.images = data.images || []
+          } else {
+            this.editingJob.images = []
+          }
+        } catch (error) {
+          console.error('Failed to load job images:', error)
+          this.editingJob.images = []
+        }
+      } else {
+        this.editingJob.images = job.images
+      }
+
+      // Refresh approved providers list to ensure it's current
+      this.loadApprovedProviders().then(() => {
+        // Ensure the current assigned provider is still approved
+        const isProviderStillApproved = this.approvedProviders.some(provider => provider.id == this.editingJob.assigned_provider_id)
+        if (this.editingJob.assigned_provider_id && !isProviderStillApproved) {
+          // Provider is no longer approved, clear the assignment
+          this.editingJob.assigned_provider_id = null
+        }
+        this.showEditJobModal = true
+      })
+    },
+
+    updateJobFilters(filters) {
+      this.jobFilters = { ...this.jobFilters, ...filters }
+    },
+
+    closeCreateJobModal() {
+      this.showCreateJobModal = false
+      this.resetNewJobForm()
+    },
+
+    async handleCreateJob(jobData) {
+      // This is now handled by the modal component itself
+      // We can keep this as a passthrough if needed
+      console.log('Creating job:', jobData)
     },
 
     viewProviderJobs(provider) {
@@ -2680,9 +1702,11 @@ export default {
       return null
     },
 
-    // Section collapse/expand functionality
+    // Section collapse/expand functionality - Vue 3 compatible
     toggleSection(sectionName) {
-      this.sectionsExpanded[sectionName] = !this.sectionsExpanded[sectionName]
+      // Vue 3 reactivity: replace entire object for nested property updates
+      const currentValue = this.sectionsExpanded[sectionName]
+      this.sectionsExpanded = { ...this.sectionsExpanded, [sectionName]: !currentValue }
     },
 
     // Archive/unarchive job functionality
@@ -2843,6 +1867,115 @@ export default {
       } finally {
         this.rejectingJob = false
       }
+    },
+
+    // Quote Response Methods
+    showQuoteResponseModal(job) {
+      this.quoteResponseJob = job
+      this.quoteResponseNotes = ''
+      this.showQuoteResponseModal = true
+    },
+
+    closeQuoteResponseModal() {
+      this.showQuoteResponseModal = false
+      this.quoteResponseJob = null
+      this.quoteResponseNotes = ''
+    },
+
+    showQuoteRejectionModal(job) {
+      this.quoteRejectionJob = job
+      this.quoteRejectionNotes = ''
+      this.showQuoteRejectionModal = true
+    },
+
+    closeQuoteRejectionModal() {
+      this.showQuoteRejectionModal = false
+      this.quoteRejectionJob = null
+      this.quoteRejectionNotes = ''
+    },
+
+    async acceptQuote() {
+      if (!this.quoteResponseJob) return
+
+      this.acceptingQuote = true
+      try {
+        const response = await apiFetch('/backend/api/job-quotation-responses.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            job_id: this.quoteResponseJob.id,
+            action: 'accept',
+            notes: this.quoteResponseNotes
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          // Update the job in the local array
+          const jobIndex = this.jobs.findIndex(j => j.id === this.quoteResponseJob.id)
+          if (jobIndex !== -1) {
+            this.jobs[jobIndex].job_status = 'Quote Accepted'
+            this.jobs[jobIndex].updated_at = new Date().toISOString()
+          }
+
+          this.closeQuoteResponseModal()
+          alert('Quote accepted successfully! The service provider will be notified to proceed with the work.')
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert('Failed to accept quote')
+      } finally {
+        this.acceptingQuote = false
+      }
+    },
+
+    async rejectQuote() {
+      if (!this.quoteRejectionJob) return
+
+      if (!this.quoteRejectionNotes.trim()) {
+        alert('Please provide a reason for rejecting this quote.')
+        return
+      }
+
+      this.rejectingQuote = true
+      try {
+        const response = await apiFetch('/backend/api/job-quotation-responses.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            job_id: this.quoteRejectionJob.id,
+            action: 'reject',
+            notes: this.quoteRejectionNotes
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          // Update the job in the local array
+          const jobIndex = this.jobs.findIndex(j => j.id === this.quoteRejectionJob.id)
+          if (jobIndex !== -1) {
+            this.jobs[jobIndex].job_status = 'Quote Rejected'
+            this.jobs[jobIndex].updated_at = new Date().toISOString()
+          }
+
+          this.closeQuoteRejectionModal()
+          alert('Quote rejected successfully! The service provider will be notified.')
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert('Failed to reject quote')
+      } finally {
+        this.rejectingQuote = false
+      }
+    },
+
+    formatCurrency(amount) {
+      return parseFloat(amount || 0).toLocaleString('en-ZA', {
+        style: 'currency',
+        currency: 'ZAR'
+      })
     }
 
 
@@ -3292,7 +2425,8 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 10000; /* Increased for better modal layering */
+  user-select: none; /* Prevent text selection on overlay */
 }
 
 .modal-content {
@@ -4051,6 +3185,176 @@ export default {
   color: #333;
 }
 
+/* Quote Modal Styles */
+.quote-response-form,
+.quote-rejection-form {
+  padding: 20px;
+}
+
+.quote-details-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid #e0e0e0;
+}
+
+.quote-details-section h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 16px;
+  border-bottom: 2px solid #28a745;
+  padding-bottom: 8px;
+}
+
+.quote-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.quote-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.quote-info-item label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.quote-info-item span {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.quote-amount {
+  font-size: 18px;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.quote-description-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.quote-description-section label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.quote-description-content {
+  background: white;
+  padding: 12px;
+  border-radius: 6px;
+  line-height: 1.5;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.quote-document-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.quote-document-section label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.quote-document-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.quote-document-link:hover {
+  background: #0056b3;
+  color: white;
+  text-decoration: none;
+}
+
+.quote-response-info,
+.quote-rejection-info {
+  margin-top: 20px;
+}
+
+.info-banner,
+.warning-banner {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 15px;
+  border-radius: 8px;
+  background: #e3f2fd;
+  border: 1px solid #2196f3;
+}
+
+.warning-banner {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+}
+
+.info-icon,
+.warning-icon {
+  font-size: 20px;
+  color: #1976d2;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.warning-icon {
+  color: #856404;
+}
+
+.info-content,
+.warning-content {
+  flex: 1;
+}
+
+.info-content p,
+.warning-content p {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.info-content p:last-child,
+.warning-content p:last-child {
+  margin-bottom: 0;
+}
+
+.info-content strong,
+.warning-content strong {
+  font-weight: 600;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .client-dashboard {
@@ -4123,8 +3427,14 @@ export default {
   }
 
   .edit-details-section,
-  .readonly-details-section {
+  .readonly-details-section,
+  .quote-details-section {
     padding: 15px;
+  }
+
+  .quote-info-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .info-row {
@@ -4140,6 +3450,17 @@ export default {
 
   .completeness-percentage {
     font-size: 1em;
+  }
+
+  .info-banner,
+  .warning-banner {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .info-icon,
+  .warning-icon {
+    align-self: flex-start;
   }
 }
 
