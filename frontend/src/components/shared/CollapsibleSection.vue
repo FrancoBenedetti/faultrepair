@@ -2,7 +2,7 @@
   <div class="collapsible-section card">
     <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="$emit('toggle')" style="cursor: pointer;">
       <div class="section-title flex items-center gap-3">
-        <button class="expand-btn" :class="{ expanded }" @click.stop>
+        <button class="expand-btn" :class="{ expanded }" @click="$emit('toggle')">
           <span class="material-icon-sm">expand_more</span>
         </button>
         <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
@@ -14,7 +14,7 @@
         </h2>
       </div>
 
-      <div class="section-header-actions flex items-center gap-4">
+      <div class="section-header-actions flex items-center gap-4" @click.stop>
         <slot name="header-actions">
           <!-- Custom header actions -->
         </slot>
