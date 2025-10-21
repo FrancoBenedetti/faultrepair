@@ -46,6 +46,10 @@ export default {
       type: Number,
       required: true
     },
+    userName: {
+      type: String,
+      default: null
+    },
     organizationName: {
       type: String,
       required: true
@@ -79,7 +83,12 @@ export default {
   },
   methods: {
     getCurrentUserName() {
-      // Get current user name from localStorage, or fallback
+      // Use provided userName prop first, fallback to localStorage
+      if (this.userName) {
+        return this.userName
+      }
+
+      // Fallback to localStorage method
       try {
         const userData = localStorage.getItem('user')
         if (userData) {

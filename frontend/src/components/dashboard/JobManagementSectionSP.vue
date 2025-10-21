@@ -1,18 +1,5 @@
 <template>
-  <CollapsibleSection
-    title="Job Management"
-    :expanded="expanded"
-    :completeness="jobs?.length ? 'loaded' : null"
-    @toggle="$emit('toggle')"
-  >
-    <template #header-actions>
-      <button @click="$emit('refresh-jobs')" class="btn-outlined flex items-center gap-2">
-        <span class="material-icon-sm">refresh</span>
-        Refresh
-      </button>
-    </template>
-
-    <div class="section-content transition-all duration-300 ease-in-out">
+  <div class="section-content">
       <!-- Job Filters -->
       <div class="job-filters flex flex-wrap gap-4 mb-6 p-4 bg-neutral-50 rounded-lg">
         <div class="filter-group min-w-40">
@@ -125,8 +112,7 @@
         <!-- Error state -->
         <ErrorState v-else class="col-span-full" message="Failed to load jobs" />
       </div>
-    </div>
-  </CollapsibleSection>
+  </div>
 </template>
 
 <script>

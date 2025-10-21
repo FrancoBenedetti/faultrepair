@@ -477,7 +477,165 @@ mounted() {
 
 ## Bug Statistics
 
-**Open Bugs:** 0 (0 Critical, 0 High, 0 Medium, 0 Low) ✅ ALL KNOWN BUGS FIXED
+**Open Bugs:** 3 Medium Priority Issues
+
++++
+### 🟡 [BUG] Service Provider Jobs Section Collapse/Expand Not Working + Duplicate Heading
+**Discovered:** 2025-10-20
+**Impact:** High (User cannot hide jobs section to reduce clutter)
+**Area:** Frontend - CollapsibleSection Component Integration
+
+**Issue Description:**
+The Job Management section header in ServiceProviderDashboard wouldn't collapse when clicked. Clicking the header did nothing - the section remained expanded.
+
+**Root Cause (_Original_):**
+Event handling chain was not connected properly:
+- CollapsibleSection emits 'toggle' event when clicked
+- JobManagementSectionSP receives it and emits 'toggle' to parent
+- ServiceProviderDashboard needs to listen for this event and toggle `sectionsExpanded.jobs`
+
+**Solution (_Original fix_):**
+Updated ServiceProviderDashboard template to wrap JobManagementSectionSP in CollapsibleSection:
+```vue
+<CollapsibleSection title="Job Management" :expanded="sectionsExpanded.jobs" @toggle="sectionsExpanded.jobs = !sectionsExpanded.jobs">
+  <JobManagementSectionSP :expanded="sectionsExpanded.jobs" .../>
+</CollapsibleSection>
+```
+
+**New Issue (_Introduced by fix_):**
+**Duplicate "Job Management" heading appears when expanded** - The JobManagementSectionSP component still had its own CollapsibleSection wrapper, creating nested CollapsibleSections and duplicate headings.
+
+**Root Cause (_New issue_):**
+JobManagementSectionSP.vue component still contains:
+```vue
+<template>
+  <CollapsibleSection title="Job Management" ...>
+```
+When used as content within parent CollapsibleSection, this creates nested CollapsibleSections.
+
+**Solution (_Current_):**
+Remove CollapsibleSection from JobManagementSectionSP.vue, make it just content:
+```vue
+<template>
+  <div>
+    <!-- Just the job content, no header -->
+  </div>
+</template>
+```
+
+### ✅ [BUG] ServiceProviderDashboard Role Names Display as Numbers Instead of Readable Names - FIXED
+**Discovered:** 2025-10-21
+**Impact:** Medium (Poor user experience - displaying role IDs instead of names)
+**Fixed:** 2025-10-21
+**Area:** Frontend - Role Settings Integration
+
+**Issue Description:**
+Technician cards and edit modals were displaying role IDs (3, 4) instead of human-readable role names like "Service Provider Admin" and "Technician".
+
+**Root Cause:**
+Frontend was using hardcoded role names or raw role_id numbers instead of the dynamic role settings available from the backend via `loadRoleSettings()`.
+
+**Specifically:**
+1. **Technician cards** used hardcoded logic: `technician.role_id === 3 ? 'Administrator' : 'Technician'`
+2. **Edit technician modal** used hardcoded dropdown options: `"Service Provider Admin"` and `"Technician"`
+
+Neither used the `roleDisplayNames` object loaded from site-settings API.
+
+**Solution:**
+Replace hardcoded role names with dynamic role settings:
+
+```vue
+<!-- Technician cards: -->
+<span>{{ roleDisplayNames && roleDisplayNames[technician.role_id] ? roleDisplayNames[technician.role_id] : getFallbackRoleName(technician.role_id) }}</span>
+
+<!-- Edit modal dropdown: -->
+<option v-for="(name, id) in roleDisplayNames" :key="id" :value="parseInt(id)">
+  {{ name }}
+</option>
+```
+
+**Testing Results:**
+- ✅ Role names now display correctly: "Service Provider Admin" and "Technician"
+- ✅ Uses dynamic settings from site-settings, not hardcoded values
+- ✅ Falls back to hardcoded names if settings unavailable
+- ✅ Dropdown options populate from settings, not static HTML
+- ✅ No changes to backend API required (reused existing functionality)
+
+**Files Changed:**
+- `frontend/src/views/ServiceProviderDashboard.vue`
+  - Updated technician cards to use `roleDisplayNames[technician.role_id]`
+  - Updated edit modal dropdown to iterate over `roleDisplayNames`
+  - Added fallback logic for reliability
+
+---
+
+### 🟡 [BUG] Service Provider Dashboard - Technician Update Modal Status Dropdown Empty
+**Discovered:** 2025-10-21
+**Impact:** High (Cannot modify technician account status)
+**Area:** Frontend - Technician Management Modal
+
+**Issue Description:**
+When using the technician update modal in Service Provider Dashboard (SPD), the form status dropdown appears empty and setting/changing the status does nothing.
+
+**Steps to Reproduce:**
+1. Login as Service Provider Admin
+2. Go to Service Provider Dashboard
+3. Click on Users section to expand
+4. Click "Edit" button on any technician
+5. In the modal that opens, look at the Status dropdown - it appears empty
+6. Try to change the status - no effect
+
+**Expected Behavior:**
+- Status dropdown should show "Active" and "Inactive" options
+- Selecting a status should update the technician account
+- Changes should be saved when form is submitted
+
+**Current Behavior:**
+- Status dropdown appears empty/blank
+- No status options visible
+- Status changes are not applied
+
+**Area Impact:**
+- Affects Service Provider Admin ability to manage technician accounts
+- Critical for technician account management workflow
+- Business impact: Cannot activate/deactivate technicians
+
+### 🟡 [BUG] Service Provider Dashboard - Technician View Jobs Modal 500 Error
+**Discovered:** 2025-10-21
+**Impact:** High (Cannot view technician job assignments)
+**Area:** Backend API - `/backend/api/technician-jobs.php`
+
+**Issue Description:**
+When clicking "View Jobs" button on a technician in Service Provider Dashboard (SPD), the technician view jobs modal fails to load with a 500 server error for `backend/api/technician-jobs.php`.
+
+**Steps to Reproduce:**
+1. Login as Service Provider Admin
+2. Go to Service Provider Dashboard
+3. Click on Users section to expand
+4. Click "View Jobs" (work/eye icon) button on any technician
+5. Modal opens but shows error/fails to load
+6. Browser console shows 500 error for `/backend/api/technician-jobs.php`
+
+**Error Details:**
+- **HTTP Status:** 500 Internal Server Error
+- **Endpoint:** `/backend/api/technician-jobs.php`
+- **Method:** GET (likely)
+- **Context:** Called when viewing technician job assignments
+
+**Expected Behavior:**
+- Modal should open and display the technician's assigned jobs
+- Should show job list with status, dates, clients
+- Should allow navigation to individual job details
+
+**Current Behavior:**
+- Modal opens but content fails to load
+- 500 server error in backend API
+- No jobs displayed for technician
+
+**Area Impact:**
+- Affects Service Provider Admin ability to monitor technician workloads
+- Critical for job assignment and technician management
+- Business impact: Cannot supervise technician performance or job distribution
 **Fixed This Session:** 6
 **Fixed This Week:** 6
 **Fixed This Month:** 6

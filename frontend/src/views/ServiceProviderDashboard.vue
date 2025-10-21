@@ -4,6 +4,7 @@
       <!-- User Identity Bar -->
       <UserIdentityBar
         :user-role="userRole"
+        :user-name="getCurrentUserName()"
         :organization-name="getOrganizationName()"
         :subscription="subscription"
         :current-usage="currentUsage"
@@ -35,19 +36,24 @@
 
       <!-- Jobs Section -->
       <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <CollapsibleSection
-          title="Job Management"
-          :expanded="sectionsExpanded.jobs"
-          :completeness="jobs?.length ? 'loaded' : null"
-          @toggle="sectionsExpanded.jobs = !sectionsExpanded.jobs"
-        >
-          <template #header-actions>
-            <button @click="loadJobs()" class="btn-outlined flex items-center gap-2">
-              <span class="material-icon-sm">refresh</span>
-              Refresh
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="sectionsExpanded.jobs = !sectionsExpanded.jobs" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.jobs }">
+              <span class="material-icon-sm">expand_more</span>
             </button>
-          </template>
+            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+              <span class="material-icon text-blue-600">work</span>
+              Job Management
+              <span v-if="jobs?.length" class="text-sm font-normal text-blue-600">({{ jobs.length }})</span>
+            </h2>
+          </div>
+          <button @click.stop="loadJobs()" class="btn-outlined flex items-center gap-2">
+            <span class="material-icon-sm">refresh</span>
+            Refresh
+          </button>
+        </div>
 
+        <div v-show="sectionsExpanded.jobs" class="section-content transition-all duration-300 ease-in-out">
           <JobManagementSectionSP
             :jobs="jobs"
             :job-filters="jobFilters"
@@ -59,7 +65,7 @@
             @view-job-details="selectedJob = $event; showJobDetailsModal = true"
             @edit-job="editingJob = $event; selectedTechnicianId = $event.assigned_technician_user_id; originalJobStatus = $event.job_status; showEditJobModal = true"
           />
-        </CollapsibleSection>
+        </div>
       </div>
 
       <!-- Business Profile Section (Admins Only) - Replaced with inline for testing -->
@@ -422,7 +428,7 @@
                         'px-2 py-1 rounded-full text-xs font-medium',
                         technician.role_id === 3 ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
                       ]">
-                        {{ technician.role_id === 3 ? 'Administrator' : 'Technician' }}
+                        {{ roleDisplayNames && roleDisplayNames[technician.role_id] ? roleDisplayNames[technician.role_id] : getFallbackRoleName(technician.role_id) }}
                       </span>
                       <span :class="[
                         'px-2 py-1 rounded-full text-xs font-medium',
@@ -1392,8 +1398,14 @@
                 class="form-input"
                 :disabled="editingTechnician && editingTechnician.id === currentUserId"
               >
-                <option value="3" :disabled="editingTechnician && editingTechnician.id === currentUserId">Service Provider Admin</option>
-                <option value="4">Technician</option>
+                <option
+                  v-for="(name, id) in roleDisplayNames"
+                  :key="id"
+                  :value="parseInt(id)"
+                  :disabled="editingTechnician && editingTechnician.id === currentUserId"
+                >
+                  {{ name }}
+                </option>
               </select>
               <small v-if="editingTechnician && editingTechnician.id === currentUserId" class="form-help text-sm text-gray-500 mt-1">
                 You cannot change your own role
