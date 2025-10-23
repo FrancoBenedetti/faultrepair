@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS `invitation_access_log` (
 -- Dumping structure for table snappy.jobs
 CREATE TABLE IF NOT EXISTS `jobs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `client_location_id` int(11) NOT NULL,
+  `client_location_id` int(11) DEFAULT NULL,
   `item_identifier` varchar(100) DEFAULT NULL,
   `fault_description` text DEFAULT NULL,
   `technician_notes` text DEFAULT NULL,
@@ -188,6 +188,9 @@ CREATE TABLE IF NOT EXISTS `jobs` (
   `job_status` varchar(50) DEFAULT 'Reported',
   `archived_by_client` tinyint(1) DEFAULT 0,
   `archived_by_service_provider` tinyint(1) DEFAULT 0,
+  `quotation_required` tinyint(1) DEFAULT 0 COMMENT 'Whether this job requires a quotation before work',
+  `current_quotation_id` int(11) DEFAULT NULL COMMENT 'Reference to active quotation for this job',
+  `quotation_deadline` date DEFAULT NULL COMMENT 'Deadline for quotation submission',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),

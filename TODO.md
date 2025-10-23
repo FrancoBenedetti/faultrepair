@@ -1,6 +1,8 @@
 # Snappy Project TODO
 
 ## In Progress 🚧
+- [x] **Quote Request Deadline Enhancement** - Add "Quote By" date field with default +7 days, minimum +1 day, visual indicators for urgency ✅
+- [x] ClientDashboard Bug Fixes (4 High Priority + 2 Follow-up Issues) ✅
 - [ ] Registration & Invitation System Enhancement
 - [ ] Geographic Search & Location-Based Features
 
@@ -108,6 +110,17 @@
 - [ ] Add API documentation for new endpoints
 
 ## Completed ✅
+- [x] **ClientDashboard Follow-up Bug Fixes (2 Issues)** (2025-10-21) [Frontend]
+  - ✅ User edit/delete buttons now functional with proper event handlers
+  - ✅ Removed duplicate add buttons and added placeholder "Add User" cards following ServiceProviderDashboard pattern
+  - ✅ Location edit buttons now functional with placeholder "Add Location" cards
+  - ✅ Consistent UI patterns across admin sections with proper grid layouts
+- [x] **ClientDashboard Bug Fixes (4 High Priority Issues)** (2025-10-21) [Frontend]
+  - ✅ Job management section now collapses/expands when clicked (fixed section expansion logic)
+  - ✅ Job view/edit buttons now work correctly (admin users always see edit buttons, regular users see conditional edit/view buttons)
+  - ✅ User management and locations sections now display correctly (removed conflicting CollapsibleSection wrappers)
+  - ✅ All build tests pass, no console errors, sections expand/collapse properly
+
 <!-- Most recent first, format: - [x] Task (YYYY-MM-DD) [Backend/Frontend/Full-stack] -->
 
 ## Blocked 🔒
@@ -118,6 +131,48 @@
 - [ ] Bulk status update capabilities
 - [ ] Advanced workflow analytics
 - [ ] Mobile app workflow support
+
+### PHASE 9: Job Details Modal & Location Integration
+#### Frontend Tasks
+- [ ] Check that Google Maps coordinates work correctly in job card view modal
+- [ ] Implement Plus Code location display for location coordinates
+- [ ] Add fallback to street address when no grid coordinates available
+- [ ] Improve JobDetailsModal styling to look more professional and polished
+
+#### Location Integration Tasks
+- [ ] Integrate Google Maps API calls for address-based location display
+- [ ] Add location click functionality to open maps in new tab
+- [ ] Test coordinate display accuracy across different location formats
+- [ ] Add location validation and error handling for map display
+
+### PHASE 10: Quote Preparation Workflow Enhancement
+#### Frontend Tasks
+- [ ] Integrate quote preparation cycle into quote provided process
+- [ ] Add quote template selection in quote creation workflow
+- [ ] Implement multi-step quote preparation form
+- [ ] Add quote preview functionality before sending to client
+
+#### Client Quote Response Handling
+- [ ] Allow edit modal access when clients receive "Unable to quote" response
+- [ ] Enable provider reassignment after quote rejection
+- [ ] Improve quote response workflow UX for clients
+
+#### Quote Management Tasks
+- [ ] Create quote preparation modal with template selection
+- [ ] Add quote itemization and pricing components
+- [ ] Implement quote save/suspend functionality for draft quotes
+- [ ] Add quote history and version control features
+
+#### UI Enhancement Tasks
+- [ ] Fix squashed quote accept/reject buttons between View and Archive buttons
+- [ ] Improve quote response button layout and styling
+- [ ] Add proper spacing and prominence for quote action buttons
+
+#### Integration Tasks
+- [ ] Connect quote preparation to existing quote provided state transition
+- [ ] Update service provider quote acceptance workflow
+- [ ] Add quote completion notifications and follow-up
+- [ ] Integrate quote analytics and performance tracking
 
 ## Current Sprint Focus
 Complete Phase 1 (Quote System) - This addresses the most critical missing functionality and provides immediate value to users.

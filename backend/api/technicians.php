@@ -1,4 +1,6 @@
 <?php
+ini_set('log_errors', true);
+ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/technicians.log');
 require_once '../config/database.php';
 require_once '../includes/JWT.php';
 require_once '../includes/email.php';
@@ -15,6 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 // JWT Authentication - Read from query parameter for live server compatibility
 $token = $_GET['token'] ?? '';
 
+error_log("technicians.php - Processing request, token present: " . (!!$token));
+
 if (!$token) {
     http_response_code(401);
     echo json_encode(['error' => 'Authorization token missing']);
@@ -26,7 +30,10 @@ try {
     $role_id = $payload['role_id'];
     $entity_type = $payload['entity_type'];
     $entity_id = $payload['entity_id'];
+
+    error_log("technicians.php - JWT decoded: user_id=$user_id, role_id=$role_id, entity_type=$entity_type, entity_id=$entity_id");
 } catch (Exception $e) {
+    error_log("technicians.php - JWT decode failed: " . $e->getMessage());
     http_response_code(401);
     echo json_encode(['error' => 'Invalid token']);
     exit;
@@ -36,6 +43,8 @@ try {
 $isAllowed = ($entity_type === 'service_provider' && $role_id === 3) ||
              $role_id === 5 ||  // System Administrator
              $role_id === 4;    // Allow all users with role_id 4 (including quickfix-admin)
+
+error_log("technicians.php - isAllowed check: $isAllowed (role=$role_id, entity_type=$entity_type)");
 
 if (!$isAllowed) {
     http_response_code(403);

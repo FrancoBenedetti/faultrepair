@@ -1,78 +1,90 @@
 <template>
-  <CollapsibleSection
-    title="User Management"
-    icon="group"
-    :expanded="expanded"
-    @toggle="$emit('toggle')"
-  >
-    <template #header-actions>
-      <button v-if="isAdmin" @click.stop="$emit('add-user')" class="btn-filled">
-        <span class="material-icon-sm mr-2">person_add</span>
-        Add New User
-      </button>
-    </template>
+  <!-- Loading state -->
+  <LoadingState v-if="!users" message="Loading users..." fullWidth />
 
-    <!-- Loading state -->
-    <LoadingState v-if="!users" message="Loading users..." fullWidth />
+  <!-- User cards grid - includes both existing users and add new user card -->
+  <div v-else-if="users && users.length > 0" class="users-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <!-- Existing user cards -->
+    <Card
+      v-for="user in users"
+      :key="user.id"
+      clickable
+      @click="$emit('view-user', user)"
+    >
+      <template #header>
+        <div class="user-avatar w-12 h-12 bg-primary-600 rounded-full flex items-center justify-center">
+          <span class="material-icon text-on-primary">{{ user.username.charAt(0).toUpperCase() }}</span>
+        </div>
+        <div class="user-actions flex gap-2" v-if="isAdmin">
+          <button @click.stop="$emit('edit-user', user)" class="btn-outlined btn-small">
+            <span class="material-icon-sm">edit</span>
+          </button>
+          <button v-if="canDeleteUser(user)" @click.stop="$emit('delete-user', user)" class="btn-outlined btn-small text-error-600 border-error-600 hover:bg-error-50">
+            <span class="material-icon-sm">delete</span>
+          </button>
+        </div>
+      </template>
 
-    <!-- User cards -->
-    <div v-else-if="users && users.length > 0" class="users-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      <Card
-        v-for="user in users"
-        :key="user.id"
-        clickable
-        @click="$emit('view-user', user)"
-      >
-        <template #header>
-          <div class="user-avatar w-12 h-12 bg-primary-600 rounded-full flex items-center justify-center">
-            <span class="material-icon text-on-primary">{{ user.username.charAt(0).toUpperCase() }}</span>
-          </div>
-          <div class="user-actions flex gap-2" v-if="isAdmin">
-            <button @click.stop="$emit('edit-user', user)" class="btn-outlined btn-small">
-              <span class="material-icon-sm">edit</span>
-            </button>
-            <button v-if="canDeleteUser(user)" @click.stop="$emit('delete-user', user)" class="btn-outlined btn-small text-error-600 border-error-600 hover:bg-error-50">
-              <span class="material-icon-sm">delete</span>
-            </button>
-          </div>
-        </template>
+      <template #content>
+        <h3 class="user-name text-title-medium text-on-surface mb-2">{{ user.first_name }} {{ user.last_name }}</h3>
+        <p class="user-email text-body-medium text-on-surface-variant mb-3">{{ user.email }}</p>
+        <div class="user-role">
+          <StatusBadge :status="user.role_name" type="role" />
+        </div>
+      </template>
 
-        <template #content>
-          <h3 class="user-name text-title-medium text-on-surface mb-2">{{ user.first_name }} {{ user.last_name }}</h3>
-          <p class="user-email text-body-medium text-on-surface-variant mb-3">{{ user.email }}</p>
-          <div class="user-role">
-            <StatusBadge :status="user.role_name" type="role" />
-          </div>
-        </template>
+      <template #footer>
+        <div class="user-date text-label-medium text-on-surface-variant">
+          Added {{ formatDate(user.created_at) }}
+        </div>
+      </template>
+    </Card>
 
-        <template #footer>
-          <div class="user-date text-label-medium text-on-surface-variant">
-            Added {{ formatDate(user.created_at) }}
+    <!-- Add User Placeholder Card - Always shown to admin users after existing users -->
+    <Card v-if="isAdmin" class="add-user-card hover:shadow-lg transition-shadow cursor-pointer bg-gray-50 border-dashed border-2 border-gray-300 hover:border-blue-400" @click="$emit('add-user')">
+      <template #content>
+        <div class="text-center p-8">
+          <div class="add-user-icon text-4xl text-gray-400 mb-4">
+            <span class="material-icon">person_add</span>
           </div>
-        </template>
-      </Card>
+          <h3 class="text-lg font-semibold text-blue-600 mb-2">Add New User</h3>
+          <p class="text-sm text-gray-600">Create a new user account</p>
+        </div>
+      </template>
+    </Card>
+  </div>
+
+  <!-- Add User Placeholder Card when no users exist - Always shown to admin users -->
+  <div v-else-if="isAdmin" class="add-user-solo-card bg-white border-dashed border-2 border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 cursor-pointer transition-colors" @click="$emit('add-user')">
+    <div class="add-user-icon text-5xl text-gray-400 mb-6">
+      <span class="material-icon">person_add</span>
     </div>
+    <h3 class="text-xl font-semibold text-blue-600 mb-3">Get Started with User Management</h3>
+    <p class="text-gray-600 mb-6">Add your first user to get started managing access to your account.</p>
+    <button class="btn-filled">
+      <span class="material-icon-sm mr-2"><span class="material-icon">person_add</span></span>
+      Add Your First User
+    </button>
+  </div>
 
-    <!-- No users state -->
-    <ErrorState
-      v-else-if="users && users.length === 0"
-      title="No users found"
-      message="Get started by adding your first user."
-      icon="group"
-    />
+  <!-- No users state -->
+  <ErrorState
+    v-else-if="users && users.length === 0"
+    title="No users found"
+    message="Get started by adding your first user."
+    icon="group"
+  />
 
-    <!-- Error state -->
-    <ErrorState
-      v-else
-      title="Failed to load users"
-      message="Please try refreshing the page."
-      icon="error"
-    />
-  </CollapsibleSection>
+  <!-- Error state -->
+  <ErrorState
+    v-else
+    title="Failed to load users"
+    message="Please try refreshing the page."
+    icon="error"
+  />
 </template>
 
 <script>
-import CollapsibleSection from '@/components/shared/CollapsibleSection.vue'
 import Card from '@/components/shared/Card.vue'
 import LoadingState from '@/components/shared/LoadingState.vue'
 import ErrorState from '@/components/shared/ErrorState.vue'
@@ -81,7 +93,6 @@ import StatusBadge from '@/components/shared/StatusBadge.vue'
 export default {
   name: 'UserManagementSection',
   components: {
-    CollapsibleSection,
     Card,
     LoadingState,
     ErrorState,

@@ -49,14 +49,14 @@ try {
                     l.id,
                     l.name,
                     l.address,
-                    l.coordinates,
+                    l.coordinates_varchar as coordinates,
                     l.access_rules,
                     l.access_instructions,
                     COUNT(j.id) as job_count
                 FROM locations l
                 LEFT JOIN jobs j ON l.id = j.client_location_id
                 WHERE l.participant_id = ?
-                GROUP BY l.id, l.name, l.address, l.coordinates, l.access_rules, l.access_instructions
+                GROUP BY l.id, l.name, l.address, l.coordinates_varchar, l.access_rules, l.access_instructions
                 ORDER BY l.name ASC
             ");
 
@@ -127,7 +127,7 @@ try {
 
             // Create new location
             $stmt = $pdo->prepare("
-                INSERT INTO locations (participant_id, name, address, coordinates, access_rules, access_instructions)
+                INSERT INTO locations (participant_id, name, address, coordinates_varchar, access_rules, access_instructions)
                 VALUES (?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([$entity_id, $name, $address, $coordinates, $access_rules, $access_instructions]);
@@ -214,7 +214,7 @@ try {
             // Update location
             $stmt = $pdo->prepare("
                 UPDATE locations
-                SET name = ?, address = ?, coordinates = ?, access_rules = ?, access_instructions = ?
+                SET name = ?, address = ?, coordinates_varchar = ?, access_rules = ?, access_instructions = ?
                 WHERE id = ? AND participant_id = ?
             ");
             $stmt->execute([$name, $address, $coordinates, $access_rules, $access_instructions, $location_id, $entity_id]);

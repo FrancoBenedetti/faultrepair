@@ -63,7 +63,7 @@
             @update-job-filters="jobFilters = $event; loadJobs()"
             @refresh-jobs="loadJobs"
             @view-job-details="selectedJob = $event; showJobDetailsModal = true"
-            @edit-job="editingJob = $event; selectedTechnicianId = $event.assigned_technician_user_id; originalJobStatus = $event.job_status; showEditJobModal = true"
+            @edit-job="handleEditJob"
           />
         </div>
       </div>
@@ -629,14 +629,18 @@
                     {{ quote.status }}
                   </span>
                 </div>
-                <div class="quote-actions flex gap-2">
-                  <button v-if="quote.status === 'draft'" @click="editQuote(quote)" class="btn-outlined btn-small">
-                    <span class="material-icon-sm">edit</span>
-                  </button>
-                  <button v-if="quote.status === 'draft'" @click="submitQuote(quote)" class="btn-filled btn-small">
-                    <span class="material-icon-sm">send</span>
-                  </button>
-                </div>
+    <div class="quote-actions flex gap-2">
+      <button @click="viewQuoteDetails(quote)" class="btn-outlined btn-small">
+        <span class="material-icon-sm">visibility</span>
+        View
+      </button>
+      <button v-if="quote.status === 'draft'" @click="editQuote(quote)" class="btn-outlined btn-small">
+        <span class="material-icon-sm">edit</span>
+      </button>
+      <button v-if="quote.status === 'draft'" @click="submitQuote(quote)" class="btn-filled btn-small">
+        <span class="material-icon-sm">send</span>
+      </button>
+    </div>
               </div>
 
               <div class="quote-content card-content">
@@ -1565,220 +1569,7 @@
       </div>
     </div>
 
-    <!-- Edit Job Modal -->
-    <div v-if="showEditJobModal" class="fixed inset-0 z-50 flex items-center justify-center">
-      <!-- Overlay -->
-      <div class="absolute inset-0 bg-black/50" @click="showEditJobModal = false"></div>
 
-      <!-- Modal Content -->
-      <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden" @click.stop>
-        <!-- Header -->
-        <div class="flex justify-between items-center p-6 border-b border-gray-200">
-          <h3 class="text-xl font-semibold text-gray-900 flex items-center gap-3">
-            <span class="material-icon text-blue-600">edit</span>
-            Edit Job: {{ editingJob?.item_identifier || 'No Item ID' }}
-          </h3>
-          <button @click="showEditJobModal = false" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-        </div>
-
-        <!-- Form -->
-        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
-          <form v-if="editingJob" @submit.prevent="updateJob" class="space-y-6">
-
-            <!-- Job Status Section -->
-            <div class="bg-gray-50 rounded-lg p-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
-                <span class="material-icon-sm text-blue-600">flag</span>
-                Job Status Management
-              </h4>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="space-y-2">
-                  <label for="edit-status" class="form-label">Status *</label>
-                  <select id="edit-status" v-model="editingJob.job_status" required class="form-input">
-                    <option v-for="status in getAvailableStatuses(editingJob, userRole)" :key="status" :value="status">
-                      {{ status }}
-                    </option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <!-- Technician Assignment Section -->
-            <div v-if="(editingJob.job_status === 'In Progress' || (originalJobStatus === 'In Progress' && editingJob.job_status === 'In Progress')) && userRole === 3" class="bg-gray-50 rounded-lg p-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
-                <span class="material-icon-sm text-purple-600">engineering</span>
-                Technician Assignment
-              </h4>
-
-              <div class="space-y-2">
-                <label for="edit-technician" class="form-label flex items-center gap-2">
-                  <span class="material-icon-sm text-gray-500">engineering</span>
-                  Assign Technician *
-                </label>
-                <select id="edit-technician" v-model="selectedTechnicianId" :class="'form-input' + (userRole === 3 ? ' admin-select' : ' technician-select')" tabindex="0">
-                  <option value="">Select a technician...</option>
-                  <option v-for="technician in technicians" :key="technician.id" :value="technician.id">
-                    {{ technician.full_name }}
-                    <span v-if="technician.role_id === 3">(Admin)</span>
-                    <span v-else>(Tech)</span>
-                  </option>
-                </select>
-                <small class="form-help text-sm text-gray-600">A technician must be assigned for jobs in "In Progress" status</small>
-              </div>
-            </div>
-
-            <!-- Provider Assignment Section -->
-            <div v-if="userRole === 2" class="bg-gray-50 rounded-lg p-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
-                <span class="material-icon-sm text-green-600">business</span>
-                Provider Assignment
-              </h4>
-
-              <div class="space-y-2">
-                <label for="edit-provider" class="form-label">Assigned Provider</label>
-                <select id="edit-provider" v-model="editingJob.assigned_provider_id" class="form-input">
-                  <option value="">No Provider Assigned</option>
-                  <option v-for="provider in approvedProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
-                    {{ provider.name }}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Job Details Section (only editable when status is 'Reported') -->
-            <div v-if="canEditJobDetails(editingJob)" class="bg-gray-50 rounded-lg p-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
-                <span class="material-icon-sm text-orange-600">description</span>
-                Job Details
-              </h4>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div class="space-y-2">
-                  <label for="edit-item-identifier" class="form-label">Item Identifier</label>
-                  <input type="text" id="edit-item-identifier" v-model="editingJob.item_identifier"
-                         class="form-input"
-                         placeholder="e.g., Computer-001, Printer-ABC">
-                  <small class="form-help text-sm text-gray-600">Optional: Unique identifier for the item</small>
-                </div>
-                <div class="space-y-2">
-                  <label for="edit-contact-person" class="form-label">Contact Person</label>
-                  <input type="text" id="edit-contact-person" v-model="editingJob.contact_person"
-                         class="form-input"
-                         placeholder="Person to contact about this service request">
-                  <small class="form-help text-sm text-gray-600">Optional: Who should the technician contact?</small>
-                </div>
-              </div>
-
-              <div class="space-y-2 mb-4">
-                <label for="edit-fault-description" class="form-label">Service Description *</label>
-                <textarea id="edit-fault-description" v-model="editingJob.fault_description" required
-                          rows="4" class="form-input resize-none"
-                          placeholder="Describe the service request in detail..."></textarea>
-              </div>
-
-              <!-- Image Upload Section for editing -->
-              <div class="space-y-2">
-                <label class="form-label">Attach Additional Images</label>
-                <ImageUpload
-                  ref="editImageUpload"
-                  :max-images="10"
-                  :max-file-size="10 * 1024 * 1024"
-                  @images-changed="handleEditImagesChanged"
-                />
-              </div>
-            </div>
-
-            <!-- Technician Notes Section (visible to service providers only) -->
-            <div v-if="userRole === 3 || userRole === 4" class="bg-gray-50 rounded-lg p-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
-                <span class="material-icon-sm text-indigo-600">notes</span>
-                Technician Notes
-              </h4>
-
-              <div class="space-y-2">
-                <label for="edit-technician-notes" class="form-label">Internal Notes</label>
-                <textarea id="edit-technician-notes" v-model="editingJob.technician_notes"
-                          rows="4" class="form-input resize-none"
-                          placeholder="Internal notes for technicians and service providers..."></textarea>
-                <small class="form-help text-sm text-gray-600">These notes are only visible to service providers and technicians</small>
-              </div>
-            </div>
-
-            <!-- Read-only details when not fully editable -->
-            <div v-else class="bg-gray-50 rounded-lg p-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
-                <span class="material-icon-sm text-blue-600">info</span>
-                Job Details (Read Only)
-              </h4>
-
-              <div class="space-y-3">
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500">Item Identifier:</span>
-                  <span class="text-sm text-gray-900 text-right">{{ editingJob.item_identifier || 'Not specified' }}</span>
-                </div>
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500">Contact Person:</span>
-                  <span class="text-sm text-gray-900 text-right">{{ editingJob.contact_person || 'Not specified' }}</span>
-                </div>
-                <div class="flex justify-between items-start">
-                  <span class="text-sm font-medium text-gray-500">Service Description:</span>
-                  <span class="text-sm text-gray-900 text-right">{{ editingJob.fault_description }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Existing Images Section -->
-            <div class="bg-gray-50 rounded-lg p-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
-                <span class="material-icon-sm text-gray-600">image</span>
-                Attached Images ({{ editingJob.images?.length || 0 }})
-              </h4>
-
-              <div v-if="!editingJob.images || editingJob.images.length === 0" class="text-center py-8 text-gray-500">
-                <span class="material-icon text-4xl text-gray-300">image</span>
-                <p class="mt-2">No images attached to this job</p>
-              </div>
-
-              <div v-else class="gallery-grid">
-                <div v-for="image in editingJob.images" :key="image.id" class="gallery-item">
-                  <img :src="generateImageUrl(image)"
-                       :alt="image.original_filename"
-                       class="gallery-image"
-                       @click="openImageModal(image)">
-                  <div class="image-overlay">
-                    <span class="image-filename">{{ image.original_filename }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Form Actions -->
-            <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
-              <button
-                type="button"
-                @click="showEditJobModal = false"
-                class="btn-filled flex items-center gap-2"
-                :disabled="loading"
-              >
-                <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
-                <span v-else class="material-icon-sm">cancel</span>
-                {{ loading ? 'Canceling...' : 'Cancel' }}
-              </button>
-              <button
-                type="submit"
-                class="btn-filled flex items-center gap-2"
-                :disabled="loading"
-              >
-                <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
-                <span v-else class="material-icon-sm">save</span>
-                {{ loading ? 'Updating...' : 'Update Job' }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
 
     <!-- Edit Quote Modal -->
     <div v-if="showEditQuoteModal" class="fixed inset-0 z-50 flex items-center justify-center">
@@ -1867,6 +1658,74 @@
             </div>
           </div>
 
+          <!-- PDF Document Upload Section -->
+          <div class="bg-green-50 rounded-lg p-6 space-y-6">
+            <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
+              <span class="material-icon-sm text-green-600">upload_file</span>
+              Upload Quote PDF Document
+            </h4>
+
+            <div class="space-y-2">
+              <label for="quote-pdf-upload" class="form-label flex items-center gap-2">
+                <span class="material-icon-sm text-gray-500">picture_as_pdf</span>
+                PDF Document Upload
+              </label>
+              <div class="flex items-center gap-3">
+                <input
+                  type="file"
+                  id="quote-pdf-upload"
+                  ref="pdfUploadInput"
+                  accept=".pdf"
+                  @change="handlePdfUpload"
+                  class="form-input flex-1"
+                  :disabled="uploadingPdf"
+                >
+                <button
+                  type="button"
+                  @click="uploadPdfDocument"
+                  :disabled="uploadingPdf || !pdfToUpload"
+                  class="btn-primary flex items-center gap-2"
+                >
+                  <span v-if="uploadingPdf" class="material-icon-sm animate-spin">refresh</span>
+                  <span v-else class="material-icon-sm">upload</span>
+                  {{ uploadingPdf ? 'Uploading...' : 'Upload PDF' }}
+                </button>
+              </div>
+
+              <!-- Upload Progress -->
+              <div v-if="uploadingPdf" class="space-y-2">
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="bg-green-600 h-2 rounded-full transition-all" :style="{ width: '50%' }"></div>
+                </div>
+                <p class="text-sm text-gray-600">Uploading PDF document...</p>
+              </div>
+
+              <!-- Uploaded Document Display -->
+              <div v-if="uploadedPdfPath" class="space-y-2">
+                <div class="flex items-center gap-2 p-3 bg-green-100 border border-green-300 rounded-lg">
+                  <span class="material-icon-sm text-green-600">check_circle</span>
+                  <div class="flex-1">
+                    <p class="font-medium text-green-800">{{ pdfDisplayName }}</p>
+                    <p class="text-sm text-green-600">PDF uploaded successfully</p>
+                  </div>
+                  <a
+                    :href="getPdfDownloadUrl(uploadedPdfPath)"
+                    target="_blank"
+                    class="btn-outlined btn-small flex items-center gap-1"
+                  >
+                    <span class="material-icon-sm">download</span>
+                    View PDF
+                  </a>
+                </div>
+              </div>
+
+              <small class="form-help text-sm text-gray-600">
+                Upload a PDF quote document (max 5MB). Alternatively, provide a URL above.
+                Both options support quote document delivery. PDF uploads are stored securely and served by our system.
+              </small>
+            </div>
+          </div>
+
           <!-- Form Actions -->
           <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
             <button
@@ -1893,10 +1752,170 @@
       </div>
     </div>
 
+    <!-- Edit Job Modal -->
+    <EditJobModal
+      v-if="editingJobForModal"
+      :job="editingJobForModal"
+      :user-role="userRole"
+      :user-id="currentUserId"
+      :entity-id="profile?.id || 0"
+      :entity-type="'service_provider'"
+      @close="editingJobForModal = null"
+      @updated="handleJobUpdated"
+    />
+
+    <!-- Quote Details Modal -->
+    <div v-if="showQuoteDetailsModal" class="fixed inset-0 z-50 flex items-center justify-center">
+      <!-- Overlay -->
+      <div class="absolute inset-0 bg-black/50" @click="showQuoteDetailsModal = false"></div>
+
+      <!-- Modal Content -->
+      <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" @click.stop>
+        <!-- Header -->
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+          <h3 class="text-xl font-semibold text-gray-900 flex items-center gap-3">
+            <span class="material-icon text-green-600">request_quote</span>
+            Quote Details: {{ selectedQuote?.item_identifier || 'Job #' + selectedQuote?.job_id }}
+          </h3>
+          <button @click="showQuoteDetailsModal = false" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+
+        <!-- Content -->
+        <div v-if="selectedQuote" class="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
+          <!-- Quote Status -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="status-badge" :class="getQuoteStatusClass(selectedQuote.status)">
+                {{ selectedQuote.status }}
+              </span>
+              <span class="text-sm text-gray-600">
+                Created {{ formatDate(selectedQuote.created_at) }}
+              </span>
+            </div>
+            <button @click="showQuoteDetailsModal = false" class="btn-filled">
+              Close
+            </button>
+          </div>
+
+          <!-- Quote Information Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Left Column -->
+            <div class="space-y-6">
+              <!-- Amount and Validity -->
+              <div class="bg-gray-50 rounded-lg p-6">
+                <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                  <span class="material-icon-sm text-green-600">attach_money</span>
+                  Quote Amount
+                </h4>
+                <div class="space-y-3">
+                  <div>
+                    <label class="text-sm font-medium text-gray-600">Amount:</label>
+                    <p class="text-2xl font-bold text-green-600">{{ formatCurrency(selectedQuote.quotation_amount) }}</p>
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium text-gray-600">Valid Until:</label>
+                    <p class="text-base text-gray-900">{{ formatDate(selectedQuote.valid_until) }}</p>
+                  </div>
+                  <div v-if="selectedQuote.submitted_at">
+                    <label class="text-sm font-medium text-gray-600">Submitted:</label>
+                    <p class="text-base text-gray-900">{{ formatDate(selectedQuote.submitted_at) }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Client Information -->
+              <div class="bg-blue-50 rounded-lg p-6">
+                <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                  <span class="material-icon-sm text-blue-600">business</span>
+                  Client Information
+                </h4>
+                <div class="space-y-3">
+                  <div>
+                    <label class="text-sm font-medium text-gray-600">Client:</label>
+                    <p class="text-base text-gray-900">{{ selectedQuote.client_name }}</p>
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium text-gray-600">Location:</label>
+                    <p class="text-base text-gray-900">{{ selectedQuote.location_name }}</p>
+                  </div>
+                  <div v-if="selectedQuote.client_email">
+                    <label class="text-sm font-medium text-gray-600">Email:</label>
+                    <p class="text-base text-gray-900">{{ selectedQuote.client_email }}</p>
+                  </div>
+                  <div v-if="selectedQuote.client_phone">
+                    <label class="text-sm font-medium text-gray-600">Phone:</label>
+                    <p class="text-base text-gray-900">{{ selectedQuote.client_phone }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="space-y-6">
+              <!-- Job Information -->
+              <div class="bg-purple-50 rounded-lg p-6">
+                <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                  <span class="material-icon-sm text-purple-600">work</span>
+                  Job Information
+                </h4>
+                <div class="space-y-3">
+                  <div>
+                    <label class="text-sm font-medium text-gray-600">Job:</label>
+                    <p class="text-base text-gray-900">{{ selectedQuote.item_identifier || 'Job #' + selectedQuote.job_id }}</p>
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium text-gray-600">Description:</label>
+                    <p class="text-base text-gray-900">{{ selectedQuote.fault_description }}</p>
+                  </div>
+                  <div class="pt-3 border-t border-purple-200">
+                    <a :href="`/service-provider/jobs/${selectedQuote.job_id}`" class="btn-filled btn-small inline-flex items-center gap-2">
+                      <span class="material-icon-sm">arrow_forward</span>
+                      View Full Job Details
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Document Links -->
+              <div class="bg-green-50 rounded-lg p-6">
+                <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+                  <span class="material-icon-sm text-green-600">description</span>
+                  Documents & Links
+                </h4>
+                <div class="space-y-3">
+                  <div v-if="selectedQuote.quotation_document_url">
+                    <label class="text-sm font-medium text-gray-600">Document Link:</label>
+                    <a :href="selectedQuote.quotation_document_url" target="_blank" class="flex items-center gap-2 text-blue-600 hover:text-blue-800 underline">
+                      <span class="material-icon-sm">link</span>
+                      Open Document
+                    </a>
+                  </div>
+                  <div v-else>
+                    <p class="text-sm text-gray-600">No document link provided</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quote Description -->
+          <div class="bg-gray-50 rounded-lg p-6">
+            <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+              <span class="material-icon-sm text-orange-600">description</span>
+              Quote Description & Breakdown
+            </h4>
+            <div class="bg-white rounded-lg p-4 border border-gray-200">
+              <p class="text-gray-900 whitespace-pre-wrap">{{ selectedQuote.quotation_description || 'No description provided' }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Image Modal for Full Size View -->
     <div v-if="selectedImage" class="modal-overlay" @click="selectedImage = null">
-      <div class="image-modal-content" @click.stop>
-        <div class="image-modal-header">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
           <h3>{{ selectedImage.original_filename }}</h3>
           <button @click="selectedImage = null" class="close-btn">&times;</button>
         </div>
@@ -1919,6 +1938,7 @@ import TechnicianManagementSection from '@/components/dashboard/TechnicianManage
 import CollapsibleSection from '@/components/shared/CollapsibleSection.vue'
 import LoadingState from '@/components/shared/LoadingState.vue'
 import StatusBadge from '@/components/shared/StatusBadge.vue'
+import EditJobModal from '@/components/modals/EditJobModal.vue'
 
 export default {
   name: 'ServiceProviderDashboard',
@@ -1929,7 +1949,8 @@ export default {
     TechnicianManagementSection,
     CollapsibleSection,
     LoadingState,
-    StatusBadge
+    StatusBadge,
+    EditJobModal
   },
   computed: {
     currentTechnician() {
@@ -2002,9 +2023,10 @@ export default {
       originalProviderId: null,
       editingImages: [], // Array to store additional images for editing
       userRole: null, // Store user role for UI restrictions
-    selectedTechnicianId: null, // For technician assignment when setting status to "In Progress"
-        // Services modal additional data
-    searchTerm: '',
+      selectedTechnicianId: null, // For technician assignment when setting status to "In Progress"
+      editingJobForModal: null, // For the new EditJobModal component
+      // Services modal additional data
+      searchTerm: '',
     selectedCategoryFilter: '',
     expandedCategories: {},
     searchTimeout: null, // For debounced search
@@ -2024,7 +2046,7 @@ export default {
       quotes: false // Quote management collapsed by default
     },
     // Quote Management Data
-    quotes: null,
+    quotes: [],
     quoteJobs: [],
     quoteFilters: {
       status: '',
@@ -2033,6 +2055,8 @@ export default {
     editingQuote: null,
     showEditQuoteModal: false,
     showCreateQuoteModal: false,
+    showQuoteDetailsModal: false,
+    selectedQuote: null,
     quoteForm: {
       job_id: '',
       quotation_amount: '',
@@ -2040,6 +2064,11 @@ export default {
       quotation_document_url: '',
       valid_until: ''
     },
+    // PDF Upload Data
+    pdfToUpload: null,
+    uploadingPdf: false,
+    uploadedPdfPath: null,
+    pdfDisplayName: '',
       technicianForm: {
         username: '',
         email: '',
@@ -2783,23 +2812,42 @@ getCurrentUserName() {
 
       this.loading = true
       try {
+        // Check if this is actually a new quote (id is null)
+        const isNewQuote = !this.editingQuote.id
+
+        const requestBody = isNewQuote ? {
+          ...this.quoteForm
+        } : {
+          quote_id: this.editingQuote.id,
+          ...this.quoteForm
+        }
+
+        console.log('🔧 updateQuote: Creating/Updating quote')
+        console.log('🔧 updateQuote: Is new quote?', isNewQuote)
+        console.log('🔧 updateQuote: Method:', isNewQuote ? 'POST' : 'PUT')
+        console.log('🔧 updateQuote: Body:', JSON.stringify(requestBody, null, 2))
+
         const response = await apiFetch('/backend/api/job-quotations.php', {
-          method: 'PUT',
-          body: JSON.stringify({
-            quote_id: this.editingQuote.id,
-            ...this.quoteForm
-          })
+          method: isNewQuote ? 'POST' : 'PUT',
+          body: JSON.stringify(requestBody)
         })
 
+        console.log('🔧 updateQuote: Response status:', response.status)
+
         if (response.ok) {
+          console.log('🔧 updateQuote: Success - refreshing quotes and jobs')
           this.closeEditQuoteModal()
           this.loadQuotes()
-          alert('Quote updated successfully!')
+          this.loadJobs() // Refresh jobs to show any status changes
+          alert(isNewQuote ? 'Quote created successfully!' : 'Quote updated successfully!')
         } else {
-          this.handleError(await response.json())
+          const errorData = await response.json()
+          console.error('🔧 updateQuote: Error response:', errorData)
+          this.handleError(errorData)
         }
       } catch (error) {
-        alert('Failed to update quote')
+        console.error('🔧 updateQuote: Exception:', error)
+        alert('Failed to save quote')
       } finally {
         this.loading = false
       }
@@ -2849,6 +2897,11 @@ getCurrentUserName() {
       }
     },
 
+    viewQuoteDetails(quote) {
+      this.selectedQuote = quote
+      this.showQuoteDetailsModal = true
+    },
+
     getQuoteStatusClass(status) {
       const statusClasses = {
         'draft': 'quote-draft',
@@ -2860,10 +2913,8 @@ getCurrentUserName() {
     },
 
     formatCurrency(amount) {
-      return parseFloat(amount || 0).toLocaleString('en-ZA', {
-        style: 'currency',
-        currency: 'ZAR'
-      })
+      // Format as South African Rand with "R" prefix instead of "ZAR"
+      return 'R ' + parseFloat(amount || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
     },
 
     // Services Modal Methods
@@ -2952,6 +3003,59 @@ getCurrentUserName() {
         // Search is handled reactively, but we can clear the timeout
         this.searchTimeout = null
       }, 300)
+    },
+
+    getDefaultQuoteValidUntil() {
+      const today = new Date();
+      const thirtyDaysFromNow = new Date(today);
+      thirtyDaysFromNow.setDate(today.getDate() + 30);
+      return thirtyDaysFromNow.toISOString().split('T')[0]; // Return YYYY-MM-DD format
+    },
+
+    // Edit Job Modal Methods
+    handleEditJob(job) {
+      console.log('Opening EditJobModal for job:', job)
+
+      // For Quote Requested jobs, open the quote editing modal instead
+      if (job.job_status === 'Quote Requested') {
+        console.log('Quote Requested job detected, opening quote modal instead')
+        // Check if there's already a quote for this job
+        const existingQuote = this.quotes.find(q => q.job_id === job.id)
+        if (existingQuote) {
+          console.log('Found existing quote, editing it')
+          this.editQuote(existingQuote)
+        } else {
+          console.log('No existing quote found, creating new quote data structure')
+          // Create new quote data structure
+          const quoteData = {
+            id: null, // This will be a new quote
+            job_id: job.id,
+            item_identifier: job.item_identifier,
+            fault_description: job.fault_description,
+            client_name: job.client_name,
+            quotation_amount: '0.00',
+            quotation_description: '',
+            quotation_document_url: '',
+            valid_until: this.getDefaultQuoteValidUntil(),
+            status: 'draft'
+          }
+          this.editQuote(quoteData)
+          // Actually open the quote modal
+          this.showEditQuoteModal = true
+        }
+        return
+      }
+
+      // For all other jobs, open the regular edit modal
+      this.editingJobForModal = job
+    },
+
+    async handleJobUpdated() {
+      console.log('Job updated, refreshing jobs list')
+      // Refresh the jobs list to show the updated job
+      await this.loadJobs()
+      // Close might already be handled by the modal, but ensure cleanup
+      this.editingJobForModal = null
     }
   }
 }

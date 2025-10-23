@@ -72,9 +72,9 @@ try {
             j.assigned_provider_participant_id,
             sp.name as provider_name
         FROM jobs j
-        JOIN locations l ON j.client_location_id = l.id
+        LEFT JOIN locations l ON j.client_location_id = l.id
         JOIN participants sp ON j.assigned_provider_participant_id = sp.participantId
-        WHERE j.id = ? AND l.participant_id = ?
+        WHERE j.id = ? AND (l.participant_id = ? OR j.client_location_id IS NULL)
     ");
     $stmt->execute([$job_id, $entity_id]);
     $job = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -101,29 +101,18 @@ try {
     ");
     $stmt->execute([$new_job_status, $job_id]);
 
-    // Insert job status history with notes
-    $stmt = $pdo->prepare("
-        INSERT INTO job_status_history (job_id, status, changed_by_user_id, notes, changed_at)
-        VALUES (?, ?, ?, ?, NOW())
-    ");
-    $stmt->execute([$job_id, $new_job_status, $user_id, $confirmation_notes]);
-
-    // If job is confirmed, archive it for both parties
-    if ($action === 'confirm') {
+        // Insert job status history with notes
         $stmt = $pdo->prepare("
-            UPDATE jobs
-            SET archived_by_client = 1, updated_at = NOW()
-            WHERE id = ?
+            INSERT INTO job_status_history (job_id, status, changed_by_user_id, notes, changed_at)
+            VALUES (?, ?, ?, ?, NOW())
         ");
-        $stmt->execute([$job_id]);
-    }
+        $stmt->execute([$job_id, $new_job_status, $user_id, $confirmation_notes]);
 
-    echo json_encode([
-        'success' => true,
-        'message' => 'Job ' . $action . 'ed successfully',
-        'new_job_status' => $new_job_status,
-        'job_archived' => $action === 'confirm'
-    ]);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Job ' . $action . 'ed successfully',
+            'new_job_status' => $new_job_status
+        ]);
 
 } catch (Exception $e) {
     http_response_code(500);

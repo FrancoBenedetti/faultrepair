@@ -38,3 +38,5 @@ ln -s ~/Projects/fault-reporter/backend ~/Projects/snappy/public/backend
 ln -s ~/Projects/fault-reporter/snappy-admin ~/Projects/snappy/public/snappy-admin
 # capture logs outside of the web root so they can be viewed directly
 ln -s ~/Projects/fault-reporter/all-logs ~/Projects/snappy/public/all-logs
+# capture images outside of the web root so they kept available for testing after rebuild
+ln -s ~/Projects/fault-reporter/uploads ~/Projects/snappy/public/uploads

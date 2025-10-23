@@ -103,9 +103,15 @@ if (!$image) {
     exit;
 }
 
-// Check if the file exists on disk
-$file_path = $image['file_path'];
-if (!file_exists($file_path)) {
+// Check if the file exists on disk - try absolute path first, then fallback to stored path
+$absolute_file_path = $_SERVER['DOCUMENT_ROOT'] . '/uploads/job_images/' . basename($image['file_path']);
+if (file_exists($absolute_file_path)) {
+    $file_path = $absolute_file_path;
+} elseif (file_exists($image['file_path'])) {
+    $file_path = $image['file_path'];
+    error_log(__FILE__ . ' - Using stored file path: ' . $file_path);
+} else {
+    error_log(__FILE__ . ' - Image file not found at: ' . $absolute_file_path . ' or ' . $image['file_path']);
     http_response_code(404);
     echo json_encode(['error' => 'Image file not found on disk']);
     exit;

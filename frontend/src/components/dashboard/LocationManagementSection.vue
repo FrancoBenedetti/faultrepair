@@ -1,47 +1,52 @@
 <template>
-  <CollapsibleSection
-    title="Locations"
-    icon="location_on"
-    :expanded="expanded"
-    @toggle="$emit('toggle')"
-  >
-    <template #header-actions>
-      <!-- View Mode Toggle -->
-      <div class="view-mode-toggle flex border border-gray-300 rounded-lg overflow-hidden mr-4">
-        <button @click.stop="viewMode = 'cards'"
-                :class="{ 'bg-blue-600 text-white': viewMode === 'cards', 'bg-white text-gray-700 hover:bg-gray-50': viewMode !== 'cards' }"
-                class="px-4 py-2 text-sm font-medium transition-colors">
-          <span class="material-icon-sm mr-1">grid_view</span>
-          Cards
-        </button>
-        <button @click.stop="viewMode = 'table'"
-                :class="{ 'bg-blue-600 text-white': viewMode === 'table', 'bg-white text-gray-700 hover:bg-gray-50': viewMode !== 'table' }"
-                class="px-4 py-2 text-sm font-medium transition-colors">
-          <span class="material-icon-sm mr-1">table_chart</span>
-          Table
-        </button>
-      </div>
-      <button v-if="isAdmin" @click.stop="$emit('add-location')" class="btn-filled">
-        <span class="material-icon-sm mr-2">add</span>
-        Add Location
-      </button>
-    </template>
+  <!-- View Mode Toggle -->
+  <div class="view-mode-toggle flex border border-gray-300 rounded-lg overflow-hidden">
+    <button @click.stop="viewMode = 'cards'"
+            :class="{ 'bg-blue-600 text-white': viewMode === 'cards', 'bg-white text-gray-700 hover:bg-gray-50': viewMode !== 'cards' }"
+            class="px-4 py-2 text-sm font-medium transition-colors">
+      <span class="material-icon-sm mr-1">grid_view</span>
+      Cards
+    </button>
+    <button @click.stop="viewMode = 'table'"
+            :class="{ 'bg-blue-600 text-white': viewMode === 'table', 'bg-white text-gray-700 hover:bg-gray-50': viewMode !== 'table' }"
+            class="px-4 py-2 text-sm font-medium transition-colors">
+      <span class="material-icon-sm mr-1">table_chart</span>
+      Table
+    </button>
+  </div>
 
     <!-- Loading state -->
     <LoadingState v-if="!locations" message="Loading locations..." />
 
-    <!-- Default location state -->
-    <ErrorState
-      v-else-if="locations && locations.length === 0"
-      title="Default Location"
-      message="Using client name as default location. Add specific locations if needed."
-      icon="location_on"
-    />
+    <!-- Default location state OR Add Location for admins -->
+    <div v-else-if="locations && locations.length === 0">
+      <!-- Add Location Placeholder Card when no locations exist - Always shown to admin users -->
+      <div v-if="isAdmin" class="add-location-solo-card bg-white border-dashed border-2 border-gray-300 rounded-lg p-8 text-center hover:border-green-400 cursor-pointer transition-colors" @click="$emit('add-location')">
+        <div class="add-location-icon text-5xl text-gray-400 mb-6">
+          <span class="material-icon">location_on</span>
+        </div>
+        <h3 class="text-xl font-semibold text-green-600 mb-3">Get Started with Location Management</h3>
+        <p class="text-gray-600 mb-6">Add your first location to organize your service requests by specific sites.</p>
+        <button class="btn-filled">
+          <span class="material-icon-sm mr-2"><span class="material-icon">location_on</span></span>
+          Add Your First Location
+        </button>
+      </div>
+      <!-- Default location message for non-admins -->
+      <ErrorState
+        v-else
+        title="Default Location"
+        message="Using client name as default location. Add specific locations if needed."
+        icon="location_on"
+      />
+    </div>
 
     <!-- Locations display -->
     <div v-else class="locations-content">
       <!-- Cards View -->
+      <!-- Cards View -->
       <div v-if="viewMode === 'cards'" class="locations-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Existing location cards -->
         <Card
           v-for="location in locations"
           :key="location.id"
@@ -53,7 +58,7 @@
               <span class="material-icon text-white">location_on</span>
             </div>
             <div class="location-actions flex gap-2" v-if="isAdmin">
-              <button @click.stop="$emit('edit-location', location)" class="btn-outlined btn-small">
+              <button @click.stop="handleEditClick(location)" class="btn-outlined btn-small">
                 <span class="material-icon-sm">edit</span>
               </button>
               <button v-if="location.job_count === 0" @click.stop="$emit('delete-location', location)" class="btn-outlined btn-small text-error-600 border-error-600 hover:bg-error-50">
@@ -106,6 +111,19 @@
             </div>
           </template>
         </Card>
+
+        <!-- Add Location Placeholder Card - Always shown to admin users as part of the grid -->
+        <Card v-if="isAdmin" class="add-location-card hover:shadow-lg transition-shadow cursor-pointer bg-gray-50 border-dashed border-2 border-gray-300 hover:border-green-400" @click="$emit('add-location')">
+          <template #content>
+            <div class="text-center p-8">
+              <div class="add-location-icon text-4xl text-gray-400 mb-4">
+            <span class="material-icon">location_on</span>
+          </div>
+              <h3 class="text-lg font-semibold text-green-600 mb-2">Add New Location</h3>
+              <p class="text-sm text-gray-600">Create a new service location</p>
+            </div>
+          </template>
+        </Card>
       </div>
 
       <!-- Table View -->
@@ -134,7 +152,7 @@
                 </td>
                 <td class="col-actions" v-if="isAdmin">
                   <div class="table-actions">
-                    <button @click.stop="$emit('edit-location', location)" class="btn-secondary btn-small">
+                    <button @click.stop="handleEditClick(location)" class="btn-secondary btn-small">
                       Edit
                     </button>
                     <button v-if="location.job_count === 0" @click.stop="$emit('delete-location', location)" class="btn-danger btn-small">
@@ -146,13 +164,12 @@
             </tbody>
           </table>
         </div>
-      </div>
     </div>
-  </CollapsibleSection>
+
+</div>
 </template>
 
 <script>
-import CollapsibleSection from '@/components/shared/CollapsibleSection.vue'
 import Card from '@/components/shared/Card.vue'
 import LoadingState from '@/components/shared/LoadingState.vue'
 import ErrorState from '@/components/shared/ErrorState.vue'
@@ -160,7 +177,6 @@ import ErrorState from '@/components/shared/ErrorState.vue'
 export default {
   name: 'LocationManagementSection',
   components: {
-    CollapsibleSection,
     Card,
     LoadingState,
     ErrorState
@@ -182,6 +198,14 @@ export default {
   data() {
     return {
       viewMode: 'cards' // 'cards' or 'table'
+    }
+  },
+  methods: {
+    handleEditClick(location) {
+      console.log('LocationManagementSection: Edit button clicked for:', location)
+      console.log('LocationManagementSection: Emitting edit-location event with:', location)
+      this.$emit('edit-location', location)
+      console.log('LocationManagementSection: Event emitted, should reach parent')
     }
   }
 }

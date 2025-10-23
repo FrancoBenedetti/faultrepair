@@ -1,15 +1,54 @@
 <template>
   <div class="image-upload border border-gray-300 rounded-xl p-6 bg-gray-50">
-    <div class="upload-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-      <h4 class="text-lg font-semibold text-gray-900 mb-0">Attach Images</h4>
-      <div class="upload-actions flex gap-3">
-        <button type="button" @click.stop="triggerFileInput" class="btn-outlined btn-small">
-          <span class="material-icon-sm mr-2">upload_file</span>
-          Choose Files
+    <div class="upload-header mb-6">
+      <h4 class="text-lg font-semibold text-gray-900 mb-4">Attach Images</h4>
+      <div class="upload-options grid gap-4">
+        <!-- File Upload Option -->
+        <div class="upload-option border border-dashed border-gray-400 rounded-lg p-6 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+             @click.stop="triggerFileInput">
+          <div class="option-content flex flex-col items-center gap-3">
+            <div class="option-icon bg-blue-100 text-blue-600 rounded-full w-12 h-12 flex items-center justify-center">
+              <span class="material-icon-lg">upload_file</span>
+            </div>
+            <div class="option-text text-center">
+              <h5 class="font-semibold text-gray-900 mb-1">Select from Device</h5>
+              <p class="text-sm text-gray-600">Choose images from your gallery, photos, or files</p>
+              <span class="text-xs text-blue-600 font-medium">Supports JPG, PNG, GIF, WebP</span>
+            </div>
+            <button type="button" class="btn-filled btn-small mt-2" @click.stop="triggerFileInput">
+              Browse Files
+            </button>
+          </div>
+        </div>
+
+        <!-- Camera Upload Option -->
+        <div class="upload-option border border-dashed border-green-400 rounded-lg p-6 bg-green-50 hover:bg-green-100 transition-colors">
+          <div class="option-content flex flex-col items-center gap-3">
+            <div class="option-icon bg-green-100 text-green-600 rounded-full w-12 h-12 flex items-center justify-center">
+              <span class="material-icon-lg">photo_camera</span>
+            </div>
+            <div class="option-text text-center">
+              <h5 class="font-semibold text-gray-900 mb-1">Take New Photo</h5>
+              <p class="text-sm text-gray-600">Capture images directly from your camera</p>
+              <span class="text-xs text-green-600 font-medium">Requires camera permission</span>
+            </div>
+            <button type="button" class="btn-outlined btn-small mt-2" @click.stop="openCamera">
+              Open Camera
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alternative compact buttons -->
+      <div class="alternative-actions flex gap-3 mt-4 pt-4 border-t border-gray-200">
+        <div class="text-sm text-gray-600 mr-2">Quick actions:</div>
+        <button type="button" @click.stop="triggerFileInput" class="btn-outlined btn-extra-small flex items-center gap-1">
+          <span class="material-icon-xs">upload_file</span>
+          Files
         </button>
-        <button type="button" @click.stop="openCamera" class="btn-filled btn-small">
-          <span class="material-icon-sm mr-2">photo_camera</span>
-          Take Photo
+        <button type="button" @click.stop="openCamera" class="btn-filled btn-extra-small flex items-center gap-1">
+          <span class="material-icon-xs">photo_camera</span>
+          Camera
         </button>
       </div>
     </div>
@@ -79,10 +118,13 @@
 
     <!-- Upload progress -->
     <div v-if="uploading" class="upload-progress mb-4">
-      <div class="progress-bar w-full h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
-        <div class="progress-fill h-full bg-blue-600 transition-all duration-300 ease-out" :style="{ width: uploadProgress + '%' }"></div>
+      <div class="progress-bar w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-3 border border-gray-300">
+        <div class="progress-fill h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 ease-out rounded-full" :style="{ width: uploadProgress + '%' }"></div>
       </div>
-      <p class="text-base text-gray-900">Uploading images... {{ uploadProgress }}%</p>
+      <p class="text-base text-gray-800 font-medium flex items-center gap-2">
+        <span class="material-icon-sm animate-spin text-blue-600">hourglass_empty</span>
+        Uploading images... {{ uploadProgress }}%
+      </p>
     </div>
 
     <!-- Error messages -->

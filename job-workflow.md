@@ -1,4 +1,17 @@
 # Job Workflow Documentation
+## Overview
+The correct name for job here is 'job ticket'. We will use 'job' for brevity.
+
+A job is always created by a client user or reporter or by a client budget or department controller. Inherently therefore, when a job is in the 'Reported' state, all the fields that were available for data capture at the time of creation, remain available for editing to both roles 1 and 2 (see below).
+In the reported state, only Role 2 may change the state of a job and then only to the states allowed.
+
+The state of the job determines:
+   * The role that is able to change the state
+   * The possible next states
+   * The fields that are available for editing and viewing
+   * In certain cases, some fields are required before a state can be selected
+
+By changing its state, a user moves the job away from themselves and to the next entity and user in the chain
 
 ## Job Types
 ### Jobs for subscribed service providers (type A)
@@ -16,7 +29,7 @@ These service providers have independent job management using their own system o
    3. Service provider admin/Dispatcher/Supervisor/Chief technician
    4. Technician/Artisan/Tradesman/Service Provider User
 
-## Status System (Simplified)
+## Status System (Complete Workflow)
 ### Status Flow 
 1. **Reported** - Job is created by Client (role 1 or role 2):
    - Permissions
@@ -49,9 +62,9 @@ These service providers have independent job management using their own system o
          - Accept the job (must have a technician), setting it to the `In Progress` state
          - Decline the job (must have a reason), setting it to the `Declined` state
 
-3. **In Progress** - Job is available to the allocated technician (Role 3 or 4) for work to proceed: 
+3. **In Progress** - Job is available to the allocated technician (Role 3 or 4) for work to proceed:
    - Permissions
-      - Client Role 1 an 2 can view, but cannot edit.
+      - Client Role 1 and 2 can view, but cannot edit.
       - Supervisor (role 3) or Technician (role 4) can add notes and update status
    - Allowed next states
       - `Completed` A note of explanation is optional
@@ -64,7 +77,7 @@ These service providers have independent job management using their own system o
       - Service Provider role 3 and 4 can view only
    - Allowed next states:
       - `Confirmed` An optional note can be provided
-      - `Incomplete` A note is required, Theuser could upload images
+      - `Incomplete` A note is required, the user could upload images
 
 5. **Incomplete** - Client representative (role 1 or role 2) rejects completion
    - Permissions
@@ -115,7 +128,38 @@ These service providers have independent job management using their own system o
       - Client (role 1) can view job but cannot view quote
       - Service Provider (role 3) can view job and quote
    - Allowed next states
-      - `Assigned` The quote is accepted and the service provider can continue with the job
+      - `Assigned` The quote is accepted and the service provider can continue with the job (automatically creates a new "Assigned" job with quote details incorporated)
       - `Quote Requested` The quote details are being queried. The service provider is asked to revisit the quote. A note to the service provider is required
       - `Rejected` Terminate this job with no further action
       - Re-assign to another service provider by resetting the quote information. In this case it is identical to returning to the initial `Reported` state with cleared service provider quote information. A message is sent to the service provider that their quote was not accepted.
+
+12. **Unable to Quote** - Service Provider cannot provide quotation
+   - Permissions
+      - Service Provider (role 3) can change state
+      - Client (role 1 and 2) can view
+   - Allowed next states
+      - `Reported` - Return to reported state for reassignment to different provider
+      - `Rejected` - Terminate the job entirely
+
+13. **Quote Rejected** - Client rejects the service provider's quotation
+   - Permissions
+      - Client (role 2) can change state
+      - Service Provider (role 3) can view
+   - Allowed next states
+      - `Quote Requested` - Request revised quote from same provider
+      - `Reported` - Reassign to different provider
+
+14. **Quote Expired** - Quote response time limit exceeded without client action
+   - Permissions
+      - System automatically manages this state
+      - Client (role 2) can change state
+   - Allowed next states
+      - `Quote Requested` - Extend deadline and request quote again
+      - `Reported` - Reassign to different provider
+
+15. **Job Cancelled** - Job cancelled by client at any point before completion
+   - Permissions
+      - Client (role 2) can cancel any active job
+      - Service Provider can view cancelled jobs
+   - Allowed next states
+      - None - This is a terminal state

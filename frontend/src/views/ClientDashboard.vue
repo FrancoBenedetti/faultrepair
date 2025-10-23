@@ -94,66 +94,137 @@
         </div>
 
         <!-- User Management Section - Only for budget controllers -->
-        <UserManagementSection
-          v-if="userRole === 2"
-          :expanded="sectionsExpanded.users"
-          :users="users"
-          :available-roles="availableRoles"
-          :is-admin="isAdmin"
-          :current-user-id="userId"
-          @toggle="sectionsExpanded = {...sectionsExpanded, users: !sectionsExpanded.users}"
-          @add-user="showAddUserModal = true"
-          @edit-user="handleEditUser"
-        />
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8" v-if="userRole === 2">
+          <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('users')" style="cursor: pointer;">
+            <div class="section-title flex items-center gap-3">
+              <button class="expand-btn" :class="{ expanded: sectionsExpanded.users }">
+                <span class="material-icon-sm">expand_more</span>
+              </button>
+              <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+                <span class="material-icon text-blue-600">group</span>
+                User Management
+                <span v-if="users?.length" class="text-sm font-normal text-blue-600">({{ users.length }})</span>
+              </h2>
+            </div>
+          </div>
+
+          <div v-show="sectionsExpanded.users" class="section-content transition-all duration-300 ease-in-out">
+            <UserManagementSection
+              :expanded="false"
+              :users="users"
+              :available-roles="availableRoles"
+              :is-admin="isAdmin"
+              :current-user-id="userId"
+              @add-user="showAddUserModal = true"
+              @edit-user="handleEditUser"
+              @delete-user="handleDeleteUser"
+            />
+          </div>
+        </div>
 
         <!-- Locations Section - Only for budget controllers -->
-        <LocationManagementSection
-          v-if="userRole === 2"
-          :expanded="sectionsExpanded.locations"
-          :locations="locations"
-          :locations-view-mode="locationsViewMode"
-          :is-admin="isAdmin"
-          @toggle="sectionsExpanded = {...sectionsExpanded, locations: !sectionsExpanded.locations}"
-          @view-mode-changed="locationsViewMode = $event"
-          @edit-location="handleEditLocation"
-          @filter-jobs="filterJobsByLocation"
-        />
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8" v-if="userRole === 2">
+          <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('locations')" style="cursor: pointer;">
+            <div class="section-title flex items-center gap-3">
+              <button class="expand-btn" :class="{ expanded: sectionsExpanded.locations }">
+                <span class="material-icon-sm">expand_more</span>
+              </button>
+              <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+                <span class="material-icon text-blue-600">location_on</span>
+                Locations
+                <span v-if="locations?.length" class="text-sm font-normal text-blue-600">({{ locations.length }})</span>
+              </h2>
+            </div>
+          </div>
+
+          <div v-show="sectionsExpanded.locations" class="section-content transition-all duration-300 ease-in-out">
+            <LocationManagementSection
+              :expanded="false"
+              :locations="locations"
+              :is-admin="isAdmin"
+              @edit-location="handleEditLocation"
+              @add-location="showAddLocationModal = true"
+              @filter-jobs="filterJobsByLocation"
+            />
+          </div>
+        </div>
 
         <!-- Approved Providers Section - Only for budget controllers -->
-        <ProviderManagementSection
-          v-if="userRole === 2"
-          :expanded="sectionsExpanded.providers"
-          :approved-providers="approvedProviders"
-          :is-admin="isAdmin"
-          @toggle="sectionsExpanded = {...sectionsExpanded, providers: !sectionsExpanded.providers}"
-          @view-provider-jobs="handleViewProviderJobs"
-          @browse-providers="$router.push('/browse-providers')"
-        />
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8" v-if="userRole === 2">
+          <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('providers')" style="cursor: pointer;">
+            <div class="section-title flex items-center gap-3">
+              <button class="expand-btn" :class="{ expanded: sectionsExpanded.providers }">
+                <span class="material-icon-sm">expand_more</span>
+              </button>
+              <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+                <span class="material-icon text-blue-600">business</span>
+                Approved Providers
+                <span v-if="approvedProviders?.length" class="text-sm font-normal text-blue-600">({{ approvedProviders.length }})</span>
+              </h2>
+            </div>
+          </div>
+
+          <div v-show="sectionsExpanded.providers" class="section-content transition-all duration-300 ease-in-out">
+            <ProviderManagementSection
+              :expanded="false"
+              :approved-providers="approvedProviders"
+              :is-admin="isAdmin"
+              @view-provider-jobs="handleViewProviderJobs"
+              @browse-providers="$router.push('/browse-providers')"
+            />
+          </div>
+        </div>
 
         <!-- Jobs Section - For all user roles -->
-        <JobManagementSection
-          :jobs="jobs"
-          :job-filters="jobFilters"
-          :locations="locations"
-          :approved-providers="approvedProviders"
-        :user-role="userRole"
-        :client-profile="clientProfile"
-        @update-job-filters="updateJobFilters"
-        @load-jobs="loadJobs"
-        @create-job="$emit('show-create-job')"
-        @view-job-details="handleViewJobDetails"
-        @edit-job="handleEditJob"
-        @toggle-archive-job="toggleArchiveJob"
-        @confirm-job="console.log('EVENT RECEIVED: confirm-job', $event); showJobConfirmationModal = true; confirmationJob = $event; console.log('ClientDashboard: AFTER event handler - showJobConfirmationModal:', showJobConfirmationModal, 'confirmationJob:', confirmationJob)"
-        @reject-job="showJobRejectionModal = true; rejectionJob = $event"
-        @accept-quote="showQuoteResponseModal = true; quoteResponseJob = $event; quoteResponseAction = 'accept'"
-        @reject-quote="showQuoteRejectionModal = true; quoteRejectionJob = $event; quoteRejectionAction = 'reject'"
-        />
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+          <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('jobs')" style="cursor: pointer;">
+            <div class="section-title flex items-center gap-3">
+              <button class="expand-btn" :class="{ expanded: sectionsExpanded.jobs }">
+                <span class="material-icon-sm">expand_more</span>
+              </button>
+              <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+                <span class="material-icon text-blue-600">work</span>
+                Job Management
+                <span v-if="jobs && jobs.length" class="text-sm font-normal text-blue-600">({{ jobs.length }})</span>
+              </h2>
+            </div>
+            <div class="section-header-actions flex items-center gap-4" @click.stop>
+              <button @click.stop="showCreateJobModal = true" class="btn-filled flex items-center gap-2" :disabled="!clientProfile?.is_enabled">
+                <span class="material-icon-sm">add</span>
+                Service Request
+              </button>
+            </div>
+          </div>
+
+          <div v-show="sectionsExpanded.jobs" class="section-content transition-all duration-300 ease-in-out">
+            <JobManagementSection
+              :jobs="jobs"
+              :job-filters="jobFilters"
+              :locations="locations"
+              :approved-providers="approvedProviders"
+              :user-role="userRole"
+              :client-profile="clientProfile"
+              :is-admin="isAdmin"
+              :expanded="sectionsExpanded.jobs"
+              @update-job-filters="updateJobFilters"
+              @load-jobs="loadJobs"
+              @create-job="showCreateJobModal = true"
+              @view-job-details="handleViewJobDetails($event)"
+              @edit-job="handleEditJob($event)"
+              @toggle-archive-job="toggleArchiveJob($event)"
+              @confirm-job="handleConfirmJob($event)"
+              @reject-job="handleRejectJob($event)"
+              @accept-quote="handleAcceptQuote($event)"
+              @reject-quote="handleRejectQuote($event)"
+            />
+          </div>
+        </div>
       </div>
 
       <!-- Modals -->
       <AddUserModal
         v-if="showAddUserModal"
+        :newUser="newUser"
         :available-roles="availableRoles"
         :adding-user="addingUser"
         @close="showAddUserModal = false"
@@ -162,33 +233,66 @@
 
       <EditUserModal
         v-if="showEditUserModal"
-        :user="editingUser"
+        :editingUser="editingUser"
         :available-roles="availableRoles"
         :updating-user="updatingUser"
         @close="showEditUserModal = false"
         @submit="handleUpdateUser"
       />
 
+      <AddLocationModal
+        v-if="showAddLocationModal"
+        :newLocation="newLocation"
+        :adding-location="addingLocation"
+        @close="showAddLocationModal = false"
+        @submit="handleAddLocation"
+      />
+
+      <EditLocationModal
+        v-if="showEditLocationModal"
+        :editingLocation="editingLocation"
+        :updating="false"
+        @close="showEditLocationModal = false"
+        @submit="handleUpdateLocation"
+      />
+
       <CreateJobModal
-        v-if="showCreateJobModal"
+        :show="showCreateJobModal"
         :locations="locations"
         :creating-job="creatingJob"
         :new-job="newJob"
         @close="closeCreateJobModal"
         @submit="handleCreateJob"
         @qr-detected="handleQrDetected"
+        @images-changed="handleImagesChanged"
       />
 
-      <JobDetailsModal
-        v-if="showJobDetailsModal"
-        :job="selectedJob"
-        @close="showJobDetailsModal = false"
-        @image-click="selectedImage = $event"
+    <JobDetailsModal
+      v-if="showJobDetailsModal"
+      :job="selectedJob"
+      @close="showJobDetailsModal = false"
+      @image-click="selectedImage = $event"
+    />
+
+    <ProviderDetailsModal
+      v-if="showProviderDetailsModal"
+      :provider="selectedProvider"
+      @close="showProviderDetailsModal = false"
+    />
+
+      <EditJobModal
+        v-if="showEditJobModal"
+        :job="editingJob"
+        :userRole="userRole"
+        :userId="userId"
+        :entityId="entityId"
+        :entityType="'client'"
+        @close="showEditJobModal = false"
+        @updated="handleEditJobUpdated"
       />
 
-      <!-- Job Confirmation Modal -->
-      <!-- EMERGENCY: Force modal OFF to test if template condition is driving it -->
-      <div v-if="false && showJobConfirmationModal" class="modal-overlay" @click="console.log('ClientDashboard: Modal overlay clicked'); closeJobConfirmationModal()">
+      <!-- Job Confirmation Modal - Temporarily disabled due to auto-trigger bug -->
+      <!-- <div v-if="showJobConfirmationModal" class="modal-overlay" @click="closeJobConfirmationModal()">
         <div class="modal-content" @click.stop>
           <div class="modal-header">
             <h3>Confirm Job Completion</h3>
@@ -257,8 +361,12 @@ import LocationManagementSection from '@/components/dashboard/LocationManagement
 import JobManagementSection from '@/components/dashboard/JobManagementSection.vue'
 import AddUserModal from '@/components/modals/AddUserModal.vue'
 import EditUserModal from '@/components/modals/EditUserModal.vue'
+import AddLocationModal from '@/components/modals/AddLocationModal.vue'
+import EditLocationModal from '@/components/modals/EditLocationModal.vue'
 import CreateJobModal from '@/components/modals/CreateJobModal.vue'
+import EditJobModal from '@/components/modals/EditJobModal.vue'
 import JobDetailsModal from '@/components/modals/JobDetailsModal.vue'
+import ProviderDetailsModal from '@/components/modals/ProviderDetailsModal.vue'
 
 export default {
   name: 'ClientDashboard',
@@ -273,8 +381,12 @@ export default {
     JobManagementSection,
     AddUserModal,
     EditUserModal,
+    AddLocationModal,
     CreateJobModal,
-    JobDetailsModal
+    JobDetailsModal,
+    EditJobModal,
+    EditLocationModal,
+    ProviderDetailsModal
   },
   data() {
     return {
@@ -320,6 +432,7 @@ export default {
         is_active: true
       },
       showJobDetailsModal: false,
+      showProviderDetailsModal: false,
       showEditJobModal: false,
       showJobConfirmationModal: false,
       showJobRejectionModal: false,
@@ -329,12 +442,14 @@ export default {
       rejectionJob: null,
       quoteResponseJob: null,
       quoteRejectionJob: null,
+      selectedProvider: null,
       confirmationNotes: '',
       rejectionNotes: '',
       quoteResponseNotes: '',
       quoteRejectionNotes: '',
       addingUser: false,
       updatingUser: false,
+      deletingUser: false,
       creatingJob: false,
       updatingProfile: false, // Client profile update loading state
       acceptingQuote: false,
@@ -466,6 +581,19 @@ export default {
     this.loadJobs()
   },
   computed: {
+    entityId() {
+      try {
+        const token = localStorage.getItem('token')
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+          return payload.entity_id || payload.client_id
+        }
+      } catch (error) {
+        console.error('Failed to parse JWT token:', error)
+      }
+      return null
+    },
+
     getProfileDisabled() {
       return this.editingProfile && !this.editingProfile.is_enabled
     }
@@ -707,6 +835,32 @@ export default {
       this.showEditUserModal = true
     },
 
+    async handleDeleteUser(user) {
+      this.deletingUser = true
+      try {
+        if (!confirm(`Are you sure you want to delete user "${user.username}"? This action cannot be undone.`)) {
+          return
+        }
+
+        const response = await apiFetch(`/backend/api/client-users.php?user_id=${user.id}`, {
+          method: 'DELETE'
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          alert(data.message)
+          this.loadUsers()
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert('Failed to delete user')
+      } finally {
+        this.deletingUser = false
+      }
+    },
+
     async handleAddUser(userData) {
       this.addingUser = true
       try {
@@ -731,12 +885,32 @@ export default {
       }
     },
 
+    async handleAddLocation(locationData) {
+      this.newLocation = { ...locationData }
+      await this.addLocation()
+    },
+
     async handleUpdateUser(userData) {
       this.updatingUser = true
       try {
+        // Merge form data with the existing user ID
+        const updateData = {
+          user_id: userData.id,
+          email: userData.email,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          mobile: userData.phone || null,
+          role_id: userData.role_id
+        }
+
+        // Include password if it was provided for password change
+        if (userData.newPassword) {
+          updateData.password = userData.newPassword
+        }
+
         const response = await apiFetch('/backend/api/client-users.php', {
           method: 'PUT',
-          body: JSON.stringify(userData)
+          body: JSON.stringify(updateData)
         })
 
         if (response.ok) {
@@ -755,6 +929,34 @@ export default {
       }
     },
 
+    async handleUpdateLocation(locationData) {
+      try {
+        const response = await apiFetch('/backend/api/client-locations.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            location_id: locationData.id,
+            name: locationData.name.trim(),
+            address: locationData.address ? locationData.address.trim() : '',
+            coordinates: locationData.coordinates ? locationData.coordinates.trim() : '',
+            access_rules: locationData.access_rules ? locationData.access_rules.trim() : '',
+            access_instructions: locationData.access_instructions ? locationData.access_instructions.trim() : ''
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          alert(data.message)
+          this.showEditLocationModal = false
+          this.loadLocations()
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert('Failed to update location')
+      }
+    },
+
     handleEditLocation(location) {
       this.editingLocation = {
         id: location.id,
@@ -767,10 +969,15 @@ export default {
       this.showEditLocationModal = true
     },
 
-    handleViewProviderJobs(provider) {
-      // Filter jobs to show only those for the selected provider
-      this.jobFilters.provider_id = provider.service_provider_id
+    handleEditJobUpdated() {
+      // Refresh jobs list after edit modal updates
       this.loadJobs()
+    },
+
+    handleViewProviderJobs(provider) {
+      // Open provider details modal
+      this.selectedProvider = provider
+      this.showProviderDetailsModal = true
     },
 
     async handleViewJobDetails(job) {
@@ -841,9 +1048,7 @@ export default {
     },
 
     async handleCreateJob(jobData) {
-      // This is now handled by the modal component itself
-      // We can keep this as a passthrough if needed
-      console.log('Creating job:', jobData)
+      await this.createJob()
     },
 
     viewProviderJobs(provider) {
@@ -1078,23 +1283,50 @@ export default {
           const data = await response.json()
           const jobId = data.job_id
 
-      // Upload images if any were selected - let the ImageUpload component handle this
-      if (this.selectedImages.length > 0) {
-        console.log('ClientDashboard: Starting image upload for job', jobId, 'with', this.selectedImages.length, 'images')
-        try {
-          console.log('ClientDashboard: Calling uploadImages with jobId:', jobId)
-          await this.$refs.imageUpload.uploadImages(jobId)
-          console.log('ClientDashboard: Image upload completed successfully')
-        } catch (imageError) {
-          console.error('ClientDashboard: Image upload failed:', imageError)
-          // Show a warning but don't fail the job creation
-          setTimeout(() => {
-            alert('Job created successfully, but image upload failed. You can try uploading images again by editing the job.')
-          }, 100)
+        // Upload images if any were selected - handle directly in ClientDashboard
+        if (this.selectedImages.length > 0) {
+          console.log('ClientDashboard: Starting image upload for job', jobId, 'with', this.selectedImages.length, 'images')
+          try {
+            let successCount = 0
+            const token = localStorage.getItem('token')
+
+            for (let i = 0; i < this.selectedImages.length; i++) {
+              const image = this.selectedImages[i]
+              const formData = new FormData()
+              formData.append('image', image.file)
+              formData.append('job_id', jobId.toString())
+
+              console.log('ClientDashboard: Uploading image', i + 1, 'of', this.selectedImages.length, 'for job', jobId)
+
+              const response = await fetch(`/backend/api/upload-job-image.php?token=${encodeURIComponent(token)}`, {
+                method: 'POST',
+                body: formData
+              })
+
+              if (response.ok) {
+                successCount++
+                console.log('ClientDashboard: Image upload successful')
+              } else {
+                const errorData = await response.json()
+                console.error('ClientDashboard: Image upload failed:', errorData)
+              }
+            }
+
+            if (successCount === this.selectedImages.length) {
+              console.log('ClientDashboard: All image uploads successful')
+            } else {
+              console.log('ClientDashboard: Some uploads failed:', successCount, 'of', this.selectedImages.length, 'successful')
+            }
+          } catch (imageError) {
+            console.error('ClientDashboard: Image upload failed:', imageError)
+            // Show a warning but don't fail the job creation
+            setTimeout(() => {
+              alert('Job created successfully, but image upload failed. You can try uploading images again by editing the job.')
+            }, 100)
+          }
+        } else {
+          console.log('ClientDashboard: No images selected, skipping upload')
         }
-      } else {
-        console.log('ClientDashboard: No images selected, skipping upload')
-      }
 
           alert('Service request submitted successfully!')
           this.showCreateJobModal = false
@@ -1185,18 +1417,7 @@ export default {
       }
     },
 
-    async editLocation(location) {
-      // Populate the editing form with current location data
-      this.editingLocation = {
-        id: location.id,
-        name: location.name,
-        address: location.address || '',
-        coordinates: location.coordinates || '',
-        access_rules: location.access_rules || '',
-        access_instructions: location.access_instructions || ''
-      }
-      this.showEditLocationModal = true
-    },
+    // Removed duplicate editLocation method - using handleEditLocation instead
 
     async updateLocation() {
       const token = localStorage.getItem('token')
@@ -1259,6 +1480,130 @@ export default {
       // Set the location filter to this location
       this.jobFilters.location_id = location.id
       this.loadJobs()
+    },
+
+    // Job confirmation and rejection handlers
+    async handleConfirmJob(job) {
+      if (confirm(`Confirm completion of job "${job.item_identifier}"?\n\nThis will mark the job as confirmed.`)) {
+        await this.confirmJobCompletion(job);
+      }
+    },
+
+    handleRejectJob(job) {
+      // Open edit modal to handle rejection with notes and status selection
+      this.editingJob = { ...job };
+      // Set to null to force reload of technicians if needed
+      this.editingJob.assigned_technician_user_id = null;
+      this.showEditJobModal = true;
+    },
+
+    async handleAcceptQuote(job) {
+      // Enhanced confirmation dialog with more details
+      const confirmMessage = `Accept this quotation for "${job.item_identifier}"?
+
+Quote Details:
+• New job will be created with status "Assigned"
+• Original quote job will remain in history
+• Service provider can begin work immediately
+
+Are you sure you want to proceed?`;
+
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+
+      try {
+        // Validate that we have a current quotation
+        if (!job.current_quotation_id) {
+          alert('No quote found for this job. Please refresh the page and try again.');
+          return;
+        }
+
+        const response = await apiFetch('/backend/api/accept-quote-and-duplicate.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            quote_id: job.current_quotation_id
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          alert(`Quote accepted successfully! New job created with ID: ${data.new_job_id}`);
+
+          // Refresh jobs list to show both the original job and the new assigned job
+          this.loadJobs();
+        } else {
+          const errorData = await response.json();
+          this.handleError(errorData);
+        }
+      } catch (error) {
+        alert('Failed to accept quote');
+      }
+    },
+
+    handleRejectQuote(job) {
+      // Set job being rejected and open EditJobModal for state transitions
+      this.editingJob = { ...job };
+      this.showEditJobModal = true;
+      this.rejectQuoteMode = true;
+    },
+
+    async confirmJobCompletion(job) {
+      try {
+        const response = await apiFetch('/backend/api/job-completion-confirmation.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            job_id: job.id,
+            action: 'confirm',
+            notes: ''
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          // Update the job in the local array
+          const jobIndex = this.jobs.findIndex(j => j.id === job.id)
+          if (jobIndex !== -1) {
+            this.jobs[jobIndex].job_status = 'Confirmed'
+            this.jobs[jobIndex].updated_at = new Date().toISOString()
+          }
+          alert('Job confirmed successfully!')
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert('Failed to confirm job')
+      }
+    },
+
+    async rejectJobCompletion(job, reason) {
+      try {
+        const response = await apiFetch('/backend/api/job-completion-confirmation.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            job_id: job.id,
+            action: 'reject',
+            notes: reason
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          // Update the job in the local array
+          const jobIndex = this.jobs.findIndex(j => j.id === job.id)
+          if (jobIndex !== -1) {
+            this.jobs[jobIndex].job_status = 'Incomplete'
+            this.jobs[jobIndex].updated_at = new Date().toISOString()
+          }
+          alert('Job rejected successfully!')
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert('Failed to reject job')
+      }
     },
 
     openImageModal(image) {

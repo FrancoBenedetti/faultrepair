@@ -1,93 +1,87 @@
 <template>
-  <CollapsibleSection
-    title="Approved Service Providers"
-    icon="handshake"
-    :expanded="expanded"
-    @toggle="$emit('toggle')"
-  >
-    <template #header-actions>
-      <router-link v-if="isAdmin" to="/browse-providers" class="btn-outlined" @click.stop>
-        <span class="material-icon-sm mr-2">search</span>
-        Browse Providers
-      </router-link>
-    </template>
+  <!-- Browse Providers button -->
+  <div class="section-header-actions mb-6" v-if="isAdmin">
+    <button @click="$emit('browse-providers')" class="btn-outlined">
+      <span class="material-icon-sm mr-2">search</span>
+      Browse Providers
+    </button>
+  </div>
 
-    <!-- Loading state -->
-    <LoadingState v-if="!approvedProviders" message="Loading providers..." fullWidth />
+  <!-- Loading state -->
+  <LoadingState v-if="!approvedProviders" message="Loading providers..." fullWidth />
 
-    <!-- Provider cards -->
-    <div v-else-if="approvedProviders && approvedProviders.length > 0" class="providers-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <Card
-        v-for="provider in approvedProviders"
-        :key="provider.id"
-        clickable
-        @click="$emit('view-provider-jobs', provider)"
-      >
-        <template #header>
-          <div class="provider-logo w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-            <span class="material-icon text-on-primary">{{ provider.name.charAt(0).toUpperCase() }}</span>
-          </div>
-          <div class="provider-actions flex gap-2">
-            <button @click.stop="$emit('view-provider-jobs', provider)" class="btn-outlined btn-small">
-              <span class="material-icon-sm">visibility</span>
-            </button>
-          </div>
-        </template>
-
-        <template #content>
-          <h3 class="provider-name text-title-medium text-on-surface mb-2">{{ provider.name }}</h3>
-          <p class="provider-address text-body-medium text-on-surface-variant mb-4">{{ provider.address }}</p>
-
-          <div class="provider-stats grid grid-cols-3 gap-3">
-            <div class="stat-item text-center">
-              <span class="stat-number text-xl font-bold text-on-surface">{{ provider.total_jobs }}</span>
-              <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Total</span>
-            </div>
-            <div class="stat-item text-center">
-              <span class="stat-number text-xl font-bold text-on-surface">{{ provider.active_jobs }}</span>
-              <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Active</span>
-            </div>
-            <div class="stat-item text-center">
-              <span class="stat-number text-xl font-bold text-on-surface">{{ provider.completed_jobs }}</span>
-              <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Completed</span>
-            </div>
-          </div>
-        </template>
-
-        <template #footer>
-          <div class="approval-date text-label-medium text-on-surface-variant">
-            <span class="material-icon-sm mr-1">check_circle</span>
-            Approved {{ formatDate(provider.approved_at) }}
-          </div>
-        </template>
-      </Card>
-    </div>
-
-    <!-- No providers state -->
-    <ErrorState
-      v-else-if="approvedProviders && approvedProviders.length === 0"
-      title="No approved providers"
-      message="Browse and approve service providers to get started."
-      icon="handshake"
+  <!-- Provider cards -->
+  <div v-else-if="approvedProviders && approvedProviders.length > 0" class="providers-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- Existing provider cards -->
+    <Card
+      v-for="provider in approvedProviders"
+      :key="provider.id"
+      clickable
+      @click="$emit('view-provider-jobs', provider)"
     >
-      <router-link v-if="isAdmin" to="/browse-providers" class="btn-outlined">
-        <span class="material-icon-sm mr-2">search</span>
-        Browse Providers
-      </router-link>
-    </ErrorState>
+      <template #header>
+        <div class="provider-logo w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+          <span class="material-icon text-on-primary">{{ provider.name.charAt(0).toUpperCase() }}</span>
+        </div>
+        <div class="provider-actions flex gap-2">
+          <button @click.stop="$emit('view-provider-jobs', provider)" class="btn-outlined btn-small">
+            <span class="material-icon-sm">visibility</span>
+          </button>
+        </div>
+      </template>
 
-    <!-- Error state -->
-    <ErrorState
-      v-else
-      title="Failed to load providers"
-      message="Please try refreshing the page."
-      icon="error"
-    />
-  </CollapsibleSection>
+      <template #content>
+        <h3 class="provider-name text-title-medium text-on-surface mb-2">{{ provider.name }}</h3>
+        <p class="provider-address text-body-medium text-on-surface-variant mb-4">{{ provider.address }}</p>
+
+        <div class="provider-stats grid grid-cols-3 gap-3">
+          <div class="stat-item text-center">
+            <span class="stat-number text-xl font-bold text-on-surface">{{ provider.total_jobs }}</span>
+            <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Total</span>
+          </div>
+          <div class="stat-item text-center">
+            <span class="stat-number text-xl font-bold text-on-surface">{{ provider.active_jobs }}</span>
+            <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Active</span>
+          </div>
+          <div class="stat-item text-center">
+            <span class="stat-number text-xl font-bold text-on-surface">{{ provider.completed_jobs }}</span>
+            <span class="stat-label text-label-small text-on-surface-variant uppercase tracking-wide">Completed</span>
+          </div>
+        </div>
+      </template>
+
+      <template #footer>
+        <div class="approval-date text-label-medium text-on-surface-variant">
+          <span class="material-icon-sm mr-1">check_circle</span>
+          Approved {{ formatDate(provider.approved_at) }}
+        </div>
+      </template>
+    </Card>
+  </div>
+
+  <!-- No providers state -->
+  <ErrorState
+    v-else-if="approvedProviders && approvedProviders.length === 0"
+    title="No approved providers"
+    message="Browse and approve service providers to get started."
+    icon="handshake"
+  >
+    <button v-if="isAdmin" @click="$emit('browse-providers')" class="btn-outlined ml-6 mt-4">
+      <span class="material-icon-sm mr-2">search</span>
+      Browse Providers
+    </button>
+  </ErrorState>
+
+  <!-- Error state -->
+  <ErrorState
+    v-else
+    title="Failed to load providers"
+    message="Please try refreshing the page."
+    icon="error"
+  />
 </template>
 
 <script>
-import CollapsibleSection from '@/components/shared/CollapsibleSection.vue'
 import Card from '@/components/shared/Card.vue'
 import LoadingState from '@/components/shared/LoadingState.vue'
 import ErrorState from '@/components/shared/ErrorState.vue'
@@ -95,7 +89,6 @@ import ErrorState from '@/components/shared/ErrorState.vue'
 export default {
   name: 'ProviderManagementSection',
   components: {
-    CollapsibleSection,
     Card,
     LoadingState,
     ErrorState

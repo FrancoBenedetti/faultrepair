@@ -1,12 +1,12 @@
 <template>
-  <div v-if="show" class="modal-overlay" @click="$emit('close')">
+  <div class="modal-overlay" @click="$emit('close')">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
-        <h3>Edit User: {{ editingUser.first_name }} {{ editingUser.last_name }}</h3>
+        <h3>Edit User{{ editingUser ? `: ${editingUser.first_name} ${editingUser.last_name}` : '' }}</h3>
         <button @click="$emit('close')" class="close-btn">&times;</button>
       </div>
 
-      <form @submit.prevent="handleSubmit" class="user-form">
+      <form v-if="editingUser" @submit.prevent="handleSubmit" class="user-form">
         <div class="form-row">
           <div class="form-group">
             <label for="edit-first-name">First Name</label>
@@ -63,10 +63,6 @@
 export default {
   name: 'EditUserModal',
   props: {
-    show: {
-      type: Boolean,
-      default: false
-    },
     editingUser: {
       type: Object,
       required: true
@@ -83,7 +79,7 @@ export default {
   emits: ['close', 'submit'],
   methods: {
     handleSubmit() {
-      this.$emit('submit')
+      this.$emit('submit', this.editingUser)
     }
   }
 }

@@ -131,9 +131,8 @@ if ($file['size'] > $max_size) {
     exit;
 }
 
-// Create uploads directory if it doesn't exist
-// Path is relative to the backend API directory: backend/uploads/job_images/
-$upload_dir = '../uploads/job_images/';
+// Create uploads directory if it doesn't exist (use absolute path from document root)
+$upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/job_images/';
 if (!is_dir($upload_dir)) {
     mkdir($upload_dir, 0755, true);
     error_log(__FILE__ . ' - Created upload directory: ' . realpath($upload_dir));

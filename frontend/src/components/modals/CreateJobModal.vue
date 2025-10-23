@@ -23,16 +23,12 @@
           </div>
           <div class="form-group">
             <label for="location">Location</label>
-            <select v-if="locations && locations.length > 0" id="location" v-model="newJob.client_location_id">
-              <option value="">Select Location (optional)</option>
+            <select id="location" v-model="newJob.client_location_id">
+              <option value="0">Default Location (Client Premises)</option>
               <option v-for="location in locations" :key="location.id" :value="location.id">
                 {{ location.name }}
               </option>
             </select>
-            <div v-else class="default-location-display">
-              <span class="default-location-text">Default Location (Client Name)</span>
-              <input type="hidden" v-model="newJob.client_location_id" value="">
-            </div>
             <small class="form-help">
               Optional: Can be auto-filled from QR code. If no custom locations defined, this service request will be associated with your client name.
             </small>

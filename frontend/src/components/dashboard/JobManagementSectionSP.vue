@@ -87,8 +87,11 @@
                   <span>{{ job.assigned_technician || 'Not assigned' }}</span>
                 </div>
                 <div>
-                  <span class="font-medium">Images:</span>
-                  <span>{{ job.image_count }}</span>
+                  <span class="font-medium">{{ job.job_status === 'Quote Requested' ? 'Quote Due:' : 'Images:' }}</span>
+                  <span v-if="job.job_status === 'Quote Requested'" :class="getQuoteUrgencyClass(job.due_date)" class="font-medium">
+                    {{ formatQuoteDueDate(job.due_date) }}
+                  </span>
+                  <span v-else>{{ job.image_count }}</span>
                 </div>
               </div>
             </div>
@@ -180,6 +183,30 @@ export default {
     formatDate(dateString) {
       const date = new Date(dateString)
       return date.toLocaleDateString()
+    },
+    getQuoteUrgencyClass(dueDate) {
+      if (!dueDate) return 'text-gray-600';
+      const daysRemaining = this.calculateDaysRemaining(dueDate);
+      if (daysRemaining <= 1) return 'text-red-600 font-bold';
+      if (daysRemaining <= 3) return 'text-yellow-600';
+      return 'text-gray-600';
+    },
+    calculateDaysRemaining(dueDate) {
+      if (!dueDate) return 999;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const due = new Date(dueDate);
+      due.setHours(0, 0, 0, 0);
+      const diffTime = due.getTime() - today.getTime();
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    },
+    formatQuoteDueDate(dueDate) {
+      if (!dueDate) return 'No deadline';
+      const days = this.calculateDaysRemaining(dueDate);
+      if (days < 0) return `Overdue by ${Math.abs(days)} days`;
+      if (days === 0) return 'Due today';
+      if (days === 1) return '1 day left';
+      return `${days} days left`;
     }
   }
 }

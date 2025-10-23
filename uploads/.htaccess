@@ -1,0 +1,4 @@
+# Deny all direct access to uploaded files
+# All image access must go through the authenticated API endpoint
+Order Deny,Allow
+Deny from all

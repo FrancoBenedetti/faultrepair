@@ -1,73 +1,46 @@
 <template>
-  <div class="jobs-section card">
-    <!-- Jobs Section Header -->
-    <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
-      <div class="flex-1">
-        <CollapsibleSection
-          title="Job Management"
-          icon="build"
-          :expanded="true"
-        >
-          <template #title-suffix>
-            <div v-if="clientProfile && (clientProfile.is_enabled === false || clientProfile.is_enabled === 0 || clientProfile.is_enabled === '0')" class="admin-disabled-warning mt-3">
-              <div class="disabled-banner">
-                <div class="disabled-icon">⚠️</div>
-                <div class="disabled-content">
-                  <h4>Account Administratively Disabled</h4>
-                  <p>Service request creation is restricted. {{ clientProfile.disabled_reason || 'Please contact support for assistance.' }}</p>
-                </div>
-              </div>
-            </div>
-          </template>
-        </CollapsibleSection>
-      </div>
-      <button @click="$emit('create-job')" class="btn-filled" :disabled="!clientProfile?.is_enabled">
-        <span class="material-icon-sm mr-2">add</span>
-        Service Request
-      </button>
+  <!-- Job Filters -->
+  <div class="job-filters flex flex-wrap gap-4 mb-6 p-4 bg-neutral-50 rounded-lg">
+    <div class="filter-group min-w-40">
+      <label for="status-filter" class="form-label mb-1">Status:</label>
+      <select id="status-filter" v-model="jobFilters.status" @change="$emit('load-jobs')" class="form-input">
+        <option value="">All Statuses</option>
+        <option value="Reported">Reported</option>
+        <option value="Assigned">Assigned</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+      </select>
     </div>
-
-    <!-- Job Filters -->
-    <div class="job-filters flex flex-wrap gap-4 mb-6 p-4 bg-neutral-50 rounded-lg">
-      <div class="filter-group min-w-40">
-        <label for="status-filter" class="form-label mb-1">Status:</label>
-        <select id="status-filter" v-model="jobFilters.status" @change="$emit('load-jobs')" class="form-input">
-          <option value="">All Statuses</option>
-          <option value="Reported">Reported</option>
-          <option value="Assigned">Assigned</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Completed">Completed</option>
-        </select>
-      </div>
-      <!-- Archive filter only for budget controllers -->
-      <div v-if="isAdmin" class="filter-group min-w-40">
-        <label for="archive-filter" class="form-label mb-1">Archive Status:</label>
-        <select id="archive-filter" v-model="jobFilters.archive_status" @change="$emit('load-jobs')" class="form-input">
-          <option value="">All Jobs</option>
-          <option value="active">Active Jobs</option>
-          <option value="archived">Archived Jobs</option>
-        </select>
-      </div>
-      <!-- Location and Provider filters for budget controllers -->
-      <div v-if="isAdmin" class="filter-group min-w-40">
-        <label for="location-filter" class="form-label mb-1">Location:</label>
-        <select id="location-filter" v-model="jobFilters.location_id" @change="$emit('load-jobs')" class="form-input">
-          <option value="">All Locations</option>
-          <option v-for="location in locations" :key="location.id" :value="location.id">
-            {{ location.name }}
-          </option>
-        </select>
-      </div>
-      <div v-if="isAdmin" class="filter-group min-w-40">
-        <label for="provider-filter" class="form-label mb-1">Provider:</label>
-        <select id="provider-filter" v-model="jobFilters.provider_id" @change="$emit('load-jobs')" class="form-input">
-          <option value="">All Providers</option>
-          <option v-for="provider in approvedProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
-            {{ provider.name }}
-          </option>
-        </select>
-      </div>
+    <!-- Archive filter only for budget controllers -->
+    <div v-if="isAdmin" class="filter-group min-w-40">
+      <label for="archive-filter" class="form-label mb-1">Archive Status:</label>
+      <select id="archive-filter" v-model="jobFilters.archive_status" @change="$emit('load-jobs')" class="form-input">
+        <option value="">All Jobs</option>
+        <option value="active">Active Jobs</option>
+        <option value="archived">Archived Jobs</option>
+      </select>
     </div>
+    <!-- Location and Provider filters for budget controllers -->
+    <div v-if="isAdmin" class="filter-group min-w-40">
+      <label for="location-filter" class="form-label mb-1">Location:</label>
+      <select id="location-filter" v-model="jobFilters.location_id" @change="$emit('load-jobs')" class="form-input">
+        <option value="">All Locations</option>
+        <option value="0">Default</option>
+        <option v-for="location in locations" :key="location.id" :value="location.id">
+          {{ location.name }}
+        </option>
+      </select>
+    </div>
+    <div v-if="isAdmin" class="filter-group min-w-40">
+      <label for="provider-filter" class="form-label mb-1">Provider:</label>
+      <select id="provider-filter" v-model="jobFilters.provider_id" @change="$emit('load-jobs')" class="form-input">
+        <option value="">All Providers</option>
+        <option v-for="provider in approvedProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
+          {{ provider.name }}
+        </option>
+      </select>
+    </div>
+  </div>
 
     <!-- Loading state -->
     <LoadingState v-if="jobs === null" message="Loading jobs..." fullWidth />
@@ -85,35 +58,26 @@
             <StatusBadge :status="job.job_status" />
           </div>
           <div class="job-actions flex gap-2">
-            <button v-if="canEditJob(job)" @click.stop="$emit('edit-job', job)" class="btn-outlined btn-small">
-              <span class="material-icon-sm">edit</span>
+            <!-- For admin users (budget controllers), always show edit button -->
+            <button v-if="isAdmin" @click.stop="$emit('edit-job', job)" class="btn-outlined btn-small">
+              <span class="material-icon-sm">{{ canEditJob(job) ? 'edit' : 'visibility' }}</span>
             </button>
-            <button v-else @click.stop="$emit('view-job-details', job)" class="btn-outlined btn-small">
-              <span class="material-icon-sm">visibility</span>
-            </button>
-            <!-- Quote Response buttons for Quote Provided jobs -->
-            <button v-if="job.job_status === 'Quote Provided' && isAdmin" @click.stop="$emit('accept-quote', job)" class="btn-filled btn-small bg-green-600 hover:bg-green-700">
-              <span class="material-icon-sm">check_circle</span>
-              Accept Quote
-            </button>
-            <button v-if="job.job_status === 'Quote Provided' && isAdmin" @click.stop="$emit('reject-quote', job)" class="btn-outlined btn-small border-red-600 text-red-600 hover:bg-red-50">
-              <span class="material-icon-sm">cancel</span>
-              Reject Quote
-            </button>
-            <!-- Confirmation/Rejection buttons for completed jobs -->
-            <button v-if="job.job_status === 'Completed' && isAdmin" @click.stop="$emit('confirm-job', job)" class="btn-filled btn-small bg-green-600 hover:bg-green-700">
-              <span class="material-icon-sm">check_circle</span>
-              Confirm
-            </button>
-            <button v-if="job.job_status === 'Completed' && isAdmin" @click.stop="$emit('reject-job', job)" class="btn-outlined btn-small border-red-600 text-red-600 hover:bg-red-50">
-              <span class="material-icon-sm">cancel</span>
-              Reject
-            </button>
+            <!-- For regular users, show edit if they can edit, otherwise view -->
+            <template v-else>
+              <button v-if="canEditJob(job)" @click.stop="$emit('edit-job', job)" class="btn-outlined btn-small">
+                <span class="material-icon-sm">edit</span>
+              </button>
+              <button v-else @click.stop="$emit('view-job-details', job)" class="btn-outlined btn-small">
+                <span class="material-icon-sm">visibility</span>
+              </button>
+            </template>
+
             <!-- Archive/Unarchive button for budget controllers -->
             <button v-if="isAdmin" @click.stop="$emit('archive-job', job)" class="btn-outlined btn-small" :class="{ 'text-orange-600 border-orange-600': job.archived_by_client }">
               <span class="material-icon-sm">{{ job.archived_by_client ? 'unarchive' : 'archive' }}</span>
             </button>
           </div>
+
         </template>
 
         <template #content>
@@ -138,10 +102,64 @@
               <span class="meta-value text-body-small text-on-surface font-medium">{{ job.assigned_provider_name || 'Not assigned' }}</span>
             </div>
             <div class="meta-item">
-              <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">Images:</span>
-              <span class="meta-value text-body-small text-on-surface font-medium">{{ job.image_count }}</span>
+              <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">{{ job.job_status === 'Quote Requested' ? 'Quote Due:' : 'Images:' }}</span>
+              <span v-if="job.job_status === 'Quote Requested'" :class="getQuoteUrgencyClass(job.due_date)" class="meta-value text-body-small text-on-surface font-medium">
+                {{ formatQuoteDueDate(job.due_date) }}
+              </span>
+              <span v-else class="meta-value text-body-small text-on-surface font-medium">{{ job.image_count }}</span>
             </div>
           </div>
+
+          <!-- Floating Action Panel for Completed Jobs - Client Admin View -->
+          <div v-if="job?.job_status === 'Completed' && isAdmin"
+               class="completion-action-panel mt-4 p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+            <p class="text-sm font-medium text-green-800 mb-3 flex items-center gap-2">
+              <span class="material-icon text-green-600">check_circle</span>
+              Service provider has marked this job as complete
+            </p>
+            <div class="flex gap-3">
+              <button
+                @click.stop="$emit('confirm-job', job)"
+                class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <span class="material-icon-sm">check_circle</span>
+                Confirm completion
+              </button>
+              <button
+                @click.stop="$emit('reject-job', job)"
+                class="flex-1 bg-white hover:bg-gray-50 text-red-600 font-medium py-2 px-4 rounded-lg border border-red-200 transition-colors flex items-center justify-center gap-2"
+              >
+                <span class="material-icon-sm">cancel</span>
+                Reject / Return
+              </button>
+            </div>
+          </div>
+
+          <!-- Floating Action Panel for Quote Provided Jobs - Client Admin View -->
+          <div v-if="job?.job_status === 'Quote Provided' && isAdmin"
+               class="quote-action-panel mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+            <p class="text-sm font-medium text-blue-800 mb-3 flex items-center gap-2">
+              <span class="material-icon text-blue-600">description</span>
+              Quotation received from service provider
+            </p>
+            <div class="flex gap-3">
+              <button
+                @click.stop="$emit('accept-quote', job)"
+                class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <span class="material-icon-sm">check_circle</span>
+                Accept Quote
+              </button>
+              <button
+                @click.stop="$emit('reject-quote', job)"
+                class="flex-1 bg-white hover:bg-gray-50 text-red-600 font-medium py-2 px-4 rounded-lg border border-red-200 transition-colors flex items-center justify-center gap-2"
+              >
+                <span class="material-icon-sm">cancel</span>
+                Reject Quote
+              </button>
+            </div>
+          </div>
+
         </template>
 
         <template #footer>
@@ -168,11 +186,9 @@
       message="Please try refreshing the page."
       icon="error"
     />
-  </div>
 </template>
 
 <script>
-import CollapsibleSection from '@/components/shared/CollapsibleSection.vue'
 import Card from '@/components/shared/Card.vue'
 import LoadingState from '@/components/shared/LoadingState.vue'
 import ErrorState from '@/components/shared/ErrorState.vue'
@@ -181,7 +197,6 @@ import StatusBadge from '@/components/shared/StatusBadge.vue'
 export default {
   name: 'JobManagementSection',
   components: {
-    CollapsibleSection,
     Card,
     LoadingState,
     ErrorState,
@@ -219,6 +234,10 @@ export default {
     isAdmin: {
       type: Boolean,
       default: false
+    },
+    expanded: {
+      type: Boolean,
+      default: true
     }
   },
   methods: {
@@ -243,6 +262,30 @@ export default {
     formatDate(dateString) {
       const date = new Date(dateString)
       return date.toLocaleDateString()
+    },
+    getQuoteUrgencyClass(dueDate) {
+      if (!dueDate) return 'text-gray-600';
+      const daysRemaining = this.calculateDaysRemaining(dueDate);
+      if (daysRemaining <= 1) return 'text-red-600 font-bold';
+      if (daysRemaining <= 3) return 'text-yellow-600';
+      return 'text-gray-600';
+    },
+    calculateDaysRemaining(dueDate) {
+      if (!dueDate) return 999;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const due = new Date(dueDate);
+      due.setHours(0, 0, 0, 0);
+      const diffTime = due.getTime() - today.getTime();
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    },
+    formatQuoteDueDate(dueDate) {
+      if (!dueDate) return 'No deadline';
+      const days = this.calculateDaysRemaining(dueDate);
+      if (days < 0) return `Overdue by ${Math.abs(days)} days`;
+      if (days === 0) return 'Due today';
+      if (days === 1) return '1 day left';
+      return `${days} days left`;
     }
   }
 }

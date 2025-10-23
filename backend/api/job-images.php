@@ -145,9 +145,17 @@ try {
             exit;
         }
 
-        // Delete the physical file
-        if (file_exists($image['file_path'])) {
+        // Delete the physical file - use absolute path consistency
+        $absolute_file_path = $_SERVER['DOCUMENT_ROOT'] . '/uploads/job_images/' . basename($image['file_path']);
+        if (file_exists($absolute_file_path)) {
+            unlink($absolute_file_path);
+            error_log(__FILE__ . ' - Deleted image file: ' . $absolute_file_path);
+        } elseif (file_exists($image['file_path'])) {
+            // Fallback to stored path in case it's an absolute path
             unlink($image['file_path']);
+            error_log(__FILE__ . ' - Deleted image file (fallback): ' . $image['file_path']);
+        } else {
+            error_log(__FILE__ . ' - Warning: Could not find image file to delete: ' . $image['file_path'] . ' or ' . $absolute_file_path);
         }
 
         // Delete the database record

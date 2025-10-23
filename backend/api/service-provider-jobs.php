@@ -5,7 +5,7 @@ require_once '../config/database.php';
 require_once '../includes/JWT.php';
 
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, OPTIONS');
+header('Access-Control-Allow-Methods: GET, PUT, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json');
 
@@ -13,7 +13,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
 
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+$method = $_SERVER['REQUEST_METHOD'];
+
+if (!in_array($method, ['GET', 'PUT'])) {
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed']);
     exit;
@@ -30,6 +32,7 @@ if (!$token) {
 try {
     $payload = JWT::decode($token);
     $user_id = $payload['user_id'];
+    $role_id = $payload['role_id'];
     $entity_type = $payload['entity_type'];
     $entity_id = $payload['entity_id'];
 } catch (Exception $e) {
@@ -50,27 +53,28 @@ if ($entity_type !== 'service_provider') {
 error_log("service-provider-jobs.php - Processing request, user_id: $user_id, entity_id: $entity_id");
 
 try {
-    // Base condition - always filter by provider participant
-    $where_conditions = ["j.assigned_provider_participant_id = ?"];
-    $params = [$entity_id];
+    if ($method === 'GET') {
+        // Base condition - always filter by provider participant
+        $where_conditions = ["j.assigned_provider_participant_id = ?"];
+        $params = [$entity_id];
 
-    // If technician_id is passed, filter by specific technician (technician view)
-    if (isset($_GET['technician_id']) && !empty($_GET['technician_id'])) {
-        $where_conditions[] = "j.assigned_technician_user_id = ?";
-        $params[] = $_GET['technician_id'];
-        error_log("service-provider-jobs.php - Technician filter applied for technician_id: " . $_GET['technician_id']);
-    }
+        // If technician_id is passed, filter by specific technician (technician view)
+        if (isset($_GET['technician_id']) && !empty($_GET['technician_id'])) {
+            $where_conditions[] = "j.assigned_technician_user_id = ?";
+            $params[] = $_GET['technician_id'];
+            error_log("service-provider-jobs.php - Technician filter applied for technician_id: " . $_GET['technician_id']);
+        }
 
-    // Additional filters
-    if (isset($_GET['status']) && !empty($_GET['status'])) {
-        $where_conditions[] = "j.job_status = ?";
-        $params[] = $_GET['status'];
-    }
+        // Additional filters
+        if (isset($_GET['status']) && !empty($_GET['status'])) {
+            $where_conditions[] = "j.job_status = ?";
+            $params[] = $_GET['status'];
+        }
 
-    if (isset($_GET['client_id']) && !empty($_GET['client_id'])) {
-        $where_conditions[] = "p.participantId = ?";
-        $params[] = $_GET['client_id'];
-    }
+        if (isset($_GET['client_id']) && !empty($_GET['client_id'])) {
+            $where_conditions[] = "p.participantId = ?";
+            $params[] = $_GET['client_id'];
+        }
 
     // Filter for quote-related jobs if requested
     if (isset($_GET['quote_jobs']) && $_GET['quote_jobs'] === 'true') {
@@ -78,57 +82,280 @@ try {
         $params[] = $_GET['quote_jobs'];
     }
 
+    // Special case: return technicians instead of jobs
+    if (isset($_GET['get_technicians']) && $_GET['get_technicians'] === '1') {
+        error_log("service-provider-jobs.php - Returning technicians for entity_id: $entity_id");
+
+        $stmt = $pdo->prepare("
+            SELECT
+                u.userId,
+                u.username,
+                u.email,
+                u.first_name,
+                u.last_name,
+                u.phone,
+                u.role_id
+            FROM users u
+            WHERE u.entity_type = 'service_provider'
+              AND u.entity_id = ?
+              AND u.role_id IN (3, 4)
+            ORDER BY u.role_id ASC, u.created_at DESC
+        ");
+        $stmt->execute([$entity_id]);
+        $technicians = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode(['technicians' => $technicians]);
+        return; // Exit here, don't return jobs
+    }
+
     $where_clause = implode(" AND ", $where_conditions);
     error_log("service-provider-jobs.php - WHERE clause: $where_clause, params: " . json_encode($params));
 
     // Get filtered jobs assigned to this service provider
+        $stmt = $pdo->prepare("
+            SELECT
+                j.id,
+                j.item_identifier,
+                j.fault_description,
+                j.technician_notes,
+                j.job_status,
+                j.client_location_id,
+                j.quotation_deadline,
+                j.quotation_deadline as due_date,
+                j.created_at,
+                j.updated_at,
+                j.contact_person,
+                j.assigned_technician_user_id,
+                CASE
+                    WHEN j.client_location_id IS NULL THEN 'Default'
+                    ELSE l.name
+                END as location_name,
+                l.address as location_address,
+                l.coordinates as location_coordinates,
+                l.access_rules as location_access_rules,
+                l.access_instructions as location_access_instructions,
+                p.name as client_name,
+                p.participantId as client_id,
+                u.username as reporting_user,
+                CONCAT(tu.first_name, ' ', tu.last_name) as assigned_technician,
+                tu.userId as assigned_technician_user_id,
+                (SELECT COUNT(*) FROM job_images ji WHERE ji.job_id = j.id) as image_count
+            FROM jobs j
+            LEFT JOIN locations l ON j.client_location_id = l.id
+            LEFT JOIN participants p ON l.participant_id = p.participantId
+            LEFT JOIN users u ON j.reporting_user_id = u.userId
+            LEFT JOIN users tu ON j.assigned_technician_user_id = tu.userId
+            WHERE {$where_clause}
+            ORDER BY j.created_at DESC
+        ");
+
+        $stmt->execute($params);
+        $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        error_log("service-provider-jobs.php - Found " . count($jobs) . " jobs");
+        error_log("service-provider-jobs.php - First few jobs raw data:");
+        for ($i = 0; $i < min(3, count($jobs)); $i++) {
+            error_log("service-provider-jobs.php - Job " . ($i + 1) . ": " . json_encode([
+                'id' => $jobs[$i]['id'] ?? 'missing',
+                'assigned_technician_user_id' => $jobs[$i]['assigned_technician_user_id'] ?? 'missing',
+                'assigned_technician' => $jobs[$i]['assigned_technician'] ?? 'missing'
+            ]));
+        }
+
+        echo json_encode([
+            'jobs' => $jobs
+        ]);
+
+    } elseif ($method === 'PUT') {
+    // Update job (for service provider technicians and supervisors)
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    error_log("service-provider-jobs.php - PUT request input: " . json_encode($input));
+
+    if (!$input || !isset($input['job_id'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Job ID is required']);
+        exit;
+    }
+
+    $job_id = (int)$input['job_id'];
+
+    // Verify job belongs to this service provider
+    $stmt = $pdo->prepare("SELECT j.id FROM jobs j WHERE j.id = ? AND j.assigned_provider_participant_id = ?");
+    $stmt->execute([$job_id, $entity_id]);
+    if (!$stmt->fetch()) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Access denied. Job not found or does not belong to your service provider.']);
+        exit;
+    }
+
+    // Get job details to check ownership and status
     $stmt = $pdo->prepare("
-        SELECT
-            j.id,
-            j.item_identifier,
-            j.fault_description,
-            j.technician_notes,
-            j.job_status,
-            j.created_at,
-            j.updated_at,
-            j.contact_person,
-            j.assigned_technician_user_id,
-            l.name as location_name,
-            l.address as location_address,
-            l.coordinates as location_coordinates,
-            l.access_rules as location_access_rules,
-            l.access_instructions as location_access_instructions,
-            p.name as client_name,
-            p.participantId as client_id,
-            u.username as reporting_user,
-            CONCAT(tu.first_name, ' ', tu.last_name) as assigned_technician,
-            tu.userId as assigned_technician_user_id,
-            (SELECT COUNT(*) FROM job_images ji WHERE ji.job_id = j.id) as image_count
-        FROM jobs j
-        JOIN locations l ON j.client_location_id = l.id
-        JOIN participants p ON l.participant_id = p.participantId
-        LEFT JOIN users u ON j.reporting_user_id = u.userId
-        LEFT JOIN users tu ON j.assigned_technician_user_id = tu.userId
-        WHERE {$where_clause}
-        ORDER BY j.created_at DESC
+        SELECT j.assigned_technician_user_id, j.job_status FROM jobs j
+        WHERE j.id = ?
     ");
+    $stmt->execute([$job_id]);
+    $job = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    if (!$job) {
+        http_response_code(404);
+        echo json_encode(['error' => 'Job not found']);
+        exit;
+    }
+
+    $canEdit = false;
+
+    // Service Provider Role 3 (Supervisor) can edit:
+    // - Technician assignment and notes in Assigned, Quote Provided, Incomplete states
+    // - Status changes for most jobs
+    if ($role_id === 3) {
+        if (in_array($job['job_status'], ['Assigned', 'In Progress', 'Incomplete', 'Quote Requested', 'Quote Provided'])) {
+            $canEdit = true;
+        }
+    }
+
+    // Service Provider Role 4 (Technician) can edit:
+    // - Notes for jobs assigned to them when in progress
+    // - Status changes (completed, cannot repair) for jobs assigned to them
+    if ($role_id === 4 && $job['assigned_technician_user_id'] === $user_id) {
+        if (in_array($job['job_status'], ['In Progress'])) {
+            $canEdit = true;
+        }
+    }
+
+    if (!$canEdit) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Access denied. You do not have permission to edit this job.']);
+        exit;
+    }
+
+    $updates = [];
+    $params = [];
+
+    // Handle technician assignment (Role 3 only)
+    if ($role_id === 3 && isset($input['assigned_technician_user_id'])) {
+        $technician_id = $input['assigned_technician_user_id'];
+
+        // Convert empty string to NULL for database
+        if ($technician_id === '') {
+            $technician_id = null;
+        }
+
+        // Verify technician belongs to this service provider (allow both supervisors and technicians)
+        if ($technician_id) {
+            $stmt = $pdo->prepare("
+                SELECT u.userId FROM users u
+                WHERE u.userId = ? AND u.entity_id = ? AND u.role_id IN (3, 4)
+            ");
+            $stmt->execute([$technician_id, $entity_id]);
+            if (!$stmt->fetch()) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid technician assignment - technician does not belong to your organization']);
+                exit;
+            }
+        }
+
+        $updates[] = "assigned_technician_user_id = ?";
+        $params[] = $technician_id;
+    }
+
+    // Handle technician notes (both roles can update notes, but different permissions)
+    if (isset($input['technician_notes'])) {
+        $updates[] = "technician_notes = ?";
+        $params[] = $input['technician_notes'];
+    }
+
+    // Handle state change requests
+    if (isset($input['request_state_change'])) {
+        $allowedTransitions = [];
+
+        if ($role_id === 3) {
+            // Supervisor transitions
+            $supervisorTransitions = [
+                'Assigned' => ['in_progress'],
+                'Quote Requested' => ['quote_provided', 'unable_to_quote'],
+                'Incomplete' => ['in_progress', 'completed'],
+            ];
+            $allowedTransitions = $supervisorTransitions[$job['job_status']] ?? [];
+        } elseif ($role_id === 4) {
+            // Technician transitions
+            $technicianTransitions = [
+                'In Progress' => ['completed', 'cannot_repair'],
+            ];
+            $allowedTransitions = $technicianTransitions[$job['job_status']] ?? [];
+        }
+
+        if (!in_array($input['request_state_change'], $allowedTransitions)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid state transition for your role: ' . $input['request_state_change']]);
+            exit;
+        }
+
+        // Map frontend state transition keys to actual job statuses
+        $stateMapping = [
+            'in_progress' => 'In Progress',
+            'quote_provided' => 'Quote Provided',
+            'unable_to_quote' => 'Unable to quote',
+            'completed' => 'Completed',
+            'cannot_repair' => 'Cannot repair'
+        ];
+
+        if (isset($stateMapping[$input['request_state_change']])) {
+            $updates[] = "job_status = ?";
+            $params[] = $stateMapping[$input['request_state_change']];
+        }
+    }
+
+    if (isset($input['job_status'])) {
+        // For direct status updates (mainly for quotes)
+        $updates[] = "job_status = ?";
+        $params[] = $input['job_status'];
+    }
+
+    if (empty($updates)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'No valid fields to update']);
+        exit;
+    }
+
+    $params[] = $job_id;
+
+    $stmt = $pdo->prepare("
+        UPDATE jobs SET " . implode(', ', $updates) . ", updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ");
     $stmt->execute($params);
-    $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    error_log("service-provider-jobs.php - Found " . count($jobs) . " jobs");
-    error_log("service-provider-jobs.php - First few jobs raw data:");
-    for ($i = 0; $i < min(3, count($jobs)); $i++) {
-        error_log("service-provider-jobs.php - Job " . ($i + 1) . ": " . json_encode([
-            'id' => $jobs[$i]['id'] ?? 'missing',
-            'assigned_technician_user_id' => $jobs[$i]['assigned_technician_user_id'] ?? 'missing',
-            'assigned_technician' => $jobs[$i]['assigned_technician'] ?? 'missing'
-        ]));
+    // Insert status history if status changed
+    if (isset($input['job_status'])) {
+        $stmt = $pdo->prepare("
+            INSERT INTO job_status_history (job_id, status, changed_by_user_id)
+            VALUES (?, ?, ?)
+        ");
+        $stmt->execute([$job_id, $input['job_status'], $user_id]);
+    } elseif (isset($input['request_state_change'])) {
+        $stateMapping = [
+            'in_progress' => 'In Progress',
+            'quote_provided' => 'Quote Provided',
+            'unable_to_quote' => 'Unable to quote',
+            'completed' => 'Completed',
+            'cannot_repair' => 'Cannot repair'
+        ];
+        if (isset($stateMapping[$input['request_state_change']])) {
+            $stmt = $pdo->prepare("
+                INSERT INTO job_status_history (job_id, status, changed_by_user_id)
+                VALUES (?, ?, ?)
+            ");
+            $stmt->execute([$job_id, $stateMapping[$input['request_state_change']], $user_id]);
+        }
     }
 
     echo json_encode([
-        'jobs' => $jobs
+        'success' => true,
+        'message' => 'Job updated successfully'
     ]);
+
+}
 
 } catch (Exception $e) {
     error_log("service-provider-jobs.php - Admin query failed: " . $e->getMessage());

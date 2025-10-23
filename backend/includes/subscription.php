@@ -227,7 +227,15 @@ function canPerformAction($user_id, $action_type) {
     }
 
     $current_usage = getMonthlyUsageForSubscription($subscription['id'], $action_type);
-    $monthly_limit = $subscription['monthly_job_limit'];
+
+    // For free tier users, always use up-to-date site settings limit
+    if ($subscription['subscription_tier'] === 'free') {
+        $limits = getUsageLimits();
+        $monthly_limit = $subscription['participantType'] === 'C' ? $limits['client_free_jobs'] : $limits['provider_free_jobs'];
+    } else {
+        // Paid tiers can use stored limit or unlimited
+        $monthly_limit = $subscription['monthly_job_limit'];
+    }
 
     // Unlimited for paid tiers
     if ($subscription['subscription_tier'] !== 'free') {

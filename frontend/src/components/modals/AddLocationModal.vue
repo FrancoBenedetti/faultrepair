@@ -2,45 +2,53 @@
   <div class="modal-overlay" @click="$emit('close')">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
-        <h3>Add New User</h3>
+        <h3>Add New Location</h3>
         <button @click="$emit('close')" class="close-btn">&times;</button>
       </div>
 
-      <form @submit.prevent="handleSubmit" class="user-form">
+      <form @submit.prevent="handleSubmit" class="location-form">
         <div class="form-row">
           <div class="form-group">
-            <label for="email">Email Address *</label>
-            <input type="email" id="email" v-model="newUser.email" required>
-          </div>
-          <div class="form-group">
-            <label for="first_name">First Name *</label>
-            <input type="text" id="first_name" v-model="newUser.first_name" required>
+            <label for="name">Location Name *</label>
+            <input type="text" id="name" v-model="newLocation.name" required>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label for="last_name">Last Name *</label>
-            <input type="text" id="last_name" v-model="newUser.last_name" required>
+            <label for="address">Address *</label>
+            <textarea id="address" v-model="newLocation.address" rows="3" required></textarea>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label for="role">Role *</label>
-            <select id="role" v-model="newUser.role_id" required>
-              <option value="">Select Role</option>
-              <option v-for="role in availableRoles" :key="role.id" :value="role.id">
-                {{ role.name }}
-              </option>
-            </select>
+            <label for="coordinates">GPS Coordinates</label>
+            <input type="text" id="coordinates" v-model="newLocation.coordinates"
+                   placeholder="-26.2041,28.0473">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="access_rules">Site Information URL</label>
+            <input type="url" id="access_rules" v-model="newLocation.access_rules"
+                   placeholder="https://example.com/site-info">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="access_instructions">Access Instructions</label>
+            <textarea id="access_instructions" v-model="newLocation.access_instructions" rows="2"
+                      placeholder="Instructions for technicians on how to access this location..."></textarea>
           </div>
         </div>
 
         <div class="form-actions">
           <button type="button" @click="$emit('close')" class="btn-secondary">Cancel</button>
-          <button type="submit" class="btn-primary" :disabled="addingUser">
-            {{ addingUser ? 'Adding User...' : 'Add User' }}
+          <button type="submit" class="btn-primary" :disabled="addingLocation">
+            {{ addingLocation ? 'Adding Location...' : 'Add Location' }}
           </button>
         </div>
       </form>
@@ -50,17 +58,13 @@
 
 <script>
 export default {
-  name: 'AddUserModal',
+  name: 'AddLocationModal',
   props: {
-    newUser: {
+    newLocation: {
       type: Object,
       default: () => ({})
     },
-    availableRoles: {
-      type: Array,
-      default: () => []
-    },
-    addingUser: {
+    addingLocation: {
       type: Boolean,
       default: false
     }
@@ -68,7 +72,7 @@ export default {
   emits: ['close', 'submit'],
   methods: {
     handleSubmit() {
-      this.$emit('submit', this.newUser)
+      this.$emit('submit', this.newLocation)
     }
   }
 }
@@ -120,14 +124,11 @@ export default {
   color: #666;
 }
 
-.user-form {
+.location-form {
   padding: 20px;
 }
 
 .form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
   margin-bottom: 15px;
 }
 
@@ -140,15 +141,21 @@ export default {
   margin-bottom: 5px;
   font-weight: 500;
   color: #333;
+  font-size: 14px;
 }
 
 .form-group input,
-.form-group select {
+.form-group textarea {
   width: 100%;
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 60px;
 }
 
 .form-actions {
@@ -198,11 +205,6 @@ export default {
   .modal-content {
     width: 95%;
     margin: 10px;
-    padding: 5px 10px;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
   }
 }
 </style>

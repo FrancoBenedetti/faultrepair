@@ -58,23 +58,27 @@ try {
                 j.fault_description,
                 j.technician_notes,
                 j.job_status,
+                j.client_location_id,
                 j.created_at,
                 j.updated_at,
                 j.contact_person,
                 j.reporting_user_id,
                 j.archived_by_client,
-                l.name as location_name,
+                CASE
+                    WHEN j.client_location_id IS NULL THEN 'Default'
+                    ELSE l.name
+                END as location_name,
                 l.address as location_address,
                 sp.name as assigned_provider_name,
                 u.username as reporting_user,
                 CONCAT(tu.first_name, ' ', tu.last_name) as assigned_technician,
                 (SELECT COUNT(*) FROM job_images WHERE job_id = j.id) as image_count
             FROM jobs j
-            JOIN locations l ON j.client_location_id = l.id
+            LEFT JOIN locations l ON j.client_location_id = l.id
             LEFT JOIN participants sp ON j.assigned_provider_participant_id = sp.participantId
             LEFT JOIN users u ON j.reporting_user_id = u.userId
             LEFT JOIN users tu ON j.assigned_technician_user_id = tu.userId
-            WHERE l.participant_id = ?
+            WHERE (l.participant_id = ? OR j.client_location_id IS NULL)
         ";
 
         $params = [$entity_id];
@@ -147,12 +151,6 @@ try {
             exit;
         }
 
-        // Check if client has any locations defined
-        $stmt = $pdo->prepare("SELECT COUNT(*) as location_count FROM locations WHERE participant_id = ?");
-        $stmt->execute([$entity_id]);
-        $location_result = $stmt->fetch();
-        $has_locations = $location_result['location_count'] > 0;
-
         // Validate required fields
         if (!isset($input['fault_description']) || empty($input['fault_description'])) {
             http_response_code(400);
@@ -175,20 +173,16 @@ try {
             exit;
         }
 
-        $client_location_id = null;
+        // Handle location validation - use NULL for default location (no specific location)
+        $client_location_id = $input['client_location_id'] ?? null;
 
-        // Handle location validation
-        if ($has_locations) {
-            // Locations exist - client_location_id is required
-            if (!isset($input['client_location_id']) || empty($input['client_location_id'])) {
-                http_response_code(400);
-                echo json_encode(['error' => "Field 'client_location_id' is required"]);
-                exit;
-            }
+        // Convert '0' string to NULL for default location
+        if ($client_location_id === '0' || $client_location_id === 0) {
+            $client_location_id = null;
+        }
 
-            $client_location_id = $input['client_location_id'];
-
-            // Verify location belongs to this client
+        // If location is provided, verify it belongs to this client
+        if ($client_location_id !== null) {
             $stmt = $pdo->prepare("SELECT id FROM locations WHERE id = ? AND participant_id = ?");
             $stmt->execute([$client_location_id, $entity_id]);
             if (!$stmt->fetch()) {
@@ -196,15 +190,6 @@ try {
                 echo json_encode(['error' => 'Invalid location ID']);
                 exit;
             }
-        } else {
-            // No locations defined - create a default location entry
-            // Insert default location for this client
-            $stmt = $pdo->prepare("
-                INSERT INTO locations (participant_id, name, address)
-                VALUES (?, 'Default Location', 'Client premises')
-            ");
-            $stmt->execute([$entity_id]);
-            $client_location_id = $pdo->lastInsertId();
         }
 
         // Insert new job
@@ -262,13 +247,18 @@ try {
 
         $job_id = (int)$input['job_id'];
 
-        // Verify job belongs to this client
+        // Verify job belongs to this client (either via location or as a client-created job)
         $stmt = $pdo->prepare("
             SELECT j.id FROM jobs j
-            JOIN locations l ON j.client_location_id = l.id
-            WHERE j.id = ? AND l.participant_id = ?
+            LEFT JOIN locations l ON j.client_location_id = l.id
+            WHERE j.id = ? AND (
+                l.participant_id = ? OR
+                (j.client_location_id IS NULL AND j.reporting_user_id IN (
+                    SELECT u.userId FROM users u WHERE u.entity_id = ?
+                ))
+            )
         ");
-        $stmt->execute([$job_id, $entity_id]);
+        $stmt->execute([$job_id, $entity_id, $entity_id]);
         if (!$stmt->fetch()) {
             http_response_code(403);
             echo json_encode(['error' => 'Access denied. Job not found or does not belong to your organization.']);
@@ -311,8 +301,8 @@ try {
             $canEdit = true;
         }
 
-        // Budget controllers can edit when status is 'Reported', 'Declined', or 'Quote Requested'
-        if ($role_id === 2 && in_array($job['job_status'], ['Reported', 'Declined', 'Quote Requested'])) {
+        // Budget controllers can edit when status is 'Reported', 'Declined', 'Quote Requested', or 'Completed'
+        if ($role_id === 2 && in_array($job['job_status'], ['Reported', 'Declined', 'Quote Requested', 'Completed'])) {
             $canEdit = true;
         }
 
@@ -343,6 +333,24 @@ try {
             }
 
             // Reporting employees CANNOT assign providers - only budget controllers can
+        }
+
+        // Also handle basic fields that can be edited by budget controllers when status is 'Reported'
+        if ($role_id === 2 && $job['job_status'] === 'Reported') {
+            if (isset($input['item_identifier'])) {
+                $updates[] = "item_identifier = ?";
+                $params[] = $input['item_identifier'];
+            }
+
+            if (isset($input['fault_description'])) {
+                $updates[] = "fault_description = ?";
+                $params[] = $input['fault_description'];
+            }
+
+            if (isset($input['contact_person'])) {
+                $updates[] = "contact_person = ?";
+                $params[] = $input['contact_person'];
+            }
         }
 
         // Handle fields that can be edited by budget controllers (including provider assignment and archiving)
@@ -406,11 +414,71 @@ try {
                     $params[] = 'Quote Requested';
                 }
             }
+
+            // Handle quote request with deadline (new workflow)
+            if (isset($input['quote_by_date']) && !empty($input['quote_by_date'])) {
+                // Validate quote_by_date format and range
+                $quoteDate = DateTime::createFromFormat('Y-m-d', $input['quote_by_date']);
+                if (!$quoteDate) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Invalid quote_by_date format. Expected YYYY-MM-DD']);
+                    exit;
+                }
+
+                $minDate = new DateTime();
+                $minDate->modify('+1 day');
+                $maxDate = new DateTime();
+                $maxDate->modify('+90 days');
+
+                if ($quoteDate < $minDate || $quoteDate > $maxDate) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Quote by date must be between tomorrow and 90 days from now']);
+                    exit;
+                }
+
+                // Map quote_by_date to jobs.quotation_deadline field
+                $updates[] = "quotation_deadline = ?";
+                $params[] = $input['quote_by_date'];
+
+                // If action is "Quote Requested", set the status
+                if (isset($input['action']) && $input['action'] === 'Quote Requested') {
+                    // Set status to Quote Requested if not already set
+                    $status_index = array_search("job_status = ?", $updates);
+                    if ($status_index === false) {
+                        $updates[] = "job_status = ?";
+                        $params[] = 'Quote Requested';
+                    }
+                }
+            }
         }
 
         if (isset($input['job_status'])) {
             $updates[] = "job_status = ?";
             $params[] = $input['job_status'];
+        }
+
+        // Handle state change requests (even without other field updates)
+        if (isset($input['request_state_change'])) {
+            // Map frontend state transition keys to actual job statuses
+            $stateMapping = [
+                'assigned' => 'Assigned',
+                'quote_requested' => 'Quote Requested',
+                'rejected' => 'Rejected',
+                'confirmed' => 'Confirmed',
+                'incomplete' => 'Incomplete',
+                'declined' => 'Declined',
+                'completed' => 'Completed',
+                'cannot_repair' => 'Cannot repair'
+            ];
+
+            if (isset($stateMapping[$input['request_state_change']])) {
+                $updates[] = "job_status = ?";
+                $params[] = $stateMapping[$input['request_state_change']];
+            } else {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid state transition: ' . $input['request_state_change']]);
+                exit;
+            }
         }
 
         if (empty($updates)) {
@@ -434,6 +502,25 @@ try {
                 VALUES (?, ?, ?)
             ");
             $stmt->execute([$job_id, $input['job_status'], $user_id]);
+        } elseif (isset($input['request_state_change'])) {
+            // Also insert status history for state change requests
+            $stateMapping = [
+                'assigned' => 'Assigned',
+                'quote_requested' => 'Quote Requested',
+                'rejected' => 'Rejected',
+                'confirmed' => 'Confirmed',
+                'incomplete' => 'Incomplete',
+                'declined' => 'Declined',
+                'completed' => 'Completed',
+                'cannot_repair' => 'Cannot repair'
+            ];
+            if (isset($stateMapping[$input['request_state_change']])) {
+                $stmt = $pdo->prepare("
+                    INSERT INTO job_status_history (job_id, status, changed_by_user_id)
+                    VALUES (?, ?, ?)
+                ");
+                $stmt->execute([$job_id, $stateMapping[$input['request_state_change']], $user_id]);
+            }
         }
 
         echo json_encode([
