@@ -62,10 +62,9 @@ try {
     $stmt = $pdo->prepare("
         SELECT
             jq.id,
-            jq.quote_id,
             jq.status,
             jq.job_id,
-            jq.description,
+            jq.quotation_description,
             j.client_location_id,
             j.item_identifier,
             j.fault_description,
@@ -98,10 +97,10 @@ try {
         exit;
     }
 
-    // Get the original job description
+    // Get the original job description and create modified description
     $original_description = $quote['fault_description'];
-    $quote_number = $quote['quote_id'];
-    $modified_description = $original_description . " Quote " . $quote_number . " Accepted";
+    $quote_number = "Q" . $quote_id;
+    $modified_description = $original_description . " (Quote " . $quote_number . " Accepted)";
 
     // Create the new job by duplicating the original
     $stmt = $pdo->prepare("
@@ -114,6 +113,7 @@ try {
             job_status,
             quotation_required,
             quotation_deadline,
+            current_quotation_id,
             assigned_provider_participant_id,
             assigned_technician_user_id,
             created_at,
@@ -127,19 +127,20 @@ try {
             'Assigned',
             0,
             NULL,
+            ?,
             assigned_provider_participant_id,
             assigned_technician_user_id,
             NOW(),
             NOW()
         FROM jobs WHERE id = ?
     ");
-    $stmt->execute([$quote['job_id']]);
+    $stmt->execute([$quote_id, $quote['job_id']]);
     $new_job_id = $pdo->lastInsertId();
 
     // Copy job_images records to the new job
     $stmt = $pdo->prepare("
-        INSERT INTO job_images (job_id, filename, original_filename, display_order, created_at)
-        SELECT ?, filename, original_filename, display_order, NOW()
+        INSERT INTO job_images (job_id, filename, original_filename, file_path, file_size, mime_type, uploaded_by, display_order, uploaded_at)
+        SELECT ?, filename, original_filename, file_path, file_size, mime_type, uploaded_by, display_order, NOW()
         FROM job_images WHERE job_id = ?
         ORDER BY display_order
     ");

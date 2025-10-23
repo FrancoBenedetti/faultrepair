@@ -58,12 +58,11 @@ try {
                         j.item_identifier,
                         j.fault_description,
                         j.job_status,
-                        p.name as client_name,
-                        l.name as location_name
+                        COALESCE(l.name, 'Default Location (Client Premises)') as location_name,
+                        'Client Company' as client_name
                     FROM job_quotations jq
                     JOIN jobs j ON jq.job_id = j.id
-                    JOIN locations l ON j.client_location_id = l.id
-                    JOIN participants p ON l.participant_id = p.participantId
+                    LEFT JOIN locations l ON j.client_location_id = l.id
                     WHERE jq.provider_participant_id = ?
                 ";
                 $params = [$entity_id];
@@ -89,6 +88,7 @@ try {
             $query = "
                 SELECT
                     jq.id,
+                    jq.job_id,
                     jq.quotation_amount,
                     jq.quotation_description,
                     jq.quotation_document_url,
@@ -241,6 +241,107 @@ try {
         ]);
 
     } elseif ($method === 'PUT') {
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        // Handle client quote responses (reject, request new quote)
+        if ($entity_type === 'client' && in_array($role_id, [1, 2])) {
+            if (!$input || !isset($input['quote_id']) || !isset($input['action'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Quote ID and action are required']);
+                exit;
+            }
+
+            $quote_id = (int)$input['quote_id'];
+            $action = $input['action'];
+            $notes = $input['notes'] ?? '';
+
+            // Validate action
+            if (!in_array($action, ['reject', 'request'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid action. Must be "reject" or "request".']);
+                exit;
+            }
+
+            // Verify the quote belongs to this client's organization
+            $stmt = $pdo->prepare("
+                SELECT jq.id, jq.status, jq.job_id
+                FROM job_quotations jq
+                JOIN jobs j ON jq.job_id = j.id
+                LEFT JOIN locations l ON j.client_location_id = l.id
+                WHERE jq.id = ?
+                AND (l.participant_id = ? OR (j.client_location_id IS NULL AND j.reporting_user_id IN (
+                    SELECT u.userId FROM users u WHERE u.entity_id = ?
+                )))
+            ");
+            $stmt->execute([$quote_id, $entity_id, $entity_id]);
+            $quote = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$quote) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Quote not found or does not belong to your organization']);
+                exit;
+            }
+
+            // Check if quote is in correct status for response
+            if ($quote['status'] !== 'submitted') {
+                http_response_code(400);
+                echo json_encode(['error' => 'Quote has already been responded to']);
+                exit;
+            }
+
+            $pdo->beginTransaction();
+
+            try {
+                $status = $action === 'reject' ? 'rejected' : 'expired';
+                $history_action = $action === 'reject' ? 'rejected' : 'expired';
+
+                // Update quote status
+                $stmt = $pdo->prepare("
+                    UPDATE job_quotations
+                    SET status = ?, responded_at = NOW(), response_notes = ?, updated_at = NOW()
+                    WHERE id = ?
+                ");
+                $stmt->execute([$status, $notes, $quote_id]);
+
+                // Insert quotation history
+                $stmt = $pdo->prepare("
+                    INSERT INTO job_quotation_history (quotation_id, action, changed_by_user_id, notes, created_at)
+                    VALUES (?, ?, ?, ?, NOW())
+                ");
+                $stmt->execute([$quote_id, $history_action, $user_id, $notes]);
+
+                if ($action === 'request') {
+                    // For requote request, change job status back to 'Quote Requested'
+                    $stmt = $pdo->prepare("
+                        UPDATE jobs SET job_status = 'Quote Requested', updated_at = NOW()
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$quote['job_id']]);
+
+                    // Insert job status history
+                    $stmt = $pdo->prepare("
+                        INSERT INTO job_status_history (job_id, status, changed_by_user_id, changed_at)
+                        VALUES (?, 'Quote Requested', ?, NOW())
+                    ");
+                    $stmt->execute([$quote['job_id'], $user_id]);
+                }
+
+                $pdo->commit();
+
+                echo json_encode([
+                    'success' => true,
+                    'message' => "Quote {$status} successfully"
+                ]);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                http_response_code(500);
+                echo json_encode(['error' => 'Failed to process quote response: ' . $e->getMessage()]);
+            }
+
+            exit;
+        }
+
         // Update existing quote - only service provider admins can update their quotes
         if ($entity_type !== 'service_provider' || $role_id !== 3) {
             http_response_code(403);

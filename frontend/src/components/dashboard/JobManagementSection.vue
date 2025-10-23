@@ -102,9 +102,14 @@
               <span class="meta-value text-body-small text-on-surface font-medium">{{ job.assigned_provider_name || 'Not assigned' }}</span>
             </div>
             <div class="meta-item">
-              <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">{{ job.job_status === 'Quote Requested' ? 'Quote Due:' : 'Images:' }}</span>
+              <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">
+                {{ job.job_status === 'Quote Requested' ? 'Quote Due:' : (job.job_status === 'Assigned' && job.current_quotation_id ? 'Quoted:' : 'Images:') }}
+              </span>
               <span v-if="job.job_status === 'Quote Requested'" :class="getQuoteUrgencyClass(job.due_date)" class="meta-value text-body-small text-on-surface font-medium">
                 {{ formatQuoteDueDate(job.due_date) }}
+              </span>
+              <span v-else-if="job.job_status === 'Assigned' && job.current_quotation_id" class="meta-value text-body-small text-on-surface font-medium">
+                R{{ formatQuoteAmount(job.quotation_amount) }}
               </span>
               <span v-else class="meta-value text-body-small text-on-surface font-medium">{{ job.image_count }}</span>
             </div>
@@ -138,24 +143,13 @@
           <!-- Floating Action Panel for Quote Provided Jobs - Client Admin View -->
           <div v-if="job?.job_status === 'Quote Provided' && isAdmin"
                class="quote-action-panel mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-            <p class="text-sm font-medium text-blue-800 mb-3 flex items-center gap-2">
-              <span class="material-icon text-blue-600">description</span>
-              Quotation received from service provider
-            </p>
-            <div class="flex gap-3">
+            <div class="flex justify-center">
               <button
-                @click.stop="$emit('accept-quote', job)"
-                class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                @click.stop="$emit('view-quotation', job)"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
               >
-                <span class="material-icon-sm">check_circle</span>
-                Accept Quote
-              </button>
-              <button
-                @click.stop="$emit('reject-quote', job)"
-                class="flex-1 bg-white hover:bg-gray-50 text-red-600 font-medium py-2 px-4 rounded-lg border border-red-200 transition-colors flex items-center justify-center gap-2"
-              >
-                <span class="material-icon-sm">cancel</span>
-                Reject Quote
+                <span class="material-icon-sm">visibility</span>
+                View Quotation
               </button>
             </div>
           </div>
@@ -286,6 +280,13 @@ export default {
       if (days === 0) return 'Due today';
       if (days === 1) return '1 day left';
       return `${days} days left`;
+    },
+    formatQuoteAmount(amount) {
+      if (amount === null || amount === undefined) return '0';
+      return new Intl.NumberFormat('en-ZA', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }).format(amount);
     }
   }
 }

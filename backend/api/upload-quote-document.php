@@ -36,27 +36,48 @@ if ($method === 'OPTIONS') {
 if ($method === 'POST') {
     // Handle quote document upload
 
+    // Debug: Log all incoming data for troubleshooting
+    error_log('PDF Upload Debug - REQUEST_METHOD: ' . $_SERVER['REQUEST_METHOD']);
+    error_log('PDF Upload Debug - FILES: ' . json_encode($_FILES));
+    error_log('PDF Upload Debug - POST: ' . json_encode($_POST));
+    error_log('PDF Upload Debug - entity_type: ' . $entity_type . ', role_id: ' . $role_id);
+
     // Validate user permissions (service provider admins only for quote uploads)
     if ($entity_type !== 'service_provider' || $role_id !== 3) {
+        error_log('PDF Upload Debug - Authorization failed: entity_type=' . $entity_type . ', role_id=' . $role_id);
         http_response_code(403);
-        echo json_encode(['error' => 'Access denied. Service provider admin access required.']);
+        echo json_encode([
+            'error' => 'Access denied. Service provider admin access required.',
+            'debug_authorization' => ['entity_type' => $entity_type, 'role_id' => $role_id]
+        ]);
         exit;
     }
+    error_log('PDF Upload Debug - Authorization passed for user: ' . $user_id);
 
     // Check if file was uploaded
     if (!isset($_FILES['quote_document']) || !is_uploaded_file($_FILES['quote_document']['tmp_name'])) {
+        error_log('PDF Upload Debug - File validation failed: isset=' . (isset($_FILES['quote_document']) ? 'yes' : 'no') . ', is_uploaded=' . (is_uploaded_file($_FILES['quote_document']['tmp_name'] ?? '') ? 'yes' : 'no'));
         http_response_code(400);
-        echo json_encode(['error' => 'No quote document file provided']);
+        echo json_encode([
+            'error' => 'No quote document file provided',
+            'debug_files' => $_FILES
+        ]);
         exit;
     }
+    error_log('PDF Upload Debug - File validation passed');
 
     // Validate quote_id parameter
     $quote_id = isset($_POST['quote_id']) ? (int)$_POST['quote_id'] : null;
     if (!$quote_id) {
+        error_log('PDF Upload Debug - Quote ID validation failed: POST_quote_id=' . ($_POST['quote_id'] ?? 'null'));
         http_response_code(400);
-        echo json_encode(['error' => 'Quote ID is required']);
+        echo json_encode([
+            'error' => 'Quote ID is required',
+            'debug_quote_id' => ['post_quote_id' => $_POST['quote_id'] ?? null, 'parsed' => $quote_id]
+        ]);
         exit;
     }
+    error_log('PDF Upload Debug - Quote ID validation passed: ' . $quote_id);
 
     // Verify user owns the quote
     $stmt = $pdo->prepare("
@@ -115,41 +136,111 @@ if ($method === 'POST') {
 
     // Ensure upload directory exists
     if (!is_dir($upload_dir)) {
-        mkdir($upload_dir, 0755, true);
+        if (!mkdir($upload_dir, 0755, true)) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to create upload directory']);
+            exit;
+        }
     }
+
+    // Verify the upload directory is writable
+    if (!is_writable($upload_dir)) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Upload directory is not writable']);
+        exit;
+    }
+
+    // Check database connection
+    if (!$pdo) {
+        error_log('PDF Upload Debug - Database connection is null');
+        http_response_code(500);
+        echo json_encode(['error' => 'Database connection error']);
+        exit;
+    }
+
+    // Debug information
+    $debug_info = [
+        'upload_dir' => $upload_dir,
+        'upload_path' => $upload_path,
+        'tmp_file_exists' => file_exists($file_tmp),
+        'upload_dir_writable' => is_writable($upload_dir),
+        'upload_dir_exists' => is_dir($upload_dir)
+    ];
 
     // Move uploaded file
     if (!move_uploaded_file($file_tmp, $upload_path)) {
+        $move_error = error_get_last();
+        error_log('PDF Upload Debug - move_uploaded_file failed: ' . json_encode($move_error));
         http_response_code(500);
-        echo json_encode(['error' => 'Failed to save uploaded file']);
+        echo json_encode([
+            'error' => 'Failed to save uploaded file',
+            'debug_info' => $debug_info,
+            'move_error' => $move_error,
+            'target_exists_after_fail' => file_exists($upload_path)
+        ]);
+        exit;
+    }
+
+    // Verify file was actually saved
+    if (!file_exists($upload_path)) {
+        http_response_code(500);
+        echo json_encode([
+            'error' => 'File was not saved to target location',
+            'debug_info' => $debug_info
+        ]);
         exit;
     }
 
     // Store relative path in database (without full directory path for security)
     $relative_path = 'quotes/' . $secure_filename;
 
-    // Update quote with document path
-    $stmt = $pdo->prepare("
-        UPDATE job_quotations
-        SET quotation_document_url = ?, updated_at = NOW()
-        WHERE id = ?
-    ");
-    $stmt->execute([$relative_path, $quote_id]);
+    try {
+        // Update quote with document path
+        $stmt = $pdo->prepare("
+            UPDATE job_quotations
+            SET quotation_document_url = ?, updated_at = NOW()
+            WHERE id = ?
+        ");
+        $result = $stmt->execute([$relative_path, $quote_id]);
+        error_log('PDF Upload Debug - Quote update result: ' . ($result ? 'success' : 'failed'));
 
-    // Insert quotation history
-    $stmt = $pdo->prepare("
-        INSERT INTO job_quotation_history (quotation_id, action, changed_by_user_id, notes, created_at)
-        VALUES (?, 'document_uploaded', ?, ?, NOW())
-    ");
-    $stmt->execute([$quote_id, $user_id, 'PDF document uploaded: ' . $file_name]);
+        // Insert quotation history (using valid enum value)
+        $stmt = $pdo->prepare("
+            INSERT INTO job_quotation_history (quotation_id, action, changed_by_user_id, notes, created_at)
+            VALUES (?, 'updated', ?, ?, NOW())
+        ");
+        $history_result = $stmt->execute([$quote_id, $user_id, 'PDF document uploaded: ' . $file_name]);
+        error_log('PDF Upload Debug - History insert result: ' . ($history_result ? 'success' : 'failed'));
 
-    echo json_encode([
-        'success' => true,
-        'message' => 'Quote document uploaded successfully',
-        'document_url' => $relative_path,
-        'filename' => $file_name,
-        'filesize' => $file_size
-    ]);
+        $response_data = [
+            'success' => true,
+            'message' => 'Quote document uploaded successfully',
+            'document_url' => $relative_path,
+            'filename' => $file_name,
+            'filesize' => $file_size,
+            'quote_id' => $quote_id
+        ];
+
+        error_log('PDF Upload Debug - About to return success response');
+        echo json_encode($response_data);
+
+    } catch (Exception $e) {
+        error_log('PDF Upload Debug - Database error: ' . $e->getMessage());
+        error_log('PDF Upload Debug - Stack trace: ' . $e->getTraceAsString());
+        http_response_code(500);
+        echo json_encode([
+            'error' => 'Database error during file processing',
+            'debug_error' => $e->getMessage()
+        ]);
+    } catch (PDOException $e) {
+        error_log('PDF Upload Debug - PDO error: ' . $e->getMessage());
+        error_log('PDF Upload Debug - PDO Stack trace: ' . $e->getTraceAsString());
+        http_response_code(500);
+        echo json_encode([
+            'error' => 'Database connection error during file processing',
+            'debug_error' => $e->getMessage()
+        ]);
+    }
 
 } elseif ($method === 'GET') {
     // Handle serving quote documents
@@ -172,7 +263,7 @@ if ($method === 'POST') {
         exit;
     }
 
-    $file_path = __DIR__ . '/../uploads/' . $document_path;
+    $file_path = __DIR__ . '/../../uploads/' . $document_path;
 
     // Check if file exists
     if (!file_exists($file_path)) {

@@ -219,6 +219,7 @@ CREATE TABLE IF NOT EXISTS `job_images` (
   `mime_type` varchar(100) NOT NULL,
   `uploaded_by` int(11) NOT NULL,
   `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `display_order` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `idx_job_images_job_id` (`job_id`),
   KEY `idx_job_images_uploaded_by` (`uploaded_by`),

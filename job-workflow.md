@@ -127,11 +127,16 @@ These service providers have independent job management using their own system o
       - Client (role 2) can change state and view quote
       - Client (role 1) can view job but cannot view quote
       - Service Provider (role 3) can view job and quote
+   - UI Implementation - Client Dashboard
+      - Client role 2 views the quote in QuotationDetailsModal with 3 radio button options:
+         - Accept Quote: Changes job state to `Assigned` and quote to accepted
+         - Reject Quote: Changes job state to `Rejected`, quote to rejected, clears quotation reference
+         - Request New Quote: Changes quote status to expired, allowing service provider to submit revised quote with optional client notes
    - Allowed next states
-      - `Assigned` The quote is accepted and the service provider can continue with the job (automatically creates a new "Assigned" job with quote details incorporated)
-      - `Quote Requested` The quote details are being queried. The service provider is asked to revisit the quote. A note to the service provider is required
+      - `Assigned` The quote is accepted and the service provider can continue with the job
       - `Rejected` Terminate this job with no further action
-      - Re-assign to another service provider by resetting the quote information. In this case it is identical to returning to the initial `Reported` state with cleared service provider quote information. A message is sent to the service provider that their quote was not accepted.
+      - `Quote Provided` (stays) - Service provider can submit revised quote when quote status is expired
+      - Re-assign to another service provider by resetting the quote information (future implementation)
 
 12. **Unable to Quote** - Service Provider cannot provide quotation
    - Permissions

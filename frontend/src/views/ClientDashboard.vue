@@ -216,6 +216,7 @@
               @reject-job="handleRejectJob($event)"
               @accept-quote="handleAcceptQuote($event)"
               @reject-quote="handleRejectQuote($event)"
+              @view-quotation="handleViewQuotation($event)"
             />
           </div>
         </div>
@@ -289,6 +290,17 @@
         :entityType="'client'"
         @close="showEditJobModal = false"
         @updated="handleEditJobUpdated"
+      />
+
+      <!-- Quotation Details Modal -->
+      <QuotationDetailsModal
+        v-if="showQuotationDetailsModal"
+        :show="showQuotationDetailsModal"
+        :quotation="selectedQuotation"
+        @close="showQuotationDetailsModal = false"
+        @accept-quote="handleAcceptQuoteFromModal"
+        @reject-quote="handleRejectQuoteFromModal"
+        @request-quote="handleRequestQuoteFromModal"
       />
 
       <!-- Job Confirmation Modal - Temporarily disabled due to auto-trigger bug -->
@@ -367,6 +379,7 @@ import CreateJobModal from '@/components/modals/CreateJobModal.vue'
 import EditJobModal from '@/components/modals/EditJobModal.vue'
 import JobDetailsModal from '@/components/modals/JobDetailsModal.vue'
 import ProviderDetailsModal from '@/components/modals/ProviderDetailsModal.vue'
+import QuotationDetailsModal from '@/components/modals/QuotationDetailsModal.vue'
 
 export default {
   name: 'ClientDashboard',
@@ -386,7 +399,8 @@ export default {
     JobDetailsModal,
     EditJobModal,
     EditLocationModal,
-    ProviderDetailsModal
+    ProviderDetailsModal,
+    QuotationDetailsModal
   },
   data() {
     return {
@@ -433,6 +447,7 @@ export default {
       },
       showJobDetailsModal: false,
       showProviderDetailsModal: false,
+      showQuotationDetailsModal: false,
       showEditJobModal: false,
       showJobConfirmationModal: false,
       showJobRejectionModal: false,
@@ -497,18 +512,19 @@ export default {
       editingJob: null,
       originalJobStatus: null,
       originalProviderId: null,
-      editingImages: [], // Array to store additional images for editing
-      // Section collapse/expand state
-      sectionsExpanded: {
-        profile: false, // Profile section collapsed by default
-        users: false,
-        locations: false,
-        providers: false,
-        jobs: true // Jobs section expanded by default
-      },
+    editingImages: [], // Array to store additional images for editing
+    selectedQuotation: null,
+    // Section collapse/expand state
+    sectionsExpanded: {
+      profile: false, // Profile section collapsed by default
+      users: false,
+      locations: false,
+      providers: false,
+      jobs: true // Jobs section expanded by default
+    },
 
-      // EMERGENCY DEBUG FLAG - For testing modal blocking
-      forceModalReset: true
+    // EMERGENCY DEBUG FLAG - For testing modal blocking
+    forceModalReset: true
     }
   },
   async mounted() {
@@ -2321,6 +2337,118 @@ Are you sure you want to proceed?`;
         style: 'currency',
         currency: 'ZAR'
       })
+    },
+
+    async handleViewQuotation(job) {
+      // Fetch quotation details from API
+      try {
+        const response = await apiFetch(`/backend/api/job-quotations.php?job_id=${job.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.quotes && data.quotes.length > 0) {
+            this.selectedQuotation = data.quotes[0] // Get the first (most recent) quotation for the job
+            this.showQuotationDetailsModal = true
+          } else {
+            alert('No quotation found for this job.')
+          }
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert('Failed to load quotation details')
+      }
+    },
+
+    async handleAcceptQuoteFromModal(actionData) {
+      const { quotation, notes } = actionData;
+
+      const confirmMessage = `Accept this quotation for "${quotation.item_identifier}"?
+
+Quote Details:
+• New job will be created with status "Assigned"
+• Original quote job will remain in history
+• Service provider can begin work immediately
+
+Are you sure you want to proceed?`
+
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+
+      try {
+        const response = await apiFetch('/backend/api/accept-quote-and-duplicate.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            quote_id: quotation.id,
+            notes: notes
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          alert(`Quote accepted successfully! New job created with ID: ${data.new_job_id}`);
+          this.showQuotationDetailsModal = false;
+          this.loadJobs(); // Refresh jobs list to show both the original job and the new assigned job
+        } else {
+          const errorData = await response.json();
+          this.handleError(errorData);
+        }
+      } catch (error) {
+        alert('Failed to accept quote');
+      }
+    },
+
+    async handleRejectQuoteFromModal(actionData) {
+      const { quotation, notes } = actionData;
+
+      try {
+        const response = await apiFetch('/backend/api/job-quotations.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            quote_id: quotation.id,
+            action: 'reject',
+            notes: notes
+          })
+        });
+
+        if (response.ok) {
+          alert('Quote rejected successfully! The service provider will be notified.');
+          this.showQuotationDetailsModal = false;
+          this.loadJobs(); // Refresh jobs list to show updated status
+        } else {
+          const errorData = await response.json();
+          this.handleError(errorData);
+        }
+      } catch (error) {
+        alert('Failed to reject quote');
+      }
+    },
+
+    async handleRequestQuoteFromModal(actionData) {
+      const { quotation, notes } = actionData;
+
+      try {
+        const response = await apiFetch('/backend/api/job-quotations.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            quote_id: quotation.id,
+            action: 'request',
+            notes: notes
+          })
+        });
+
+        if (response.ok) {
+          alert('New quote requested! The provider has been notified and can submit a revised quotation.');
+          this.showQuotationDetailsModal = false;
+          this.loadJobs(); // Refresh jobs list to show updated status
+        } else {
+          const errorData = await response.json();
+          this.handleError(errorData);
+        }
+      } catch (error) {
+        alert('Failed to request new quote');
+      }
     }
 
 

@@ -1,40 +1,398 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- User Identity Bar -->
-      <UserIdentityBar
-        :user-role="userRole"
-        :user-name="getCurrentUserName()"
-        :organization-name="getOrganizationName()"
-        :subscription="subscription"
-        :current-usage="currentUsage"
-        :limits="limits"
-      />
-
-      <!-- Dashboard Header -->
-      <div class="dashboard-header flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6 mb-8 p-6 bg-white rounded-xl border border-gray-200">
-        <div class="header-left">
-          <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ getOrganizationName() }} - Service Provider Dashboard</h1>
-          <div class="profile-completeness flex items-center gap-4">
-            <div class="completeness-bar w-64 h-3 bg-gray-200 rounded-full overflow-hidden">
-              <div class="completeness-fill h-full bg-blue-600 transition-all duration-500 ease-out" :style="{ width: profileCompleteness + '%' }"></div>
+    <div class="max-w-7xl mx-auto px-6 py-8">
+      <!-- Dashboard Header (matching ClientDashboard) -->
+      <div class="dashboard-header flex justify-between items-center mb-8 pb-6 border-b border-gray-200">
+        <div class="left">
+          <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ getOrganizationName() }} - Service Provider Dashboard</h1>
+          <div class="profile-completeness">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-20 h-4 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  class="h-full bg-green-500 transition-all duration-300"
+                  :style="{ width: profileCompleteness + '%' }"
+                ></div>
+              </div>
+              <span class="text-xs font-medium text-gray-600">{{ profileCompleteness }}% Complete</span>
             </div>
-            <span class="completeness-text text-lg font-medium text-gray-900">{{ profileCompleteness }}% Complete</span>
+            <p class="text-sm text-gray-600">Complete your profile to unlock all features</p>
           </div>
         </div>
-        <div class="header-right flex gap-3">
-          <button @click="$router.push('/create-invitation')" class="btn-filled flex items-center gap-2">
+        <div class="right flex items-center gap-4">
+          <button @click="$router.push('/create-invitation')" class="btn-secondary flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
             <span class="material-icon-sm">person_add</span>
             Create Invitation
           </button>
-          <button @click="signOut" class="btn-filled flex items-center gap-2">
+          <button @click="signOut" class="btn-secondary flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
             <span class="material-icon-sm">logout</span>
             Sign Out
           </button>
         </div>
       </div>
 
-      <!-- Jobs Section -->
+      <!-- User Identity Bar (matching ClientDashboard) -->
+      <div class="user-identity-bar bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6 shadow-sm">
+        <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div class="user-info flex items-center gap-4">
+            <div class="user-avatar flex-shrink-0">
+              <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                <span class="material-icon text-white">{{ getCurrentUserName().charAt(0).toUpperCase() }}</span>
+              </div>
+            </div>
+            <div class="identity-details">
+              <div class="signed-in-user flex items-center gap-2 mb-1">
+                <span class="material-icon-sm text-blue-600">person</span>
+                <span class="text-sm font-medium text-gray-700">Signed in as:</span>
+                <span class="text-sm font-semibold text-gray-900">{{ getCurrentUserName() }}</span>
+              </div>
+              <div class="organization-info flex items-center gap-2">
+                <span class="material-icon-sm text-indigo-600">business</span>
+                <span class="text-sm font-medium text-gray-700">Organization:</span>
+                <span class="text-sm font-semibold text-gray-900">{{ getOrganizationName() }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="subscription-info flex items-center gap-4">
+            <div class="subscription-badge flex items-center gap-2 px-3 py-1 bg-white border border-gray-300 rounded-full">
+              <span class="material-icon-sm text-green-600">workspace_premium</span>
+              <span class="text-xs font-medium text-gray-700">Free Plan</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Administrator Settings Section - Role 3 Only -->
+      <div v-if="userRole === 3" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('administrator-settings')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded['administrator-settings'] }">
+              <span class="material-icon-sm">admin_panel_settings</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+              <span class="material-icon text-purple-600">admin_panel_settings</span>
+              Administrator Settings
+            </h2>
+          </div>
+        </div>
+
+        <!-- All sub-sections wrapped in v-show -->
+        <div v-show="sectionsExpanded['administrator-settings']" class="section-content">
+
+          <!-- Business Profile Sub-Section -->
+          <div class="mb-6">
+            <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-200" @click="toggleSection('profile')" style="cursor: pointer;">
+              <div class="section-title flex items-center gap-3">
+                <button class="expand-btn small" :class="{ expanded: sectionsExpanded.profile }">
+                  <span class="material-icon-sm">expand_more</span>
+                </button>
+                <h3 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                  <span class="material-icon text-blue-600">business</span>
+                  Business Profile
+                </h3>
+              </div>
+              <button @click.stop="showProfileModal = true" class="btn-outlined btn-small flex items-center gap-2">
+                <span class="material-icon-sm">edit</span>
+                Edit Profile
+              </button>
+            </div>
+
+            <div v-show="sectionsExpanded.profile" class="section-content transition-all duration-300 ease-in-out">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Basic Info -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                  <div class="flex items-center gap-2 mb-4">
+                    <span class="material-icon text-blue-600">business_center</span>
+                    <h4 class="font-semibold text-gray-900">Basic Information</h4>
+                  </div>
+                  <div class="space-y-3">
+                    <div>
+                      <label class="text-sm font-medium text-gray-600">Business Name</label>
+                      <p class="text-gray-900">{{ profile.name || 'Not set' }}</p>
+                    </div>
+                    <div>
+                      <label class="text-sm font-medium text-gray-600">Website</label>
+                      <p class="text-gray-900">{{ profile.website || 'Not set' }}</p>
+                    </div>
+                    <div>
+                      <label class="text-sm font-medium text-gray-600">Status</label>
+                      <span :class="[
+                        'px-2 py-1 rounded-full text-xs font-medium',
+                        profile.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      ]">
+                        {{ profile.is_active ? 'Active' : 'Inactive' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Contact Info -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                  <div class="flex items-center gap-2 mb-4">
+                    <span class="material-icon text-green-600">contact_phone</span>
+                    <h4 class="font-semibold text-gray-900">Contact Information</h4>
+                  </div>
+                  <div class="space-y-3">
+                    <div>
+                      <label class="text-sm font-medium text-gray-600">Manager</label>
+                      <p class="text-gray-900">{{ profile.manager_name || 'Not set' }}</p>
+                    </div>
+                    <div>
+                      <label class="text-sm font-medium text-gray-600">Email</label>
+                      <p class="text-gray-900">{{ profile.manager_email || 'Not set' }}</p>
+                    </div>
+                    <div>
+                      <label class="text-sm font-medium text-gray-600">Phone</label>
+                      <p class="text-gray-900">{{ profile.manager_phone || 'Not set' }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Address and Description -->
+              <div class="mt-6 bg-white border border-gray-200 rounded-lg p-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <div class="flex items-center gap-2 mb-3">
+                      <span class="material-icon text-gray-600">location_on</span>
+                      <label class="font-semibold text-gray-900">Business Address</label>
+                    </div>
+                    <p class="text-gray-700 whitespace-pre-wrap">{{ profile.address || 'No address set' }}</p>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2 mb-3">
+                      <span class="material-icon text-gray-600">description</span>
+                      <label class="font-semibold text-gray-900">Business Description</label>
+                    </div>
+                    <p class="text-gray-700 line-clamp-3">{{ profile.description || 'No description set' }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Services Offered Sub-Section -->
+          <div class="mb-6">
+            <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-200" @click="toggleSection('services')" style="cursor: pointer;">
+              <div class="section-title flex items-center gap-3">
+                <button class="expand-btn small" :class="{ expanded: sectionsExpanded.services }">
+                  <span class="material-icon-sm">expand_more</span>
+                </button>
+                <h3 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                  <span class="material-icon text-green-600">build</span>
+                  Services Offered
+                </h3>
+              </div>
+              <button @click.stop="showServicesModal = true" class="btn-outlined btn-small flex items-center gap-2">
+                <span class="material-icon-sm">settings</span>
+                Configure
+              </button>
+            </div>
+
+            <div v-show="sectionsExpanded.services" class="section-content transition-all duration-300 ease-in-out">
+              <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div class="p-4 border-b border-gray-200">
+                  <div class="flex items-center justify-between">
+                    <h4 class="font-semibold text-gray-900">Configured Services ({{ services.length }})</h4>
+                    <span class="text-sm text-gray-600">Click "Configure" to manage services</span>
+                  </div>
+                </div>
+
+                <div v-if="services.length === 0" class="p-8 text-center">
+                  <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-4">
+                    <span class="material-icon text-gray-400">build</span>
+                  </div>
+                  <h3 class="text-lg font-semibold text-gray-900 mb-2">No Services Configured</h3>
+                  <p class="text-gray-600 mb-4">Configure your services to start accepting jobs.</p>
+                  <button @click="showServicesModal = true" class="btn-filled">
+                    Configure Services
+                  </button>
+                </div>
+
+                <div v-else class="divide-y divide-gray-200">
+                  <div v-for="service in services" :key="service.id" class="p-4 hover:bg-gray-50">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg flex items-center justify-center" :style="{ backgroundColor: getCategoryColor(service.category) }">
+                          <span class="material-icon-sm text-white">{{ getCategoryIcon(service.category) }}</span>
+                        </div>
+                        <div>
+                          <div class="font-medium text-gray-900">{{ service.name }}</div>
+                          <div class="text-sm text-gray-600">{{ service.category }}</div>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-3">
+                        <span v-if="service.is_primary" class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                          Primary
+                        </span>
+                        <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                          Active
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Service Regions Sub-Section -->
+          <div class="mb-6">
+            <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-200" @click="toggleSection('regions')" style="cursor: pointer;">
+              <div class="section-title flex items-center gap-3">
+                <button class="expand-btn small" :class="{ expanded: sectionsExpanded.regions }">
+                  <span class="material-icon-sm">expand_more</span>
+                </button>
+                <h3 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                  <span class="material-icon text-orange-600">location_on</span>
+                  Service Regions
+                </h3>
+              </div>
+              <button @click.stop="showRegionsModal = true" class="btn-outlined btn-small flex items-center gap-2">
+                <span class="material-icon-sm">settings</span>
+                Configure
+              </button>
+            </div>
+
+            <div v-show="sectionsExpanded.regions" class="section-content transition-all duration-300 ease-in-out">
+              <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div class="p-4 border-b border-gray-200">
+                  <div class="flex items-center justify-between">
+                    <h4 class="font-semibold text-gray-900">Active Regions ({{ regions.length }})</h4>
+                    <span class="text-sm text-gray-600">Click "Configure" to manage regions</span>
+                  </div>
+                </div>
+
+                <div v-if="regions.length === 0" class="p-8 text-center">
+                  <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-4">
+                    <span class="material-icon text-gray-400">location_off</span>
+                  </div>
+                  <h3 class="text-lg font-semibold text-gray-900 mb-2">No Regions Configured</h3>
+                  <p class="text-gray-600 mb-4">Configure your service regions to define where you operate.</p>
+                  <button @click="showRegionsModal = true" class="btn-filled">
+                    Configure Regions
+                  </button>
+                </div>
+
+                <div v-else class="divide-y divide-gray-200">
+                  <div v-for="region in regions" :key="region.id" class="p-4 hover:bg-gray-50">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-orange-500">
+                          <span class="material-icon-sm text-white">location_on</span>
+                        </div>
+                        <div>
+                          <div class="font-medium text-gray-900">{{ region.name }}</div>
+                          <div class="text-sm text-gray-600">{{ region.code }}</div>
+                        </div>
+                      </div>
+                      <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                        Active
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Users Sub-Section -->
+          <div class="mb-6">
+            <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-200" @click="toggleSection('technicians')" style="cursor: pointer;">
+              <div class="section-title flex items-center gap-3">
+                <button class="expand-btn small" :class="{ expanded: sectionsExpanded.technicians }">
+                  <span class="material-icon-sm">expand_more</span>
+                </button>
+                <h3 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                  <span class="material-icon text-blue-600">group</span>
+                  Users
+                </h3>
+              </div>
+              <button @click.stop="openAddTechnicianModal" class="btn-outlined btn-small flex items-center gap-2">
+                <span class="material-icon-sm">person_add</span>
+                Add User
+              </button>
+            </div>
+
+            <div v-show="sectionsExpanded.technicians" class="section-content transition-all duration-300 ease-in-out">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div v-for="technician in technicians" :key="technician.id" class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                  <div class="flex justify-between items-center p-4 bg-gray-50 border-b border-gray-200">
+                    <div class="flex items-center gap-3">
+                      <div class="w-12 h-12 rounded-full flex items-center justify-center" :class="technician.role_id === 3 ? 'bg-blue-600' : 'bg-purple-600'">
+                        <span class="material-icon text-white">{{
+                          technician && technician.full_name ?
+                            technician.full_name.charAt(0).toUpperCase() :
+                            technician && technician.username ?
+                            technician.username.charAt(0).toUpperCase() :
+                            'T'
+                        }}</span>
+                      </div>
+                      <div>
+                        <h3 class="font-semibold text-gray-900">{{ technician.full_name || 'Unnamed User' }}</h3>
+                        <div class="flex gap-2">
+                          <span :class="[
+                            'px-2 py-1 rounded-full text-xs font-medium',
+                            technician.role_id === 3 ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          ]">
+                            {{ roleDisplayNames && roleDisplayNames[technician.role_id] ? roleDisplayNames[technician.role_id] : getFallbackRoleName(technician.role_id) }}
+                          </span>
+                          <span :class="[
+                            'px-2 py-1 rounded-full text-xs font-medium',
+                            technician.is_active
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          ]">
+                            {{ technician.is_active ? 'Active' : 'Inactive' }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex gap-2">
+                      <button @click="viewTechnicianJobs(technician)" class="btn-round" title="View Jobs">
+                        <span class="material-icon-sm">work</span>
+                      </button>
+                      <button @click="editTechnician(technician)" class="btn-round" title="Edit Technician">
+                        <span class="material-icon-sm">edit</span>
+                      </button>
+                      <button @click="deleteTechnician(technician)" class="btn-round-filled" title="Delete Technician">
+                        <span class="material-icon-sm">delete</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="p-4">
+                    <p class="text-sm text-gray-600 flex items-center gap-1 mb-2">
+                      <span class="material-icon-sm">email</span>
+                      {{ technician.email }}
+                    </p>
+                    <p v-if="technician.phone" class="text-sm text-gray-600 flex items-center gap-1">
+                      <span class="material-icon-sm">phone</span>
+                      {{ technician.phone }}
+                    </p>
+                  </div>
+
+                  <div class="px-4 pb-4">
+                    <p class="text-xs text-gray-500">
+                      Added {{ formatDate(technician.created_at) }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Add Technician Card -->
+                <button @click="openAddTechnicianModal" class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-purple-400 hover:bg-purple-50 transition-colors flex flex-col items-center justify-center gap-3 text-gray-500 hover:text-purple-600">
+                  <span class="material-icon text-3xl">person_add</span>
+                  <div class="text-center">
+                    <div class="font-medium">Add Technician</div>
+                    <div class="text-sm">Create a new technician account</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Jobs Management Section -->
       <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
         <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="sectionsExpanded.jobs = !sectionsExpanded.jobs" style="cursor: pointer;">
           <div class="section-title flex items-center gap-3">
@@ -68,432 +426,128 @@
         </div>
       </div>
 
-      <!-- Business Profile Section (Admins Only) - Replaced with inline for testing -->
-      <div v-if="userRole === 3" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('profile')" style="cursor: pointer;">
+      <!-- Quote Management Section -->
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="sectionsExpanded.quotes = !sectionsExpanded.quotes" style="cursor: pointer;">
           <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.profile }">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.quotes }">
               <span class="material-icon-sm">expand_more</span>
             </button>
             <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-              <span class="material-icon text-blue-600">business</span>
-              Business Profile
-              <span v-if="profile && profile.name" class="text-sm font-normal text-gray-500">({{ profile.name }})</span>
+              <span class="material-icon text-green-600">request_quote</span>
+              Quote Management
             </h2>
           </div>
-          <button @click.stop="showProfileModal = true" class="btn-filled flex items-center gap-2">
-            <span class="material-icon-sm">edit</span>
-            Edit Profile
+          <button @click.stop="loadQuotes" class="btn-outlined btn-small flex items-center gap-2">
+            <span class="material-icon-sm">refresh</span>
+            Refresh Quotes
           </button>
         </div>
 
-        <div v-show="sectionsExpanded.profile" class="section-content transition-all duration-300 ease-in-out">
+        <div v-show="sectionsExpanded.quotes" class="section-content transition-all duration-300 ease-in-out">
+          <!-- Quote Filters -->
+          <div class="quote-filters flex flex-wrap gap-4 mb-6 p-4 bg-green-50 rounded-lg">
+            <div class="filter-group min-w-40">
+              <label for="quote-status-filter" class="form-label mb-1">Quote Status:</label>
+              <select id="quote-status-filter" v-model="quoteFilters.status" @change="loadQuotes" class="form-input">
+                <option value="">All Quotes</option>
+                <option value="draft">Draft</option>
+                <option value="submitted">Submitted</option>
+                <option value="accepted">Accepted</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            <div class="filter-group min-w-40">
+              <label for="quote-job-filter" class="form-label mb-1">Job:</label>
+              <select id="quote-job-filter" v-model="quoteFilters.job_id" @change="loadQuotes" class="form-input">
+                <option value="">All Jobs</option>
+                <option v-for="job in quoteJobs" :key="job.id" :value="job.id">
+                  {{ job.item_identifier || 'Job #' + job.id }}
+                </option>
+              </select>
+            </div>
+          </div>
+
           <!-- Loading state -->
-          <LoadingState v-if="!profile" message="Loading business profile..." />
+          <div v-if="quotes === null" class="loading-state text-center py-16">
+            <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-body-large text-on-surface-variant">Loading quotes...</p>
+          </div>
 
-          <!-- Profile content -->
-          <div v-else-if="profile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Basic Information Card -->
-            <div class="profile-card bg-gray-50 rounded-lg p-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
-                <span class="material-icon-sm text-blue-600">business_center</span>
-                Basic Information
-              </h4>
-              <div class="space-y-3">
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Business Name:</label>
-                  <p class="text-base text-gray-900">{{ profile.name || 'Not specified' }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Address:</label>
-                  <p class="text-base text-gray-900">{{ profile.address || 'Not specified' }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Description:</label>
-                  <p class="text-base text-gray-900">{{ profile.description || 'Not specified' }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Website:</label>
-                  <p class="text-base text-gray-900">
-                    <a v-if="profile.website" :href="profile.website" target="_blank" class="text-blue-600 hover:text-blue-800 underline">{{ profile.website }}</a>
-                    <span v-else>Not specified</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Manager Contact Card -->
-            <div class="profile-card bg-gray-50 rounded-lg p-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
-                <span class="material-icon-sm text-green-600">contact_phone</span>
-                Manager Contact
-              </h4>
-              <div class="space-y-3">
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Manager Name:</label>
-                  <p class="text-base text-gray-900">{{ profile.manager_name || 'Not specified' }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Manager Email:</label>
-                  <p class="text-base text-gray-900">{{ profile.manager_email || 'Not specified' }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Manager Phone:</label>
-                  <p class="text-base text-gray-900">{{ profile.manager_phone || 'Not specified' }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">VAT Number:</label>
-                  <p class="text-base text-gray-900">{{ profile.vat_number || 'Not specified' }}</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Status & Account Card -->
-            <div class="profile-card bg-gray-50 rounded-lg p-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
-                <span class="material-icon-sm text-purple-600">assignment</span>
-                Account Information
-              </h4>
-              <div class="space-y-3">
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Status:</label>
-                  <span :class="[
-                    'px-2 py-1 rounded-full text-xs font-medium',
-                    profile.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  ]">
-                    {{ profile.is_active ? 'Active' : 'Inactive' }}
+          <!-- Quotes Grid -->
+          <div v-else-if="quotes && quotes.length > 0" class="quotes-grid grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div v-for="quote in quotes" :key="quote.id" class="quote-card card overflow-hidden">
+              <div class="quote-header card-header">
+                <div class="quote-status">
+                  <span class="status-badge" :class="getQuoteStatusClass(quote.status)">
+                    {{ quote.status }}
                   </span>
                 </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Member Since:</label>
-                  <p class="text-base text-gray-900">{{ formatDate(profile.created_at) }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Registration:</label>
-                  <p class="text-base text-gray-900">{{ profile.business_registration_number || 'Not specified' }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Profile Completeness:</label>
-                  <p class="text-base font-semibold">{{ profileCompleteness }}%</p>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <!-- No profile state when data is loaded but empty -->
-          <div v-else class="text-center py-16 bg-gray-50 rounded-lg border border-gray-200">
-            <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-6">
-              <span class="material-icon text-gray-400">business</span>
-            </div>
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">Profile Not Set Up</h3>
-            <p class="text-gray-600 mb-6">Your business profile hasn't been configured yet. This is normal for new accounts.</p>
-            <button @click="showProfileModal = true" class="btn-filled">
-              <span class="material-icon-sm mr-2">edit</span>
-              Set Up Profile
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- No Business Profile Section for this user role -->
-      <div v-else-if="!profile && userRole === 3" class="bg-white rounded-xl shadow-lg border border-red-300 bg-red-50 p-6 mb-8">
-        <div class="text-center">
-          <div class="mb-4">
-            <span class="material-icon text-4xl text-red-600">error</span>
-          </div>
-          <h3 class="text-xl font-semibold text-gray-900 mb-2">Business Profile Not Available</h3>
-          <p class="text-gray-700 mb-4">Unable to load your business profile. Please try refreshing the page or contact support.</p>
-          <button @click="loadProfile" class="btn-filled">
-            <span class="material-icon-sm mr-2">refresh</span>
-            Retry Loading Profile
-          </button>
-        </div>
-      </div>
-
-      <!-- Technician Profile Section (Technicians Only) -->
-      <div v-else-if="userRole === 4 && currentTechnician" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('technician-profile')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded['technician-profile'] }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-              <span class="material-icon text-blue-600">person</span>
-              My Profile
-            </h2>
-          </div>
-          <button @click.stop="showTechnicianProfileModal = true; editingTechnician = currentTechnician" class="btn-filled flex items-center gap-2">
-            <span class="material-icon-sm">edit</span>
-            Edit Profile
-          </button>
-        </div>
-
-        <div v-show="sectionsExpanded['technician-profile']" class="section-content transition-all duration-300 ease-in-out">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Personal Information -->
-            <div class="bg-gray-50 rounded-lg p-6 space-y-4">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
-                <span class="material-icon-sm text-blue-600">person</span>
-                Personal Information
-              </h4>
-              <div class="space-y-3">
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Full Name:</label>
-                  <p class="text-base text-gray-900">{{ currentTechnician.full_name || 'Not specified' }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Email:</label>
-                  <p class="text-base text-gray-900">{{ currentTechnician.email }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Phone:</label>
-                  <p class="text-base text-gray-900">{{ currentTechnician.phone || 'Not specified' }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Role:</label>
-                  <span class="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                    Technician
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Account Information -->
-            <div class="bg-gray-50 rounded-lg p-6 space-y-4">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
-                <span class="material-icon-sm text-green-600">account_circle</span>
-                Account Information
-              </h4>
-              <div class="space-y-3">
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Status:</label>
-                  <span :class="[
-                    'px-2 py-1 rounded-full text-xs font-medium',
-                    currentTechnician.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  ]">
-                    {{ currentTechnician.is_active ? 'Active' : 'Inactive' }}
-                  </span>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Member Since:</label>
-                  <p class="text-base text-gray-900">{{ formatDate(currentTechnician.created_at) }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-600">Jobs Assigned:</label>
-                  <p class="text-base font-semibold text-blue-600">{{ currentTechnician.job_count || 0 }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Profile Completeness -->
-          <div class="mt-6 p-4 bg-blue-50 rounded-lg">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-gray-700">Profile Completeness</span>
-              <span class="text-sm font-medium text-gray-700">{{ technicianProfileCompleteness }}%</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div class="bg-blue-600 h-2 rounded-full transition-all duration-500" :style="{ width: technicianProfileCompleteness + '%' }"></div>
-            </div>
-            <p class="text-xs text-gray-600 mt-2">
-              Complete your profile to improve job assignments and communication.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Services Section -->
-      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('services')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.services }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-              <span class="material-icon text-blue-600">build</span>
-              Services Offered
-            </h2>
-          </div>
-          <button @click.stop="showServicesModal = true" class="btn-filled flex items-center gap-2">
-            <span class="material-icon-sm">add</span>
-            Manage Services
-          </button>
-        </div>
-
-        <div v-show="sectionsExpanded.services" class="section-content transition-all duration-300 ease-in-out">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div v-for="service in services" :key="service.id" class="relative bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                    <span class="material-icon-sm text-white">build</span>
-                  </div>
-                  <div>
-                    <h3 class="font-semibold text-gray-900">{{ service.name }}</h3>
-                    <p class="text-sm text-gray-600">{{ service.category }}</p>
-                  </div>
-                </div>
-                <span v-if="service.is_primary" class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
-                  Primary
-                </span>
-              </div>
-            </div>
-
-            <!-- Add Service Button -->
-            <button @click="showServicesModal = true" class="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-blue-600">
-              <span class="material-icon text-2xl">add_circle</span>
-              <span class="font-medium">Add Service</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Regions Section -->
-      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('regions')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.regions }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-              <span class="material-icon text-blue-600">location_on</span>
-              Service Regions
-            </h2>
-          </div>
-          <button @click.stop="showRegionsModal = true" class="btn-filled flex items-center gap-2">
-            <span class="material-icon-sm">add</span>
-            Manage Regions
-          </button>
-        </div>
-
-        <div v-show="sectionsExpanded.regions" class="section-content transition-all duration-300 ease-in-out">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div v-for="region in regions" :key="region.id" class="relative bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
-                  <span class="material-icon-sm text-white">location_on</span>
-                </div>
-                <div>
-                  <h3 class="font-semibold text-gray-900">{{ region.name }}</h3>
-                  <p class="text-sm text-gray-600">{{ region.code }}</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Add Region Button -->
-            <button @click="showRegionsModal = true" class="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-green-400 hover:bg-green-50 transition-colors flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-green-600">
-              <span class="material-icon text-2xl">add_location</span>
-              <span class="font-medium">Add Region</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-    <!-- Users Section -->
-    <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8" v-if="userRole === 3">
-      <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('technicians')" style="cursor: pointer;">
-        <div class="section-title flex items-center gap-3">
-          <button class="expand-btn" :class="{ expanded: sectionsExpanded.technicians }">
-            <span class="material-icon-sm">expand_more</span>
-          </button>
-          <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-            <span class="material-icon text-blue-600">group</span>
-            Users
-          </h2>
-        </div>
-        <button @click.stop="openAddTechnicianModal" class="btn-filled flex items-center gap-2">
-          <span class="material-icon-sm">person_add</span>
-          Add User
-        </button>
-      </div>
-
-        <div v-show="sectionsExpanded.technicians" class="section-content transition-all duration-300 ease-in-out">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div v-for="technician in technicians" :key="technician.id" class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-              <div class="flex justify-between items-center p-4 bg-gray-50 border-b border-gray-200">
-                <div class="flex items-center gap-3">
-                  <div class="w-12 h-12 rounded-full flex items-center justify-center" :class="technician.role_id === 3 ? 'bg-blue-600' : 'bg-purple-600'">
-                    <span class="material-icon text-white">{{
-                      technician && technician.full_name ?
-                        technician.full_name.charAt(0).toUpperCase() :
-                        technician && technician.username ?
-                        technician.username.charAt(0).toUpperCase() :
-                        'T'
-                    }}</span>
-                  </div>
-                  <div>
-                    <h3 class="font-semibold text-gray-900">{{ technician.full_name || 'Unnamed User' }}</h3>
-                    <div class="flex gap-2">
-                      <span :class="[
-                        'px-2 py-1 rounded-full text-xs font-medium',
-                        technician.role_id === 3 ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                      ]">
-                        {{ roleDisplayNames && roleDisplayNames[technician.role_id] ? roleDisplayNames[technician.role_id] : getFallbackRoleName(technician.role_id) }}
-                      </span>
-                      <span :class="[
-                        'px-2 py-1 rounded-full text-xs font-medium',
-                        technician.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      ]">
-                        {{ technician.is_active ? 'Active' : 'Inactive' }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div class="flex gap-2">
-                  <button @click="viewTechnicianJobs(technician)" class="btn-round" title="View Jobs">
-                    <span class="material-icon-sm">work</span>
+                <div class="quote-actions flex gap-2">
+                  <button @click="viewQuoteDetails(quote)" class="btn-outlined btn-small">
+                    <span class="material-icon-sm">visibility</span>
+                    View
                   </button>
-                  <button @click="editTechnician(technician)" class="btn-round" title="Edit Technician">
+                  <button v-if="quote.status === 'draft'" @click="editQuote(quote)" class="btn-outlined btn-small">
                     <span class="material-icon-sm">edit</span>
+                    Edit
                   </button>
-                  <button @click="deleteTechnician(technician)" class="btn-round-filled" title="Delete Technician">
-                    <span class="material-icon-sm">delete</span>
+                  <button v-if="quote.status === 'draft'" @click="submitQuote(quote)" class="btn-filled btn-small">
+                    <span class="material-icon-sm">send</span>
+                    Submit
                   </button>
                 </div>
               </div>
 
-              <div class="p-4">
-                <p class="text-sm text-gray-600 flex items-center gap-1 mb-2">
-                  <span class="material-icon-sm">email</span>
-                  {{ technician.email }}
+              <div class="quote-content card-content">
+                <h3 class="quote-title text-title-medium text-on-surface mb-2">
+                  {{ quote.item_identifier || 'Job #' + quote.job_id }}
+                </h3>
+                <p class="quote-description text-body-medium text-on-surface-variant mb-2 line-clamp-2">
+                  {{ quote.fault_description }}
                 </p>
-                <p v-if="technician.phone" class="text-sm text-gray-600 flex items-center gap-1">
-                  <span class="material-icon-sm">phone</span>
-                  {{ technician.phone }}
-                </p>
+
+                <div class="quote-amount text-lg font-bold text-green-600 mb-2">
+                  R {{ formatCurrency(quote.quotation_amount) }}
+                </div>
+
+                <div class="quote-meta space-y-1 text-sm">
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Client:</span>
+                    <span class="font-medium">{{ quote.client_name }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Location:</span>
+                    <span class="font-medium">{{ quote.location_name }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Valid Until:</span>
+                    <span class="font-medium">{{ formatDate(quote.valid_until) }}</span>
+                  </div>
+                  <div v-if="quote.submitted_at" class="flex justify-between">
+                    <span class="text-gray-600">Submitted:</span>
+                    <span class="font-medium">{{ formatDate(quote.submitted_at) }}</span>
+                  </div>
+                </div>
               </div>
 
-              <div class="px-4 pb-4">
-                <p class="text-xs text-gray-500">
-                  Added {{ formatDate(technician.created_at) }}
-                </p>
+              <div class="quote-footer card-footer">
+                <div class="quote-description-preview text-sm text-gray-600 italic">
+                  "{{ quote.quotation_description?.substring(0, 100) }}{{ quote.quotation_description?.length > 100 ? '...' : '' }}"
+                </div>
               </div>
             </div>
-
-            <!-- Add Technician Card -->
-            <button @click="openAddTechnicianModal" class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-purple-400 hover:bg-purple-50 transition-colors flex flex-col items-center justify-center gap-3 text-gray-500 hover:text-purple-600">
-              <span class="material-icon text-3xl">person_add</span>
-              <div class="text-center">
-                <div class="font-medium">Add Technician</div>
-                <div class="text-sm">Create a new technician account</div>
-              </div>
-            </button>
           </div>
-        </div>
 
-        <!-- Empty State -->
-        <div v-if="technicians.length === 0" class="text-center py-16">
-          <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-6">
-            <span class="material-icon text-gray-400">engineering</span>
+          <!-- Empty State -->
+          <div v-else class="text-center py-16">
+            <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-6">
+              <span class="material-icon text-gray-400">request_quote</span>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">No Quotes Yet</h3>
+            <p class="text-gray-600">Quotes you create for jobs will appear here.</p>
           </div>
-          <h3 class="text-xl font-semibold text-gray-900 mb-2">No Technicians Yet</h3>
-          <p class="text-gray-600 mb-6">Add technicians to help manage your jobs and assignments.</p>
-          <button @click="openAddTechnicianModal" class="btn-filled flex items-center gap-2 mx-auto">
-            <span class="material-icon-sm">person_add</span>
-            Add Your First Technician
-          </button>
         </div>
       </div>
 
@@ -568,133 +622,6 @@
             </div>
             <h3 class="text-xl font-semibold text-gray-900 mb-2">No Approved Clients Yet</h3>
             <p class="text-gray-600">Clients will appear here once they approve your services.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quote Management Section - Only for service provider admins -->
-      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8" v-if="userRole === 3">
-        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('quotes')" style="cursor: pointer;">
-          <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.quotes }">
-              <span class="material-icon-sm">expand_more</span>
-            </button>
-            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-              <span class="material-icon text-green-600">request_quote</span>
-              Quote Management
-            </h2>
-          </div>
-          <button @click.stop="loadQuotes" class="btn-outlined flex items-center gap-2">
-            <span class="material-icon-sm">refresh</span>
-            Refresh Quotes
-          </button>
-        </div>
-
-        <div v-show="sectionsExpanded.quotes" class="section-content transition-all duration-300 ease-in-out">
-          <!-- Quote Filters -->
-          <div class="quote-filters flex flex-wrap gap-4 mb-6 p-4 bg-green-50 rounded-lg">
-            <div class="filter-group min-w-40">
-              <label for="quote-status-filter" class="form-label mb-1">Quote Status:</label>
-              <select id="quote-status-filter" v-model="quoteFilters.status" @change="loadQuotes" class="form-input">
-                <option value="">All Quotes</option>
-                <option value="draft">Draft</option>
-                <option value="submitted">Submitted</option>
-                <option value="accepted">Accepted</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
-            <div class="filter-group min-w-40">
-              <label for="quote-job-filter" class="form-label mb-1">Job:</label>
-              <select id="quote-job-filter" v-model="quoteFilters.job_id" @change="loadQuotes" class="form-input">
-                <option value="">All Jobs</option>
-                <option v-for="job in quoteJobs" :key="job.id" :value="job.id">
-                  {{ job.item_identifier || 'Job #' + job.id }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Loading state -->
-          <div v-if="quotes === null" class="loading-state text-center py-16">
-            <div class="loading-spinner w-10 h-10 border-4 border-neutral-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p class="text-body-large text-on-surface-variant">Loading quotes...</p>
-          </div>
-
-          <!-- Quotes Grid -->
-          <div v-else-if="quotes && quotes.length > 0" class="quotes-grid grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            <div v-for="quote in quotes" :key="quote.id" class="quote-card card overflow-hidden">
-              <div class="quote-header card-header">
-                <div class="quote-status">
-                  <span class="status-badge" :class="getQuoteStatusClass(quote.status)">
-                    {{ quote.status }}
-                  </span>
-                </div>
-    <div class="quote-actions flex gap-2">
-      <button @click="viewQuoteDetails(quote)" class="btn-outlined btn-small">
-        <span class="material-icon-sm">visibility</span>
-        View
-      </button>
-      <button v-if="quote.status === 'draft'" @click="editQuote(quote)" class="btn-outlined btn-small">
-        <span class="material-icon-sm">edit</span>
-      </button>
-      <button v-if="quote.status === 'draft'" @click="submitQuote(quote)" class="btn-filled btn-small">
-        <span class="material-icon-sm">send</span>
-      </button>
-    </div>
-              </div>
-
-              <div class="quote-content card-content">
-                <h3 class="quote-title text-title-medium text-on-surface mb-2">
-                  {{ quote.item_identifier || 'Job #' + quote.job_id }}
-                </h3>
-                <p class="quote-description text-body-medium text-on-surface-variant mb-2 line-clamp-2">
-                  {{ quote.fault_description }}
-                </p>
-
-                <div class="quote-amount text-lg font-bold text-green-600 mb-2">
-                  R {{ formatCurrency(quote.quotation_amount) }}
-                </div>
-
-                <div class="quote-meta space-y-1 text-sm">
-                  <div class="flex justify-between">
-                    <span class="text-gray-600">Client:</span>
-                    <span class="font-medium">{{ quote.client_name }}</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-gray-600">Location:</span>
-                    <span class="font-medium">{{ quote.location_name }}</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-gray-600">Valid Until:</span>
-                    <span class="font-medium">{{ formatDate(quote.valid_until) }}</span>
-                  </div>
-                  <div v-if="quote.submitted_at" class="flex justify-between">
-                    <span class="text-gray-600">Submitted:</span>
-                    <span class="font-medium">{{ formatDate(quote.submitted_at) }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="quote-footer card-footer">
-                <div class="quote-description-preview text-sm text-gray-600 italic">
-                  "{{ quote.quotation_description?.substring(0, 100) }}{{ quote.quotation_description?.length > 100 ? '...' : '' }}"
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- No quotes state -->
-          <div v-else-if="quotes && quotes.length === 0" class="no-quotes text-center py-16">
-            <div class="no-quotes-icon material-icon-xl text-neutral-400 mb-4">request_quote</div>
-            <h3 class="text-title-large text-on-surface mb-2">No quotes found</h3>
-            <p class="text-body-large text-on-surface-variant">No quotes match your current filters.</p>
-          </div>
-
-          <!-- Error state -->
-          <div v-else class="error-state text-center py-16">
-            <div class="error-icon material-icon-xl text-error-400 mb-4">error</div>
-            <h3 class="text-title-large text-on-surface mb-2">Failed to load quotes</h3>
-            <p class="text-body-large text-on-surface-variant">Please try refreshing the page.</p>
           </div>
         </div>
       </div>
@@ -918,167 +845,137 @@
       <div class="absolute inset-0 bg-black/50" @click="showServicesModal = false"></div>
 
       <!-- Modal Content -->
-      <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden" @click.stop>
+      <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" @click.stop>
         <!-- Header -->
         <div class="flex justify-between items-center p-6 border-b border-gray-200">
           <h3 class="text-xl font-semibold text-gray-900 flex items-center gap-3">
-            <span class="material-icon text-blue-600">build</span>
-            Manage Services
+            <span class="material-icon text-blue-600">settings</span>
+            Configure Services
           </h3>
           <button @click="showServicesModal = false" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
         </div>
 
         <!-- Content -->
         <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
-          <!-- Search and Filter Section -->
-          <div class="bg-blue-50 rounded-lg p-4 space-y-4">
-            <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <span class="material-icon-sm text-blue-600">search</span>
-              Search & Filter Services
-            </h4>
-            <div class="grid grid-cols-1 gap-4">
-              <!-- Search Input -->
-              <div class="space-y-1">
-                <label for="service-search" class="form-label">Search Services</label>
-                <input
-                  id="service-search"
-                  type="text"
-                  v-model="searchTerm"
-                  placeholder="Type to search services..."
-                  class="form-input"
-                  @input="debouncedSearch"
-                >
+          <!-- Search and Filter -->
+          <div class="flex flex-col sm:flex-row gap-4 mb-6">
+            <div class="flex-1">
+              <input
+                type="text"
+                v-model="searchTerm"
+                placeholder="Search services..."
+                class="form-input"
+                @input="debouncedSearch"
+              >
+            </div>
+            <div class="flex gap-2">
+              <button @click="expandAllCategories" class="btn-outlined btn-small">
+                <span class="material-icon-sm">expand_more</span>
+                Expand All
+              </button>
+              <button @click="collapseAllCategories" class="btn-outlined btn-small">
+                <span class="material-icon-sm">expand_less</span>
+                Collapse All
+              </button>
+            </div>
+          </div>
+
+          <!-- Services by Categories -->
+          <div v-for="category in getFilteredCategories()" :key="category" class="bg-gray-50 rounded-lg mb-4 overflow-hidden">
+            <div class="flex items-center justify-between p-4 border-b border-gray-200 cursor-pointer" @click="toggleCategoryExpansion(category)">
+              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-3">
+                <button class="small-category-btn" :class="{ expanded: expandedCategories[category] }">
+                  <span class="material-icon-sm">expand_more</span>
+                </button>
+                <span>{{ category }}</span>
+                <span class="text-sm text-gray-600 bg-gray-200 px-2 py-1 rounded-full">
+                  {{ getServicesByCategory(category).length }}
+                </span>
+              </h4>
+              <div class="flex items-center gap-3">
+                <span v-if="isCategoryFullySelected(category)" class="text-sm text-green-600 flex items-center gap-1">
+                  <span class="material-icon-sm">check_circle</span>
+                  All Selected
+                </span>
+                <span v-else-if="isCategoryPartiallySelected(category)" class="text-sm text-orange-600 flex items-center gap-1">
+                  <span class="material-icon-sm">radio_button_partial</span>
+                  Some Selected
+                </span>
+                <span v-else class="text-sm text-gray-600 flex items-center gap-1">
+                  <span class="material-icon-sm">radio_button_unchecked</span>
+                  None Selected
+                </span>
+                <div class="flex gap-2">
+                  <button @click.stop="selectAllInCategory(category)" class="btn-outlined btn-very-small">Select All</button>
+                  <button @click.stop="deselectAllInCategory(category)" class="btn-outlined btn-very-small">Deselect All</button>
+                </div>
               </div>
             </div>
 
-            <!-- Filter Actions -->
-            <div class="flex items-center gap-4 pt-2 border-t border-blue-200">
-              <div class="text-sm text-gray-600">
-                Showing {{ getFilteredServices().length }} of {{ (availableServices || []).length }} services
-              </div>
-              <div class="flex gap-2 ml-auto">
-                <button
-                  @click="expandAllCategories"
-                  class="btn-outlined btn-small"
+            <div v-show="expandedCategories[category]" class="p-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                  v-for="service in getServicesByCategory(category)"
+                  :key="service.id"
+                  class="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  @click="selectedServices.includes(service.id) ? selectedServices.splice(selectedServices.indexOf(service.id), 1) : selectedServices.push(service.id)"
                 >
-                  Expand All
-                </button>
-                <button
-                  @click="collapseAllCategories"
-                  class="btn-outlined btn-small"
-                >
-                  Collapse All
-                </button>
+                  <input
+                    type="checkbox"
+                    :checked="selectedServices.includes(service.id)"
+                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                    @click.stop
+                    @change="selectedServices.includes(service.id) ? selectedServices.splice(selectedServices.indexOf(service.id), 1) : selectedServices.push(service.id)"
+                  >
+                  <div class="w-10 h-10 rounded-lg flex items-center justify-center" :style="{ backgroundColor: getCategoryColor(service.category) }">
+                    <span class="material-icon-sm text-white">{{ getCategoryIcon(service.category) }}</span>
+                  </div>
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-900">{{ service.name }}</div>
+                    <div class="text-sm text-gray-600">{{ service.category }}</div>
+                  </div>
+                  <div v-if="primaryServiceId === service.id" class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                    Primary
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <!-- Available Services Section -->
-            <div class="xl:col-span-2 bg-gray-50 rounded-lg p-6 space-y-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
-                <span class="material-icon-sm text-blue-600">list</span>
-                Available Services
-                <span class="text-sm font-normal text-gray-500" v-if="getFilteredServices().length !== (availableServices || []).length">
-                  ({{ getFilteredServices().length }} filtered)
-                </span>
-              </h4>
-
-              <div v-if="getFilteredServices().length === 0" class="text-center py-12 text-gray-500">
-                <span class="material-icon text-4xl text-gray-300">search_off</span>
-                <p class="mt-2">No services match your search criteria</p>
-              </div>
-
-              <div v-else class="space-y-4 max-h-[500px] overflow-y-auto">
-                <div v-for="category in getFilteredCategories()" :key="category" class="category-section bg-white rounded-lg border border-gray-200">
-                  <!-- Category Header -->
-                  <div
-                    class="category-header p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                    @click="toggleCategoryExpansion(category)"
-                  >
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-3">
-                        <button class="expand-btn" :class="{ expanded: expandedCategories[category] }">
-                          <span class="material-icon-sm">expand_more</span>
-                        </button>
-                        <h5 class="font-semibold text-gray-900">
-                          {{ category }}
-                          <span class="text-sm font-normal text-gray-500">({{ getServicesByCategory(category).length }})</span>
-                        </h5>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <button
-                          @click.stop="selectAllInCategory(category)"
-                          class="btn-outlined btn-small"
-                          :disabled="isCategoryFullySelected(category)"
-                        >
-                          Select All
-                        </button>
-                        <button
-                          @click.stop="deselectAllInCategory(category)"
-                          class="btn-outlined btn-small"
-                          :disabled="!isCategoryPartiallySelected(category)"
-                        >
-                          Clear
-                        </button>
-                      </div>
-                    </div>
+          <!-- Primary Service Selection -->
+          <div class="bg-blue-50 rounded-lg p-6">
+            <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2 mb-4">
+              <span class="material-icon-sm text-blue-600">star</span>
+              Set Primary Service
+            </h4>
+            <p class="text-sm text-gray-700 mb-4">
+              Your primary service will be highlighted to clients. You can change this later.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <button
+                v-for="serviceId in selectedServices"
+                :key="serviceId"
+                @click="setPrimaryService(serviceId)"
+                :class="[
+                  'p-3 rounded-lg border text-left transition-all',
+                  primaryServiceId === serviceId
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white border-gray-300 hover:bg-gray-50'
+                ]"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg flex items-center justify-center" :style="{ backgroundColor: primaryServiceId === serviceId ? '#ffffff33' : getCategoryColor(getServiceName(serviceId).split(' - ')[1] || 'Other') }">
+                    <span class="material-icon-sm" :class="primaryServiceId === serviceId ? 'text-white' : 'text-white'">
+                      {{ getCategoryIcon(getServiceName(serviceId).split(' - ')[1] || 'Other') }}
+                    </span>
                   </div>
-
-                  <!-- Category Services -->
-                  <div v-show="expandedCategories[category]" class="category-services p-4 space-y-3 border-t border-gray-100">
-                    <div
-                      v-for="service in getServicesByCategory(category)"
-                      :key="service.id"
-                      class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        :value="service.id"
-                        v-model="selectedServices"
-                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                      >
-                      <div class="flex-1">
-                        <div class="font-medium text-gray-900">{{ service.name }}</div>
-                        <div class="text-sm text-gray-600">{{ service.category }}</div>
-                      </div>
+                  <div>
+                    <div class="font-medium" :class="primaryServiceId === serviceId ? 'text-white' : 'text-gray-900'">
+                      {{ getServiceName(serviceId) }}
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            <!-- Selected Services Section -->
-            <div class="bg-gray-50 rounded-lg p-6 space-y-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
-                <span class="material-icon-sm text-green-600">check_circle</span>
-                Selected Services ({{ selectedServices.length }})
-              </h4>
-              <div v-if="selectedServices.length === 0" class="text-center py-12 text-gray-500">
-                <span class="material-icon text-4xl text-gray-300">inventory_2</span>
-                <p class="mt-2">No services selected</p>
-                <p class="text-sm mt-1">Check the boxes in the available services section to select services</p>
-              </div>
-              <div v-else class="space-y-3 max-h-[500px] overflow-y-auto">
-                <div v-for="serviceId in selectedServices" :key="serviceId" class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
-                  <div class="flex-1">
-                    <div class="font-medium text-gray-900">{{ getServiceName(serviceId) }}</div>
-                    <div class="text-sm text-gray-600">Service Category</div>
-                  </div>
-                  <button
-                    type="button"
-                    @click="setPrimaryService(serviceId)"
-                    :class="[
-                      'px-3 py-1 text-xs font-medium rounded-full transition-colors',
-                      isPrimaryService(serviceId)
-                        ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
-                        : 'bg-gray-200 text-gray-700 hover:bg-yellow-100 hover:text-yellow-800'
-                    ]"
-                  >
-                    {{ isPrimaryService(serviceId) ? 'Primary' : 'Set Primary' }}
-                  </button>
-                </div>
-              </div>
+              </button>
             </div>
           </div>
 
@@ -1103,97 +1000,6 @@
               <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
               <span v-else class="material-icon-sm">save</span>
               {{ loading ? 'Saving...' : 'Save Services' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Regions Modal -->
-    <div v-if="showRegionsModal" class="fixed inset-0 z-50 flex items-center justify-center">
-      <!-- Overlay -->
-      <div class="absolute inset-0 bg-black/50" @click="showRegionsModal = false"></div>
-
-      <!-- Modal Content -->
-      <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" @click.stop>
-        <!-- Header -->
-        <div class="flex justify-between items-center p-6 border-b border-gray-200">
-          <h3 class="text-xl font-semibold text-gray-900 flex items-center gap-3">
-            <span class="material-icon text-green-600">location_on</span>
-            Manage Regions
-          </h3>
-          <button @click="showRegionsModal = false" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-        </div>
-
-        <!-- Content -->
-        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Available Regions Section -->
-            <div class="bg-gray-50 rounded-lg p-6 space-y-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
-                <span class="material-icon-sm text-green-600">list</span>
-                Available Regions
-              </h4>
-              <div class="space-y-3 max-h-96 overflow-y-auto">
-                <div v-for="region in availableRegions" :key="region.id" class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    :value="region.id"
-                    v-model="selectedRegions"
-                    class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
-                  >
-                  <div class="flex-1">
-                    <div class="font-medium text-gray-900">{{ region.name }}</div>
-                    <div class="text-sm text-gray-600">{{ region.code }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Selected Regions Section -->
-            <div class="bg-gray-50 rounded-lg p-6 space-y-6">
-              <h4 class="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-2">
-                <span class="material-icon-sm text-blue-600">check_circle</span>
-                Selected Regions
-              </h4>
-              <div v-if="selectedRegions.length === 0" class="text-center py-8 text-gray-500">
-                <span class="material-icon text-4xl text-gray-300">location_off</span>
-                <p class="mt-2">No regions selected</p>
-              </div>
-              <div v-else class="space-y-3 max-h-96 overflow-y-auto">
-                <div v-for="regionId in selectedRegions" :key="regionId" class="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
-                  <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                    <span class="material-icon-sm text-white">location_on</span>
-                  </div>
-                  <div class="flex-1">
-                    <div class="font-medium text-gray-900">{{ getRegionName(regionId) }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Form Actions -->
-          <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              @click="showRegionsModal = false"
-              class="btn-filled flex items-center gap-2"
-              :disabled="loading"
-            >
-              <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
-              <span v-else class="material-icon-sm">close</span>
-              {{ loading ? 'Saving...' : 'Cancel' }}
-            </button>
-            <button
-              type="button"
-              @click="updateRegions"
-              class="btn-filled flex items-center gap-2"
-              :disabled="loading"
-            >
-              <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
-              <span v-else class="material-icon-sm">save</span>
-              {{ loading ? 'Saving...' : 'Save Regions' }}
             </button>
           </div>
         </div>
@@ -1884,14 +1690,14 @@
                 </h4>
                 <div class="space-y-3">
                   <div v-if="selectedQuote.quotation_document_url">
-                    <label class="text-sm font-medium text-gray-600">Document Link:</label>
-                    <a :href="selectedQuote.quotation_document_url" target="_blank" class="flex items-center gap-2 text-blue-600 hover:text-blue-800 underline">
-                      <span class="material-icon-sm">link</span>
-                      Open Document
+                    <label class="text-sm font-medium text-gray-600">Quote Document:</label>
+                    <a :href="getPdfDownloadUrl(selectedQuote.quotation_document_url)" target="_blank" class="flex items-center gap-2 text-blue-600 hover:text-blue-800 underline">
+                      <span class="material-icon-sm">picture_as_pdf</span>
+                      Open PDF Document
                     </a>
                   </div>
                   <div v-else>
-                    <p class="text-sm text-gray-600">No document link provided</p>
+                    <p class="text-sm text-gray-600">No PDF document attached</p>
                   </div>
                 </div>
               </div>
@@ -2037,6 +1843,7 @@ export default {
     },
     // Section collapse/expand state
     sectionsExpanded: {
+      'administrator-settings': false, // Admin settings container collapsed by default
       profile: false, // Profile overview collapsed by default
       services: false, // Services collapsed by default
       regions: false, // Regions collapsed by default
@@ -2091,7 +1898,10 @@ export default {
   },
 
   async mounted() {
+    console.log('🎯 mounted: Starting dashboard initialization')
     await this.getUserRole()
+    console.log('🎯 mounted: getUserRole completed, userRole =', this.userRole)
+
     await this.loadRoleSettings()
     await this.loadProfile()
     await this.loadAvailableOptions()
@@ -2102,13 +1912,22 @@ export default {
     // Admin users (role 3) need to load technicians to assign jobs, and profile visibility
     // Technicians (role 4) need to load technicians only for their own profile
     if (this.userRole === 3 || this.userRole === 4) {
+      console.log('🎯 mounted: Loading technicians for role', this.userRole)
       await this.loadTechnicians()
     }
 
-    // Load quote jobs for service provider admins
+    // Load quote jobs and quotes for service provider admins
     if (this.userRole === 3) {
-      await this.loadQuoteJobs()
+      console.log('🎯 mounted: Loading quotes for service provider admin (role 3)')
+      await Promise.all([
+        this.loadQuoteJobs(),
+        this.loadQuotes()
+      ])
+      console.log('🎯 mounted: Finished loading quotes and quote jobs')
+    } else {
+      console.log('🎯 mounted: Not loading quotes, userRole is', this.userRole)
     }
+    console.log('🎯 mounted: Dashboard initialization complete')
   },
   methods: {
     async loadRoleSettings() {
@@ -2404,16 +2223,22 @@ getCurrentUserName() {
     },
 
     getUserRole() {
+      console.log('🎯 getUserRole: Starting role extraction')
       const token = localStorage.getItem('token')
       if (token) {
         try {
           const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
           this.userRole = payload.role_id
+          console.log('🎯 getUserRole: extracted role_id =', payload.role_id)
         } catch (error) {
-          console.error('Error parsing token:', error)
+          console.error('🎯 getUserRole: Error parsing token:', error)
           this.userRole = null
         }
+      } else {
+        console.log('🎯 getUserRole: No token found')
+        this.userRole = null
       }
+      console.log('🎯 getUserRole: final userRole =', this.userRole)
     },
 
     handleError(error) {
@@ -2704,6 +2529,28 @@ getCurrentUserName() {
       }, 300)
     },
 
+    async debugQuoteLoading() {
+      console.log('🔧 Debug: Checking quote management section')
+      console.log('User role:', this.userRole)
+      console.log('Quotes data:', this.quotes)
+      console.log('Quote filters:', this.quoteFilters)
+      console.log('Quotes section expanded:', this.sectionsExpanded.quotes)
+
+      // Also test the API call directly
+      try {
+        console.log('🔧 Debug: Testing API call...')
+        const response = await apiFetch('/backend/api/job-quotations.php')
+        if (response.ok) {
+          const data = await response.json()
+          console.log('🔧 Debug: API response:', data)
+        } else {
+          console.log('🔧 Debug: API error:', response.status, response.statusText)
+        }
+      } catch (error) {
+        console.log('🔧 Debug: API exception:', error)
+      }
+    },
+
     // Get available status options based on role and current job status
     getAvailableStatuses(job, userRole) {
       const availableStatuses = []
@@ -2757,24 +2604,35 @@ getCurrentUserName() {
 
     // Quote Management Methods
     async loadQuotes() {
+      console.log('🔍 loadQuotes: Starting quote loading...')
       try {
         const params = new URLSearchParams()
         if (this.quoteFilters.status) params.append('status', this.quoteFilters.status)
         if (this.quoteFilters.job_id) params.append('job_id', this.quoteFilters.job_id)
 
-        const response = await apiFetch(`/backend/api/job-quotations.php?${params}`)
+        const url = `/backend/api/job-quotations.php?${params}`
+        console.log('🔍 loadQuotes: Calling API:', url)
+
+        const response = await apiFetch(url)
+        console.log('🔍 loadQuotes: API response status:', response.status)
 
         if (response.ok) {
           const data = await response.json()
-          this.quotes = data.quotes
+          console.log('🔍 loadQuotes: API response data:', data)
+          console.log('🔍 loadQuotes: Setting quotes to:', data.quotes || [])
+          this.quotes = data.quotes || []
+          console.log('🔍 loadQuotes: Quotes data set to:', this.quotes)
         } else {
-          console.error('Failed to load quotes')
+          const errorText = await response.text()
+          console.error('🔍 loadQuotes: Failed to load quotes - Status:', response.status, '- Error:', errorText)
           this.quotes = []
         }
       } catch (error) {
-        console.error('Failed to load quotes:', error)
+        console.error('🔍 loadQuotes: Exception loading quotes:', error)
+        console.error('🔍 loadQuotes: Error stack:', error.stack)
         this.quotes = []
       }
+      console.log('🔍 loadQuotes: Final quotes state:', this.quotes)
     },
 
     async loadQuoteJobs() {
@@ -2808,43 +2666,107 @@ getCurrentUserName() {
     },
 
     async updateQuote() {
-      if (!this.editingQuote) return
+      // Defensive check with proper error handling
+      if (!this.editingQuote) {
+        console.error('🔧 updateQuote: editingQuote is undefined or null')
+        alert('Error: No quote data available. Please try opening the edit modal again.')
+        this.closeEditQuoteModal()
+        return
+      }
 
       this.loading = true
       try {
-        // Check if this is actually a new quote (id is null)
+        // Check if this is actually a new quote (id is null, undefined, or doesn't exist)
         const isNewQuote = !this.editingQuote.id
 
-        const requestBody = isNewQuote ? {
-          ...this.quoteForm
-        } : {
-          quote_id: this.editingQuote.id,
-          ...this.quoteForm
-        }
-
-        console.log('🔧 updateQuote: Creating/Updating quote')
         console.log('🔧 updateQuote: Is new quote?', isNewQuote)
-        console.log('🔧 updateQuote: Method:', isNewQuote ? 'POST' : 'PUT')
-        console.log('🔧 updateQuote: Body:', JSON.stringify(requestBody, null, 2))
+        console.log('🔧 updateQuote: editingQuote:', this.editingQuote)
+        console.log('🔧 updateQuote: editingQuote.job_id:', this.editingQuote.job_id)
 
-        const response = await apiFetch('/backend/api/job-quotations.php', {
-          method: isNewQuote ? 'POST' : 'PUT',
-          body: JSON.stringify(requestBody)
-        })
+        let quoteId = this.editingQuote.id
+        let documentUrl = this.quoteForm.quotation_document_url
 
-        console.log('🔧 updateQuote: Response status:', response.status)
+        // If it's a new quote, create it first
+        if (isNewQuote) {
+          const createRequestBody = {
+            ...this.quoteForm
+          }
 
-        if (response.ok) {
-          console.log('🔧 updateQuote: Success - refreshing quotes and jobs')
-          this.closeEditQuoteModal()
-          this.loadQuotes()
-          this.loadJobs() // Refresh jobs to show any status changes
-          alert(isNewQuote ? 'Quote created successfully!' : 'Quote updated successfully!')
-        } else {
-          const errorData = await response.json()
-          console.error('🔧 updateQuote: Error response:', errorData)
-          this.handleError(errorData)
+          console.log('🔧 updateQuote: Creating new quote first')
+          console.log('🔧 updateQuote: Create Body:', JSON.stringify(createRequestBody, null, 2))
+
+          const createResponse = await apiFetch('/backend/api/job-quotations.php', {
+            method: 'POST',
+            body: JSON.stringify(createRequestBody)
+          })
+
+          console.log('🔧 updateQuote: Create response status:', createResponse.status)
+
+          if (!createResponse.ok) {
+            const errorData = await createResponse.json()
+            console.error('🔧 updateQuote: Error creating quote:', errorData)
+            this.handleError(errorData)
+            return
+          }
+
+          const createResult = await createResponse.json()
+          if (!createResult.success || !createResult.quote_id) {
+            console.error('🔧 updateQuote: Invalid create response - missing quote_id')
+            console.error('🔧 updateQuote: Create result:', createResult)
+            alert('Error: Failed to create quote. Please try again.')
+            return
+          }
+          quoteId = createResult.quote_id // Get the new quote ID
+          console.log('🔧 updateQuote: New quote created with ID:', quoteId)
         }
+
+        // Handle PDF upload after quote exists (for both new and existing quotes)
+        if (this.pdfToUpload && !documentUrl) {
+          console.log('🔧 updateQuote: PDF file detected - uploading for quote ID:', quoteId)
+          await this.uploadPdfDocumentForQuote(quoteId)
+
+          // If upload failed, stop here
+          if (this.uploadingPdf) {
+            alert('PDF upload in progress. Please wait for it to complete.')
+            return
+          }
+
+          if (!this.quoteForm.quotation_document_url) {
+            alert('Failed to upload PDF. Please try again or remove the file.')
+            return
+          }
+        }
+
+        // Update existing quote if it already existed
+        if (!isNewQuote) {
+          const updateRequestBody = {
+            quote_id: this.editingQuote.id,
+            ...this.quoteForm
+          }
+
+          console.log('🔧 updateQuote: Updating existing quote')
+          console.log('🔧 updateQuote: Update Body:', JSON.stringify(updateRequestBody, null, 2))
+
+          const updateResponse = await apiFetch('/backend/api/job-quotations.php', {
+            method: 'PUT',
+            body: JSON.stringify(updateRequestBody)
+          })
+
+          console.log('🔧 updateQuote: Update response status:', updateResponse.status)
+
+          if (!updateResponse.ok) {
+            const errorData = await updateResponse.json()
+            console.error('🔧 updateQuote: Error updating quote:', errorData)
+            this.handleError(errorData)
+            return
+          }
+        }
+
+        console.log('🔧 updateQuote: Success - refreshing quotes and jobs')
+        this.closeEditQuoteModal()
+        this.loadQuotes()
+        this.loadJobs() // Refresh jobs to show any status changes
+        alert(isNewQuote ? 'Quote created successfully!' : 'Quote updated successfully!')
       } catch (error) {
         console.error('🔧 updateQuote: Exception:', error)
         alert('Failed to save quote')
@@ -3012,6 +2934,34 @@ getCurrentUserName() {
       return thirtyDaysFromNow.toISOString().split('T')[0]; // Return YYYY-MM-DD format
     },
 
+    getCategoryColor(category) {
+      const colors = {
+        'Electrical': '#3B82F6',    // Blue
+        'Mechanical': '#10B981',   // Green
+        'Plumbing': '#06B6D4',     // Cyan
+        'HVAC': '#8B5CF6',         // Purple
+        'Construction': '#F59E0B', // Amber
+        'Maintenance': '#EF4444',  // Red
+        'IT': '#6366F1',           // Indigo
+        'Other': '#6B7280'         // Gray
+      };
+      return colors[category] || colors['Other'];
+    },
+
+    getCategoryIcon(category) {
+      const icons = {
+        'Electrical': 'electric_bolt',
+        'Mechanical': 'build',
+        'Plumbing': 'water_drop',
+        'HVAC': 'air',
+        'Construction': 'construction',
+        'Maintenance': 'maintenance',
+        'IT': 'computer',
+        'Other': 'settings'
+      };
+      return icons[category] || icons['Other'];
+    },
+
     // Edit Job Modal Methods
     handleEditJob(job) {
       console.log('Opening EditJobModal for job:', job)
@@ -3056,6 +3006,90 @@ getCurrentUserName() {
       await this.loadJobs()
       // Close might already be handled by the modal, but ensure cleanup
       this.editingJobForModal = null
+    },
+
+    // PDF Upload Methods
+    handlePdfUpload(event) {
+      const file = event.target.files[0]
+      if (file) {
+        this.pdfToUpload = file
+        this.pdfDisplayName = file.name
+        console.log('PDF file selected:', file.name, 'Size:', file.size)
+      }
+    },
+
+    async uploadPdfDocument() {
+      // Legacy method for backward compatibility
+      // This method assumes we're editing the current quote
+      if (!this.editingQuote?.id) {
+        alert('Please save the quote first before uploading documents.')
+        return
+      }
+
+      await this.uploadPdfDocumentForQuote(this.editingQuote.id)
+    },
+
+    async uploadPdfDocumentForQuote(quoteId) {
+      if (!this.pdfToUpload) {
+        alert('Please select a PDF file first')
+        return
+      }
+
+      if (!quoteId) {
+        alert('No quote ID provided for PDF upload')
+        return
+      }
+
+      this.uploadingPdf = true
+
+      try {
+        // Create FormData for file upload
+        const formData = new FormData()
+        formData.append('quote_document', this.pdfToUpload)
+        formData.append('quote_id', quoteId.toString())
+        formData.append('token', localStorage.getItem('token')) // API expects token in POST data
+
+        console.log('Starting PDF upload for quote ID:', quoteId)
+
+        const response = await fetch('/backend/api/upload-quote-document.php', {
+          method: 'POST',
+          body: formData
+          // Removed Authorization header since API reads from POST data
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+          console.log('PDF upload success:', result)
+
+          // Update the quote form with the uploaded document URL
+          this.quoteForm.quotation_document_url = result.document_url
+          this.uploadedPdfPath = result.document_url
+
+          // Clear the uploaded file since it's been processed
+          this.pdfToUpload = null
+        } else {
+          const error = await response.json()
+          console.error('PDF upload failed:', error)
+
+          if (error.error) {
+            alert(`PDF upload failed: ${error.error}`)
+          } else {
+            alert('PDF upload failed. Check server logs for details.')
+          }
+        }
+      } catch (error) {
+        console.error('PDF upload exception:', error)
+        alert('Failed to upload PDF. Please try again.')
+      } finally {
+        this.uploadingPdf = false
+      }
+    },
+
+    getPdfDownloadUrl(pdfPath) {
+      if (!pdfPath) return '#'
+      // Construct the download URL for the PDF
+      const token = localStorage.getItem('token')
+      return `/backend/api/upload-quote-document.php?path=${encodeURIComponent(pdfPath)}&token=${encodeURIComponent(token)}`
     }
   }
 }

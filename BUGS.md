@@ -42,3 +42,129 @@ SQL query in service-provider-jobs.php is selecting 'j.due_date' column which do
 - [ ] Test the fix by attempting to load service provider jobs
 - [ ] If it works, move bug to Fixed ✅ section
 - [ ] If it fails with different error, investigate further
+
+### 🟡 [BUG] Quote Management Filters Must Be Fixed
+**Discovered:** 2025-10-23
+**Area:** Frontend - Quote Management
+**Impact:** Quote management filtering functionality broken - unclear what specifically is wrong
+
+**Issue Description:**
+Quote management filters are not working properly. Exact nature of the issue needs investigation.
+
+**Expected Behavior:**
+- Quote filters should work correctly to filter quotes by various criteria
+
+**Current Behavior:**
+- Filters are not functioning as expected (details need investigation)
+
+**Steps to Reproduce:**
+1. Navigate to quote management section
+2. Attempt to use filters
+3. Observe that filters are not working properly
+
+**Notes:**
+- Need to identify what specific filtering functionality is broken
+- Requires user to provide more details about what filters exist and how they should work
+
+### 🟡 [BUG] Quote Management Card Headings Show Incorrect Status
+**Discovered:** 2025-10-23
+**Area:** Frontend - Quote Status Display
+**Impact:** Quote status display is confusing and provides incorrect information
+
+**Issue Description:**
+Quote management card headings display 'submitted' instead of 'Submitted', and do not reflect the actual status of accepted/declined/expired quotes.
+
+**Expected Behavior:**
+- Card headings should read 'Submitted' (capitalized)
+- For quotes that are Accepted, Declined, or Expired, the heading should reflect the actual status (not 'submitted')
+
+**Current Behavior:**
+- All quote cards show 'submitted' regardless of actual status
+- Capitalization is lowercase 'submitted'
+
+**Steps to Reproduce:**
+1. Navigate to quote management section
+2. View quote cards for quotes that have been accepted, declined, or expired
+3. Observe headings show 'submitted' instead of proper status
+
+**Notes:**
+- This affects user understanding of quote statuses
+- May lead to confusion about which quotes are active vs. completed
+
+### 🟡 [BUG] Quote Cards Display Currency as RR Instead of R
+**Discovered:** 2025-10-23
+**Area:** Frontend - Service Provider Dashboard Quote Display
+**Impact:** Currency display is malformed in quote cards
+
+**Issue Description:**
+Quoted amounts in the Quote cards of the Service Provider Dashboard are shown with "RR" instead of "R" (South African Rand currency symbol).
+
+**Expected Behavior:**
+- Currency should display as "R" (single R) for South African Rand
+- Example: "R 1,500.00" not "RR 1,500.00"
+
+**Current Behavior:**
+- Currency displays as "RR" (double R) in quote cards
+
+**Steps to Reproduce:**
+1. Navigate to Service Provider Dashboard
+2. View quote cards
+3. Observe quoted amounts show "RR" instead of "R"
+
+**Notes:**
+- This is a display bug affecting currency formatting
+- South African Rand should use single R symbol
+
+### 🟡 [BUG] Quote Card Titles Have Incorrect Capitalization
+**Discovered:** 2025-10-23
+**Area:** Frontend - Service Provider Dashboard CSS Styling
+**Impact:** Quote card status titles are not capitalized properly
+
+**Issue Description:**
+The quote cards in the Service Provider Dashboard have titles that are not capitalized nicely - should be 'Submitted' instead of lowercase. Same applies to all status labels (Accepted, Declined, Expired, etc.).
+
+**Expected Behavior:**
+- Status titles should be properly capitalized ('Submitted', 'Accepted', 'Declined', 'Expired')
+- Can be all uppercase if preferred for consistency
+- Use CSS to fix capitalization styling
+
+**Current Behavior:**
+- Status titles are lowercase ('submitted', 'accepted', etc.)
+- Inconsistent text presentation
+
+**Steps to Reproduce:**
+1. Navigate to Service Provider Dashboard
+2. View quote cards
+3. Observe status titles are lowercase instead of capitalized
+
+**Notes:**
+- Requires CSS fixes for proper capitalization
+- UX advice needed when implementing capitalization style choice (title case vs all caps)
+- Affects all status labels in quote cards
+
+### 🟡 [BUG] Quote Cards Need Proper Styling
+**Discovered:** 2025-10-23
+**Area:** Frontend - Service Provider Dashboard UI/UX
+**Impact:** Quote cards lack proper styling and visual design
+
+**Issue Description:**
+Quotation cards in the Service Provider Dashboard need proper styling applied. Currently inadequate or inconsistent visual appearance.
+
+**Expected Behavior:**
+- Well-designed quote cards with consistent styling
+- Proper visual hierarchy, spacing, colors, typography
+- Professional appearance that enhances usability
+
+**Current Behavior:**
+- Quote cards lack proper styling
+- Unclear what specific styling issues exist (needs investigation)
+
+**Steps to Reproduce:**
+1. Navigate to Service Provider Dashboard
+2. View quote cards
+3. Observe inadequate or inconsistent styling
+
+**Notes:**
+- UX expertise needed for proper card design
+- May involve layout, colors, typography, spacing improvements
+- Requires detailed analysis of current styling issues
