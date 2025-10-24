@@ -477,7 +477,7 @@
           <!-- Quotes Grid -->
           <div v-else-if="quotes && quotes.length > 0" class="quotes-grid grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             <div v-for="quote in quotes" :key="quote.id" class="quote-card card overflow-hidden">
-              <div class="card-header">
+              <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <div class="quote-status uppercase">
                   <span class="status-badge" :class="getQuoteStatusClass(quote.status)">
                     {{ quote.status }}
@@ -509,7 +509,7 @@
                 </p>
 
                 <div class="quote-amount text-lg font-bold text-green-600 mb-2">
-                  R {{ formatCurrency(quote.quotation_amount) }}
+                  {{ formatCurrency(quote.quotation_amount) }}
                 </div>
 
                 <div class="quote-meta space-y-1 text-sm">

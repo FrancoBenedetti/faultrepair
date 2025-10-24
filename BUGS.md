@@ -151,6 +151,98 @@ Quotation cards in the Service Provider Dashboard need proper styling applied. C
 - May involve layout, colors, typography, spacing improvements
 - Requires detailed analysis of current styling issues
 
+### 🟡 [BUG] ClientDashboard Archive Function Not Working
+**Discovered:** 2025-10-24
+**Area:** Frontend - Client Dashboard Archive Functionality
+**Impact:** Clients (role 2) unable to archive items which affects data management and workflow
+
+**Issue Description:**
+The archive function in ClientDashboard is not working. This functionality should be available to users with role 2 (client users).
+
+**Expected Behavior:**
+- Archive function should be functional for role 2 users
+- Clients should be able to archive completed jobs or other items
+- Archive action should complete successfully without errors
+
+**Current Behavior:**
+- Archive function does not work for role 2 users
+- Clicking archive has no effect or fails silently
+
+**Steps to Reproduce:**
+1. Log in as role 2 user (client)
+2. Navigate to ClientDashboard
+3. Attempt to use the archive function on an item
+4. Observe that archive does not work
+
+**Notes:**
+- Role-based functionality issue - affects client users specifically
+- May be missing backend API, frontend handler, or permissions check
+- Archive functionality is important for job completion workflow
+
+### 🟡 [BUG] ServiceProviderDashboard Archive Function Not Working
+**Discovered:** 2025-10-24
+**Area:** Frontend - Service Provider Dashboard Archive Functionality
+**Impact:** Service providers (role 3) unable to archive items which affects data management and workflow
+
+**Issue Description:**
+The archive function in ServiceProviderDashboard is not working. This functionality should be available to users with role 3 (service provider users).
+
+**Expected Behavior:**
+- Archive function should be functional for role 3 users
+- Service providers should be able to archive completed jobs/quotes or other items
+- Archive action should complete successfully without errors
+
+**Current Behavior:**
+- Archive function does not work for role 3 users
+- Clicking archive has no effect or fails silently
+
+**Steps to Reproduce:**
+1. Log in as role 3 user (service provider)
+2. Navigate to ServiceProviderDashboard
+3. Attempt to use the archive function on an item
+4. Observe that archive does not work
+
+**Notes:**
+- Role-based functionality issue - affects service provider users specifically
+- May be missing backend API, frontend handler, or permissions check
+- Archive functionality is important for job completion workflow
+- Similar issue to client dashboard archive problem
+
+### 🟡 [BUG] ClientDashboard Business Profile Section Missing
+**Discovered:** 2025-10-24
+**Area:** Frontend - Client Dashboard Business Profile Management
+**Impact:** Clients cannot edit or capture their organization's details, affecting business data management
+
+**Issue Description:**
+The ClientDashboard has lost the ability to define organization/business details. The section that allows editing/capturing business information is no longer visible.
+
+**Expected Behavior:**
+- Business profile section should be visible in ClientDashboard
+- Clients should be able to edit/capture business details including:
+  - Business name
+  - Address
+  - Manager
+  - VAT number
+  - Company registration number
+- Functionality should be similar to what exists for service providers
+
+**Current Behavior:**
+- Business profile section is not visible in ClientDashboard
+- No way for clients to edit organization details
+- Critical business information cannot be updated
+
+**Steps to Reproduce:**
+1. Log in as a client user
+2. Navigate to ClientDashboard
+3. Look for organization/business profile editing section
+4. Observe that the section is missing/no longer visible
+
+**Notes:**
+- Business profile functionality is essential for client organizations
+- Should mirror the business profile functionality available to service providers
+- Affects important business information management (VAT numbers, registration, contact details)
+- Similar profile management exists for service providers and should be available for clients
+
 ## Fixed ✅
 
 ### 🟠 [BUG] Service Provider Jobs API - 'j.due_date' Column Does Not Exist - PREVENTS JOB LOADING
