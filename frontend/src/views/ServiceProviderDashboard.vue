@@ -477,8 +477,8 @@
           <!-- Quotes Grid -->
           <div v-else-if="quotes && quotes.length > 0" class="quotes-grid grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             <div v-for="quote in quotes" :key="quote.id" class="quote-card card overflow-hidden">
-              <div class="quote-header card-header">
-                <div class="quote-status">
+              <div class="card-header">
+                <div class="quote-status uppercase">
                   <span class="status-badge" :class="getQuoteStatusClass(quote.status)">
                     {{ quote.status }}
                   </span>
