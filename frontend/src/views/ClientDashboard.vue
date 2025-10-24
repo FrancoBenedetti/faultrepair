@@ -171,6 +171,7 @@
               :is-admin="isAdmin"
               @view-provider-jobs="handleViewProviderJobs"
               @browse-providers="$router.push('/browse-providers')"
+              @add-xs-provider="showAddXSProviderModal = true"
             />
           </div>
         </div>
@@ -303,6 +304,13 @@
         @request-quote="handleRequestQuoteFromModal"
       />
 
+      <!-- Add XS Provider Modal -->
+      <AddXSProviderModal
+        v-if="showAddXSProviderModal"
+        @close="showAddXSProviderModal = false"
+        @provider-added="handleXSProviderAdded"
+      />
+
       <!-- Job Confirmation Modal - Temporarily disabled due to auto-trigger bug -->
       <!-- <div v-if="showJobConfirmationModal" class="modal-overlay" @click="closeJobConfirmationModal()">
         <div class="modal-content" @click.stop>
@@ -380,6 +388,7 @@ import EditJobModal from '@/components/modals/EditJobModal.vue'
 import JobDetailsModal from '@/components/modals/JobDetailsModal.vue'
 import ProviderDetailsModal from '@/components/modals/ProviderDetailsModal.vue'
 import QuotationDetailsModal from '@/components/modals/QuotationDetailsModal.vue'
+import AddXSProviderModal from '@/components/modals/AddXSProviderModal.vue'
 
 export default {
   name: 'ClientDashboard',
@@ -400,7 +409,8 @@ export default {
     EditJobModal,
     EditLocationModal,
     ProviderDetailsModal,
-    QuotationDetailsModal
+    QuotationDetailsModal,
+    AddXSProviderModal
   },
   data() {
     return {
@@ -449,6 +459,7 @@ export default {
       showProviderDetailsModal: false,
       showQuotationDetailsModal: false,
       showEditJobModal: false,
+      showAddXSProviderModal: false,
       showJobConfirmationModal: false,
       showJobRejectionModal: false,
       showQuoteResponseModal: false,
@@ -1932,6 +1943,13 @@ Are you sure you want to proceed?`;
     handleUpgradeClick() {
       // For now, show a simple alert. In a real implementation, this would navigate to a premium upgrade page or modal
       alert('Upgrade to Premium feature coming soon! Contact sales for more information.')
+    },
+
+    // Handle XS provider added event
+    handleXSProviderAdded(provider) {
+      console.log('XS Provider added, refreshing provider list:', provider)
+      // Refresh the approved providers list to include the new XS provider
+      this.loadApprovedProviders()
     },
 
     // QR Scanner methods

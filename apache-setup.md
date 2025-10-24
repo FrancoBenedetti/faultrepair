@@ -128,6 +128,7 @@ sudo nano /etc/hosts
 ```
 
 Add this line:
+
 ```
 127.0.0.1    fault-reporter.local www.fault-reporter.local
 ```
@@ -206,6 +207,7 @@ Open browser and navigate to: `http://fault-reporter.local`
 ### Test User Flows
 
 #### Client Registration Flow:
+
 1. Click "Register as Client"
 2. Fill form: Company Name, Address, Username, Email, Password
 3. Click "Register"
@@ -214,6 +216,7 @@ Open browser and navigate to: `http://fault-reporter.local`
 6. **Expected**: Successful authentication
 
 #### Service Provider Registration Flow:
+
 1. Click "Register as Service Provider"
 2. Fill form: Company Name, Address, Username, Email, Password
 3. Click "Register"
@@ -249,6 +252,7 @@ ORDER BY u.created_at DESC LIMIT 10;
 ### Common Issues
 
 #### 1. 403 Forbidden Error
+
 ```bash
 # Check permissions
 ls -la /var/www/fault-reporter
@@ -259,6 +263,7 @@ sudo chmod -R 755 /var/www/fault-reporter
 ```
 
 #### 2. PHP Files Not Executing
+
 ```bash
 # Check if PHP module is enabled
 sudo a2enmod php8.1  # or your PHP version
@@ -269,6 +274,7 @@ php -v
 ```
 
 #### 3. Database Connection Errors
+
 ```bash
 # Test database connection
 mysql -u your_user -p -e "SELECT 1;"
@@ -281,6 +287,7 @@ mysql -u your_user -p -e "SHOW DATABASES;"
 ```
 
 #### 4. CORS Issues
+
 Since frontend and backend are on the same domain, CORS shouldn't be an issue. If you encounter CORS errors:
 
 ```apache
@@ -293,6 +300,7 @@ Since frontend and backend are on the same domain, CORS shouldn't be an issue. I
 ```
 
 #### 5. Frontend Not Loading
+
 ```bash
 # Check if dist directory exists
 ls -la /var/www/fault-reporter/frontend/dist/
@@ -303,6 +311,7 @@ npm run build
 ```
 
 #### 6. API Endpoints Not Working
+
 ```bash
 # Test API directly
 curl http://fault-reporter.local/api/auth.php
@@ -334,12 +343,14 @@ find /var/www/fault-reporter -type f -name "*.php" -exec ls -la {} \;
 ## Performance Optimization
 
 ### Enable Compression
+
 ```bash
 sudo a2enmod deflate
 sudo systemctl restart apache2
 ```
 
 ### Enable Caching
+
 ```apache
 # Add to virtual host
 <IfModule mod_expires.c>
@@ -353,6 +364,7 @@ sudo systemctl restart apache2
 ## Security Considerations
 
 ### SSL Configuration (Optional)
+
 ```bash
 # Enable SSL module
 sudo a2enmod ssl
@@ -368,6 +380,7 @@ sudo nano /etc/apache2/sites-available/fault-reporter.conf
 ```
 
 ### Database Security
+
 ```php
 // Use environment variables for database credentials
 $host = getenv('DB_HOST') ?: 'localhost';

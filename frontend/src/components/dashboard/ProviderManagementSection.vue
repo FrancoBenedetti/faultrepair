@@ -1,9 +1,13 @@
 <template>
-  <!-- Browse Providers button -->
+  <!-- Action buttons -->
   <div class="section-header-actions mb-6" v-if="isAdmin">
+    <button @click="$emit('add-xs-provider')" class="btn-filled mr-2">
+      <span class="material-icon-sm mr-2">add</span>
+      Add External Provider
+    </button>
     <button @click="$emit('browse-providers')" class="btn-outlined">
       <span class="material-icon-sm mr-2">search</span>
-      Browse Providers
+      Browse Platform Providers
     </button>
   </div>
 
@@ -31,7 +35,15 @@
       </template>
 
       <template #content>
-        <h3 class="provider-name text-title-medium text-on-surface mb-2">{{ provider.name }}</h3>
+        <div class="provider-header-row flex items-center justify-between mb-2">
+          <h3 class="provider-name text-title-medium text-on-surface">{{ provider.name }}</h3>
+          <span
+            :class="getProviderTypeClass(provider.provider_type)"
+            class="provider-type-badge text-xs font-medium px-2 py-1 rounded-full uppercase tracking-wide"
+          >
+            {{ getProviderTypeLabel(provider.provider_type) }}
+          </span>
+        </div>
         <p class="provider-address text-body-medium text-on-surface-variant mb-4">{{ provider.address }}</p>
 
         <div class="provider-stats grid grid-cols-3 gap-3">
@@ -107,10 +119,37 @@ export default {
       default: false
     }
   },
+  data() {
+    return {
+      showAddXSProviderModal: false
+    }
+  },
   methods: {
     formatDate(dateString) {
       const date = new Date(dateString)
       return date.toLocaleDateString()
+    },
+
+    getProviderTypeClass(providerType) {
+      switch (providerType) {
+        case 'S':
+          return 'bg-blue-100 text-blue-800 border-blue-200'
+        case 'XS':
+          return 'bg-green-100 text-green-800 border-green-200'
+        default:
+          return 'bg-gray-100 text-gray-800 border-gray-200'
+      }
+    },
+
+    getProviderTypeLabel(providerType) {
+      switch (providerType) {
+        case 'S':
+          return 'Platform'
+        case 'XS':
+          return 'External'
+        default:
+          return 'Unknown'
+      }
     }
   }
 }
@@ -161,6 +200,26 @@ export default {
 .approval-date {
   margin: 0;
   text-align: left;
+}
+
+.btn-filled {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: #007bff;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-filled:hover {
+  background: #0056b3;
 }
 
 .btn-outlined {

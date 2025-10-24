@@ -5,6 +5,7 @@ Based on your requirements, here are three detailed mockup approaches for handli
 ### **Mockup 1: Floating Action Panel (Recommended)**
 
 **Visual Design:**
+
 ```
 ┌─────────────────────────────────────────────────┐
 │ [Status Badge: Completed]    [View] [Edit] [Archive] │
@@ -23,6 +24,7 @@ Based on your requirements, here are three detailed mockup approaches for handli
 ```
 
 **Key Features:**
+
 - **Always Visible:** Floating panel appears immediately when job status = "Completed"
 - **Prominent Actions:** Large, clearly labeled buttons with icons
 - **Quick Access:** No need to click into modal for basic confirm/reject
@@ -30,6 +32,7 @@ Based on your requirements, here are three detailed mockup approaches for handli
 - **Space Efficient:** Doesn't clutter card header, maintains clean design
 
 **Interaction Flow:**
+
 1. Job completed → Floating panel appears automatically
 2. Client clicks "✓ CONFIRM COMPLETION" → Opens confirmation modal with notes/images
 3. Client clicks "✗ REJECT & RETURN" → Opens rejection modal with optional reason + images
@@ -38,6 +41,7 @@ Based on your requirements, here are three detailed mockup approaches for handli
 ### **Mockup 2: Integrated Edit Modal Section**
 
 **Visual Design:**
+
 ```
 ┌─────────────────────────────────────────────────┐
 │ Edit Job: Refrigerator Repair                       │
@@ -64,6 +68,7 @@ Based on your requirements, here are three detailed mockup approaches for handli
 ```
 
 **Key Features:**
+
 - **Contextual Integration:** Confirmation section appears in edit modal when job = "Completed"
 - **Rich Input:** Full notes and image upload capabilities
 - **Clear Intent:** Radio buttons make confirmation/rejection mutually exclusive
@@ -71,6 +76,7 @@ Based on your requirements, here are three detailed mockup approaches for handli
 - **Professional Layout:** Clean, form-like structure
 
 **Interaction Flow:**
+
 1. Click "Edit" on completed job → Modal opens with confirmation section
 2. Choose confirm or reject → Appropriate form fields appear
 3. Add notes and/or images as needed
@@ -79,6 +85,7 @@ Based on your requirements, here are three detailed mockup approaches for handli
 ### **Mockup 3: Status-Based Action Bar**
 
 **Visual Design:**
+
 ```
 ┌─────────────────────────────────────────────────┐
 │ [Status: Completed]  [View] [Archive]               │
@@ -96,12 +103,14 @@ Based on your requirements, here are three detailed mockup approaches for handli
 ```
 
 **Key Features:**
+
 - **Status-Driven:** Action bar changes based on job status
 - **Prominent Display:** Confirmation actions highlighted in colored bar
 - **Responsive Design:** Action bar adapts to different job states
 - **Visual Prominence:** Makes completion actions impossible to miss
 
 **Different States:**
+
 - **Quote Provided:** `[Accept Quote] [Reject Quote] [View] [Archive]`
 - **Completed:** `[✓ Confirm] [✗ Reject] [View] [Archive]`
 - **Other Statuses:** `[View] [Edit] [Archive]`
@@ -109,6 +118,7 @@ Based on your requirements, here are three detailed mockup approaches for handli
 ### **Recommended Implementation: Mockup 1 (Floating Action Panel)**
 
 **Rationale for Recommendation:**
+
 1. **Immediate Visibility:** Critical actions visible without opening modals
 2. **On-Site Efficiency:** Technicians can get quick confirmation while still at location
 3. **Progressive Enhancement:** Simple actions fast, complex actions in modal
@@ -116,19 +126,23 @@ Based on your requirements, here are three detailed mockup approaches for handli
 5. **Mobile Friendly:** Touch targets properly sized for mobile interaction
 
 **Technical Implementation Plan:**
+
 1. **Frontend Changes:**
+   
    - Add floating panel component to JobManagementSection.vue
    - Style with CSS positioning and z-index management
    - Add hover/focus states for panel visibility
    - Integrate with existing event system
 
 2. **Modal Enhancement:**
+   
    - Enable and improve the existing confirmation modal
    - Add image upload capability for evidence
    - Include optional notes field
    - Add proper form validation
 
 3. **Backend Integration:**
+   
    - Ensure confirmation/rejection APIs handle notes and images
    - Add proper validation for optional rejection reasons
    - Update job status history with detailed information
@@ -140,4 +154,4 @@ Based on your requirements, here are three detailed mockup approaches for handli
 3. **Image Requirements:** Should images be required for rejection, or always optional?
 4. **Notification Flow:** Should service providers be notified immediately when jobs are confirmed/rejected?
 
-Would you like me to proceed with implementing Mockup 1 (Floating Action Panel), or would you prefer to see a working HTML prototype first?
+Would you like me to proceed with implementing Mockup 1 (Floating Action Panel), or would you prefer to see a working HTML prototype first

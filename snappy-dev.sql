@@ -355,7 +355,7 @@ CREATE TABLE IF NOT EXISTS `participant_features` (
 -- Dumping structure for table snappy.participant_type
 CREATE TABLE IF NOT EXISTS `participant_type` (
   `participantId` int(11) NOT NULL,
-  `participantType` enum('C','S') NOT NULL DEFAULT 'S',
+  `participantType` enum('C','S','XS') NOT NULL DEFAULT 'S',
   `isActive` enum('Y','N') DEFAULT 'Y',
   PRIMARY KEY (`participantId`,`participantType`),
   CONSTRAINT `participant_type_ibfk_1` FOREIGN KEY (`participantId`) REFERENCES `participants` (`participantId`) ON DELETE CASCADE

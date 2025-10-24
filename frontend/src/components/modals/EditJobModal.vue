@@ -16,6 +16,11 @@
         <div class="section">
           <h3 class="section-title">Current Status: {{ job.job_status }}</h3>
 
+          <!-- Show a message for Assigned jobs with admin access -->
+          <div v-if="job.job_status === 'Assigned' && userRole === 3" class="status-message">
+            As a service provider administrator, you can assign technicians to this job and add instructions.
+          </div>
+
           <!-- State Transitions -->
           <div class="transitions">
             <!-- Quote Request Transition -->
@@ -75,6 +80,39 @@
           </div>
         </div>
 
+        <!-- Technician Assignment for Assigned Jobs (Role 3 only) -->
+        <div v-if="job.job_status === 'Assigned' && userRole === 3" class="section">
+          <h3 class="section-title">Technician Assignment</h3>
+
+          <div class="technician-assignment">
+            <div class="form-group">
+              <label class="form-label">Assigned Technician</label>
+              <select v-model="selectedTechnicianId" class="form-input">
+                <option value="">-- Unassigned --</option>
+                <option v-for="tech in technicians" :key="tech.id" :value="tech.id">
+                  {{ tech.full_name || tech.username }}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Technician Notes</label>
+              <textarea
+                v-model="technicianNotes"
+                placeholder="Instructions for the technician..."
+                class="form-textarea"
+                rows="3"
+              ></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button @click="assignTechnician" :disabled="!selectedTechnicianId || saving" class="btn-primary">
+                {{ saving ? 'Assigning...' : 'Assign Technician' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Job Details (read-only for now) -->
         <div class="section">
           <h3 class="section-title">Job Details</h3>
@@ -83,6 +121,7 @@
             <p><strong>Description:</strong> {{ job.fault_description }}</p>
             <p><strong>Location:</strong> {{ job.location_name }}</p>
             <p><strong>Reported by:</strong> {{ job.reporting_user }}</p>
+            <p v-if="job.assigned_technician"><strong>Current Technician:</strong> {{ job.assigned_technician }}</p>
           </div>
         </div>
       </div>
@@ -102,6 +141,18 @@ export default {
     job: {
       type: Object,
       required: true
+    },
+    userRole: {
+      type: Number,
+      default: 1
+    },
+    technicians: {
+      type: Array,
+      default: () => []
+    },
+    currentUserId: {
+      type: Number,
+      default: null
     }
   },
   emits: ['close', 'job-updated'],
@@ -125,7 +176,10 @@ export default {
       rejectionNotes: '',
       rejectionImages: [],
       // Quote deadline data
-      quoteByDate: this.calculateDefaultQuoteDueDate()
+      quoteByDate: this.calculateDefaultQuoteDueDate(),
+      // Technician assignment data
+      selectedTechnicianId: this.job.assigned_technician_user_id || '',
+      technicianNotes: this.job.technician_notes || ''
     }
   },
 
@@ -234,6 +288,49 @@ export default {
         this.$emit('close');
       } catch (error) {
         this.error = error.message;
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async assignTechnician() {
+      if (!this.selectedTechnicianId) {
+        alert('Please select a technician');
+        return;
+      }
+
+      this.saving = true;
+      this.error = null;
+
+      try {
+        const payload = {
+          assigned_technician_user_id: parseInt(this.selectedTechnicianId),
+          technician_notes: this.technicianNotes
+        };
+
+        const response = await fetch(`/backend/api/service-provider-jobs.php`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            job_id: this.job.id,
+            ...payload
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to assign technician');
+        }
+
+        const result = await response.json();
+        alert('Technician assigned successfully!');
+        this.$emit('job-updated', result);
+        this.$emit('close');
+      } catch (error) {
+        this.error = error.message;
+        alert('Failed to assign technician: ' + error.message);
       } finally {
         this.saving = false;
       }
@@ -437,5 +534,15 @@ export default {
   border-top: 1px solid #e0e0e0;
   display: flex;
   justify-content: flex-end;
+}
+
+.status-message {
+  background: #e8f4fd;
+  border: 1px solid #1e88e5;
+  border-radius: 4px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  color: #1565c0;
+  font-weight: 500;
 }
 </style>

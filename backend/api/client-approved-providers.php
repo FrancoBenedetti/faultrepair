@@ -70,15 +70,17 @@ function getApprovedProviders($participant_id) {
                 pa.id,
                 pa.provider_participant_id as service_provider_id,
                 p.name, p.address, p.website, p.description, p.logo_url,
+                pt.participantType as provider_type,
                 pa.created_at as approved_at,
                 COUNT(DISTINCT sps.service_id) as services_count,
                 COUNT(DISTINCT spr.region_id) as regions_count
             FROM participant_approvals pa
             JOIN participants p ON pa.provider_participant_id = p.participantId
-            LEFT JOIN service_provider_services sps ON p.participantId = sps.service_provider_id
-            LEFT JOIN service_provider_regions spr ON p.participantId = spr.service_provider_id
+            JOIN participant_type pt ON p.participantId = pt.participantId
+            LEFT JOIN service_provider_services sps ON p.participantId = sps.service_provider_id AND pt.participantType = 'S'
+            LEFT JOIN service_provider_regions spr ON p.participantId = spr.service_provider_id AND pt.participantType = 'S'
             WHERE pa.client_participant_id = ? AND p.is_active = TRUE
-            GROUP BY pa.id, p.participantId
+            GROUP BY pa.id, p.participantId, pt.participantType
             ORDER BY pa.created_at DESC
         ";
 

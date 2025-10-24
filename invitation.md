@@ -1,13 +1,15 @@
 # Enrolment by invitation
 
 ## Purpose
- - Allow service provide admins to invite a customer to sign up to use this application
- - Allow clients budget controllers to invite a service provider to sign up to use this application
- - Invitations will be sent by the user via Whatsapp or Telegram
+
+- Allow service provide admins to invite a customer to sign up to use this application
+- Allow clients budget controllers to invite a service provider to sign up to use this application
+- Invitations will be sent by the user via Whatsapp or Telegram
 
 ## Invitation Workflow
-    * User is signed in and selects a page to Invite a Client/Service Provider
 
+    * User is signed in and selects a page to Invite a Client/Service Provider
+    
     * Details are provided by the user
         * Whether telegram, whatsapp, sms or email is to be used
         * Contact details of party to be invite
@@ -30,9 +32,8 @@
     * The form is completed by the recipient and the account is registered with the service provider as approved by the client
 
 ## Business Rules
+
     * In the case where an invitation is sent by a service provider to a prospective client, and where the client is already a member i.e. is already registered as a client, then the client should be asked for approval to declare the referring service provider as an approved service provider. However, if the invited client is not an budget controller user of the client provider, e.g. the user is a technician, then the user must be informed that he does not have the authorisation to add the the service provider, and that this action must be completed by a budget controller.
     * In the case where an invitation is sent by a client to a prospective service provider, and where the service provider is already a member, then the service provider must be informed that no action was performed but that the client must be informed to add the service provider as a service provider budget controller, using their dashboard ability.
     * When a new unenrolled service provider is invited by a budget controller, the servise provider must be automatically added as an approved service provider, once the service provider has enrolled.
     * When a service provider is already a member, not registration is needed, if the inviting user is a budget controller of a client, the service provider is automatically added as an approved service provider.
-
-

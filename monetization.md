@@ -8,7 +8,8 @@
 
 # Overview
 
-## Free subscription 
+## Free subscription
+
 Where you pay nothing. 
 
 The service limits are: 
@@ -26,7 +27,7 @@ The service limits are:
         * Can add regions where active
         * There will be an indicator to the the client that the Sp is subscribed to the free service.
 
-## Basic Service  
+## Basic Service
 
 Different subscriptions paid:
     * **Cl** R150-00 (subject to review)
@@ -48,13 +49,15 @@ The service limits are:
         * There will be an indicator to the the client that the Sp is subscribed to the free service.
 
 ## Advanced subsciptions
+
 ### Clients
+
     * Asset management list which allows generation of snappy QR codes that automate job card creation
     * Maintenance event cost recording ability and analysis
 
 ### Service Providers
+
     * Snappy QR Code creation ability to provide to Cl for easier service request
     * Job cost collection technician for easier reporting
     * Health and safety assessment and checking 
     * Technician effect routing 
-

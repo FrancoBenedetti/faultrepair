@@ -1,6 +1,7 @@
 # Snappy Project Rules
 
 ## Project Architecture
+
 - **Backend:** Vanilla PHP with MariaDB database
 - **Frontend:** Vue 3 with Vite build system
 - **Database Schema:** Located in `snappy-dev.sql` in project root (authoritative source)
@@ -8,6 +9,7 @@
 - **Deployment:** Build files copied to local virtual host with symlinks to PHP backend
 
 ## Critical Files - DO NOT MODIFY WITHOUT EXPLICIT PERMISSION
+
 - `snappy-dev.sql` - Source of truth for database schema
 - `snappy-build.sh` - Build and deployment script
 - Any symlink configurations
@@ -17,6 +19,7 @@
 ## Work Management System
 
 ### File Structure and Purpose
+
 - **TODO.md** - Planned features, enhancements, phases (flow-based work)
 - **BUGS.md** - Bug fixes, issues, defects (interrupt-driven work)
 - **COMPLETED.md** - Historical log of all completed work (features + bugs)
@@ -25,6 +28,7 @@
 ### When to Use Which File
 
 **Add to TODO.md if:**
+
 - New feature or enhancement
 - Refactoring or improvement
 - Technical debt cleanup
@@ -33,6 +37,7 @@
 - Anything that's planned, not reactive
 
 **Add to BUGS.md if:**
+
 - Something is broken that previously worked
 - User reports an issue
 - You discover unexpected behavior
@@ -46,6 +51,7 @@
 ## Before Starting ANY Work Session
 
 ### Mandatory Startup Checklist:
+
 1. **Read TODO.md** to understand current priorities and context
 2. **Read BUGS.md** to check for urgent issues
 3. **Assess priorities:**
@@ -58,6 +64,7 @@
    - Recommend what to work on and why
 
 ### Priority Decision Tree:
+
 ```
 🔴 Critical Bugs → Fix immediately (pause all TODO work)
       ↓ (none)
@@ -71,6 +78,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 ## Before Starting ANY Task
 
 ### For TODO.md Tasks:
+
 1. **Read TODO.md** to find the task
 2. **Check database schema** in `snappy-dev.sql` if task involves data/API
 3. **Identify which side** of project:
@@ -81,6 +89,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 5. **Announce:** "Starting: [task name] - [Backend/Frontend/Full-stack]"
 
 ### For BUGS.md Tasks:
+
 1. **Read the bug description** completely
 2. **Understand severity** and confirm it's appropriate priority
 3. **Check related code** to understand context
@@ -92,22 +101,30 @@ TODO.md → Continue with planned work (check what's "In Progress")
 ## During Development
 
 ### Backend (PHP) Standards
+
 - Follow existing PHP code style in the project
+
 - **Use prepared statements for ALL database queries** (security!)
-```php
+  
+  ```php
   // Good
   $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
   $stmt->execute([$userId]);
   
   // Bad - NEVER do this
   $query = "SELECT * FROM users WHERE id = $userId";
-```
+  ```
+
 - Error handling: Use try-catch blocks and log errors appropriately
+
 - API responses: Return consistent JSON format (check existing endpoints)
+
 - **Never hardcode database credentials** - use existing config pattern
+
 - Test API endpoints manually before marking task complete (use Postman, curl, or browser)
 
 ### Frontend (Vue) Standards
+
 - Follow existing Vue component patterns in the project
 - Use Composition API if that's the project standard, Options API if that's the pattern
 - Keep components focused and reusable
@@ -116,6 +133,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 - Test components in browser after changes
 
 ### Database Standards
+
 - **CRITICAL:** If you need to modify database schema:
   1. **STOP and ask permission first**
   2. Explain what changes are needed and why
@@ -131,6 +149,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
   - Indexes
 
 ### File Organization
+
 - Backend PHP files: Follow existing backend directory structure
 - Vue components: `src/components/` (or existing pattern in project)
 - Vue views/pages: `src/views/` (or existing pattern)
@@ -139,6 +158,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 - Keep frontend and backend concerns separated
 
 ### Code Quality
+
 - Write clear, self-documenting code
 - Add comments for complex logic
 - Use meaningful variable names
@@ -148,17 +168,20 @@ TODO.md → Continue with planned work (check what's "In Progress")
 ### When You Discover Issues During Work
 
 **If you find a bug while working:**
+
 1. Assess severity (Critical/High/Medium/Low)
 2. If **Critical**: Stop current work, add to BUGS.md, fix immediately
 3. If **High**: Add to BUGS.md, suggest fixing before continuing
 4. If **Medium/Low**: Add to BUGS.md, continue current task
 
 **If you discover new tasks needed:**
+
 1. Add them to TODO.md in appropriate section
 2. Note them in your work summary
 3. Don't start them unless asked
 
 **If you find technical debt:**
+
 1. Note it in TODO.md under "Technical Debt" section
 2. Continue with current task unless it blocks progress
 
@@ -169,6 +192,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 ### Bug Priority Levels
 
 **🔴 Critical (Drop Everything)**
+
 - Site is down or unusable
 - Data loss occurring
 - Security breach
@@ -178,6 +202,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 - **Action:** Fix immediately, interrupt any TODO work
 
 **🟠 High (Fix Today/Tomorrow)**
+
 - Major feature broken
 - Affects many users
 - Workaround exists but painful
@@ -186,6 +211,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 - **Action:** Complete current TODO task, then fix bug before next TODO
 
 **🟡 Medium (Fix This Week)**
+
 - Affects some users
 - Workaround available
 - Not blocking critical paths
@@ -194,6 +220,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 - **Action:** Schedule in current sprint, fit between TODO tasks
 
 **🟢 Low (Fix When Convenient)**
+
 - Minor annoyance
 - Rarely encountered
 - Cosmetic issues
@@ -204,6 +231,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 ### Bug Workflow
 
 **When Bug is Discovered:**
+
 1. Add to BUGS.md immediately with:
    - Clear description
    - Steps to reproduce (if applicable)
@@ -214,6 +242,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 3. Assess and announce priority
 
 **When Fixing a Bug:**
+
 1. Move bug to "In Progress" section in BUGS.md
 2. Read bug description completely
 3. Reproduce the bug if possible
@@ -225,6 +254,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 9. Commit with prefix: `fix(area): description`
 
 **After Fixing Bug, Consider Prevention:**
+
 - Does this reveal missing validation? → Add to TODO.md
 - Does this show gaps in error handling? → Add to TODO.md
 - Does this indicate brittle code? → Add refactoring to TODO.md
@@ -235,6 +265,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 ## Testing Workflow
 
 ### After Backend Changes:
+
 1. Test PHP endpoint functionality directly
    - Use browser, Postman, curl, or similar
    - Test success cases
@@ -248,6 +279,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 5. Document endpoints in comments or COMPLETED.md
 
 ### After Frontend Changes:
+
 1. **Run the build:** `./snappy-build.sh`
 2. Check build completes without errors or warnings
 3. Test in local virtual host environment
@@ -260,6 +292,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 6. Test user interactions and edge cases
 
 ### After Full-Stack Changes:
+
 1. Test backend API changes first (as above)
 2. Then run frontend build: `./snappy-build.sh`
 3. Test complete feature flow in virtual host:
@@ -270,6 +303,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 5. Check for any console errors or warnings
 
 ### After Database Schema Changes:
+
 1. **Verify schema in database** matches `snappy-dev.sql`
 2. Test all affected endpoints
 3. Check foreign key relationships work
@@ -277,6 +311,7 @@ TODO.md → Continue with planned work (check what's "In Progress")
 5. Test rollback plan if needed
 
 ### Testing Checklist:
+
 - [ ] Happy path works (normal user flow)
 - [ ] Error handling works (invalid input, network errors)
 - [ ] Edge cases handled (empty data, very long input, special characters)
@@ -294,11 +329,13 @@ TODO.md → Continue with planned work (check what's "In Progress")
 **1. Update Appropriate Tracking File:**
 
 For TODO.md tasks:
+
 - Move task from "In Progress" to "Completed ✅" section
 - Add completion date: `- [x] Task name (YYYY-MM-DD)`
 - If task created subtasks, ensure they're added to TODO.md
 
 For BUGS.md tasks:
+
 - Move bug from "In Progress" to "Fixed ✅" section
 - Add fix date and commit hash
 - Note if bug revealed other issues
@@ -306,6 +343,7 @@ For BUGS.md tasks:
 **2. Update COMPLETED.md:**
 
 For features (TODO.md):
+
 ```markdown
 ### ✅ [FEATURE] Task Name
 **Source:** TODO.md
@@ -332,6 +370,7 @@ For features (TODO.md):
 ```
 
 For bugs (BUGS.md):
+
 ```markdown
 ### ✅ [BUG] 🟠 Bug Description
 **Source:** BUGS.md
@@ -356,6 +395,7 @@ For bugs (BUGS.md):
 **4. If Database Schema Changed:** Clearly flag this in COMPLETED.md with details
 
 **5. Suggest Next Task:**
+
 - Check BUGS.md for Critical/High bugs first
 - If none, suggest next TODO.md task
 - Format: "Next priority: [task name] from [TODO.md/BUGS.md]. Should I proceed?"
@@ -365,6 +405,7 @@ For bugs (BUGS.md):
 ## Git Workflow
 
 ### Commit Strategy
+
 - Commit after each completed TODO item or bug fix
 - **Separate commits** for backend and frontend when possible
 - Write clear, descriptive commit messages
@@ -373,16 +414,19 @@ For bugs (BUGS.md):
 ### Commit Message Format
 
 **Features (TODO.md):**
+
 - `feat(backend): add user registration endpoint`
 - `feat(frontend): create comment list component`
 - `feat(fullstack): implement comment system`
 
 **Bug Fixes (BUGS.md):**
+
 - `fix(backend): prevent SQL injection in search`
 - `fix(frontend): correct date formatting in posts`
 - `fix(database): add missing foreign key constraint`
 
 **Other:**
+
 - `chore(db): update database schema` - Database changes
 - `build: update build script for production`
 - `docs: update TODO.md with new tasks`
@@ -390,12 +434,14 @@ For bugs (BUGS.md):
 - `style(frontend): fix button alignment on mobile`
 
 ### Before Committing Frontend Work:
+
 1. Run `./snappy-build.sh` to ensure build succeeds
 2. Check for build errors or warnings
 3. Test in virtual host environment
 4. Verify functionality works
 
 ### What to Commit:
+
 - ✅ Source code (PHP files, Vue components, JS, CSS)
 - ✅ Configuration files (if changed)
 - ✅ TODO.md, BUGS.md, COMPLETED.md updates
@@ -407,6 +453,7 @@ For bugs (BUGS.md):
 - ❌ Local configuration (credentials, local paths)
 
 ### Git Commands Reference:
+
 ```bash
 # Check status
 git status
@@ -430,17 +477,20 @@ git diff
 ## Build & Deployment
 
 ### When to Run Build
+
 - After **ANY** frontend changes (Vue components, JS, CSS)
 - Before testing in virtual host
 - Before marking frontend tasks complete
 - Before committing frontend work
 
 ### Build Command
+
 ```bash
 ./snappy-build.sh
 ```
 
 ### If Build Fails:
+
 1. **Read error messages carefully** - they usually indicate the problem
 2. Common issues:
    - Vue/Vite syntax errors (check line numbers in error)
@@ -452,6 +502,7 @@ git diff
 5. If stuck, report the error and ask for guidance
 
 ### After Successful Build:
+
 1. Verify files copied to virtual host correctly
 2. Verify symlinks to PHP backend still work
 3. Clear browser cache if needed
@@ -459,6 +510,7 @@ git diff
 5. Check browser console for any errors
 
 ### Build Troubleshooting Checklist:
+
 - [ ] All imports correct (check file paths)
 - [ ] No syntax errors (check line numbers in error message)
 - [ ] All used components are imported
@@ -472,23 +524,27 @@ git diff
 ### Creating/Modifying Endpoints
 
 **Before writing code:**
+
 1. Check `snappy-dev.sql` for exact table/column names
 2. Review existing endpoints for patterns and conventions
 3. Plan the endpoint signature (method, path, parameters, response)
 
 **While writing code:**
+
 1. **Always use prepared statements:**
-```php
+   
+   ```php
    $stmt = $pdo->prepare("SELECT * FROM posts WHERE user_id = ?");
    $stmt->execute([$userId]);
    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-```
+   ```
 2. Validate all input
 3. Handle errors gracefully
 4. Return consistent JSON format (follow existing pattern)
 5. Add appropriate HTTP status codes
 
 **API Response Format** (follow existing pattern in project):
+
 ```json
 {
   "success": true,
@@ -500,6 +556,7 @@ git diff
 ```
 
 **Error Response Format:**
+
 ```json
 {
   "success": false,
@@ -509,6 +566,7 @@ git diff
 ```
 
 **After creating endpoint:**
+
 1. Test with success cases
 2. Test with error cases (missing params, invalid data, etc.)
 3. Document endpoint in code comments or COMPLETED.md:
@@ -524,11 +582,13 @@ git diff
 ### Database Issues
 
 **Column Naming:**
+
 - Database columns likely use underscores: `user_id`, `created_at`, `post_id`
 - JavaScript/Vue typically uses camelCase: `userId`, `createdAt`, `postId`
 - Convert between them as needed
 
 **Common Issues:**
+
 - ❌ Using wrong column name → Check `snappy-dev.sql`
 - ❌ Forgetting nullable columns → Check schema for NULL/NOT NULL
 - ❌ Wrong date format → MariaDB uses 'YYYY-MM-DD HH:MM:SS'
@@ -536,6 +596,7 @@ git diff
 - ❌ Missing data in INSERT → Check for NOT NULL columns
 
 **Solutions:**
+
 - Always reference `snappy-dev.sql` first
 - Test queries in database directly before using in code
 - Check for foreign key constraints
@@ -544,6 +605,7 @@ git diff
 ### PHP Issues
 
 **Common Issues:**
+
 - ❌ SQL injection vulnerability → Use prepared statements
 - ❌ Not checking if variable exists → Use `isset()` or `??` operator
 - ❌ Wrong superglobal → $_GET for query params, $_POST for body data
@@ -551,6 +613,7 @@ git diff
 - ❌ Not handling exceptions → Use try-catch blocks
 
 **Solutions:**
+
 - Follow existing error handling patterns in the project
 - Use existing database connection method (don't create new ones)
 - Follow existing auth/session patterns
@@ -560,6 +623,7 @@ git diff
 ### Vue/Vite Issues
 
 **Common Issues:**
+
 - ❌ Environment variables not working → Must start with `VITE_`
 - ❌ Changes not appearing → Need to run build for virtual host testing
 - ❌ Component not found → Check import path and component name
@@ -567,6 +631,7 @@ git diff
 - ❌ Reactive data not updating → Check Vue reactivity rules
 
 **Solutions:**
+
 - Use `import.meta.env.VITE_API_URL` for env variables
 - Hot reload works in dev (`npm run dev`), but changes need build for virtual host
 - Check existing API base URL configuration in project
@@ -576,6 +641,7 @@ git diff
 ### Build/Deploy Issues
 
 **Common Issues:**
+
 - ❌ Build fails → Check error message for syntax errors
 - ❌ Changes don't appear → Run build, clear browser cache
 - ❌ Symlinks broken → Verify symlink configuration
@@ -583,6 +649,7 @@ git diff
 - ❌ 404 errors → Check paths and routing configuration
 
 **Solutions:**
+
 - Build must complete successfully before testing
 - Check `snappy-build.sh` script if build behavior is unexpected
 - Verify files copied to correct location in virtual host
@@ -594,6 +661,7 @@ git diff
 ## When to Ask for Help
 
 ### Ask Permission Before:
+
 - Modifying `snappy-dev.sql` (database schema changes)
 - Modifying `snappy-build.sh` (build script changes)
 - Changing database connection configuration
@@ -606,6 +674,7 @@ git diff
 - Changing API response formats (breaks frontend)
 
 ### You Can Proceed Without Asking:
+
 - Creating new PHP endpoints following existing patterns
 - Creating new Vue components following existing patterns
 - Modifying existing components/endpoints (following patterns)
@@ -617,6 +686,7 @@ git diff
 - Refactoring code (if it doesn't change behavior)
 
 ### When Uncertain:
+
 - Explain what you want to do
 - Explain why you think it's needed
 - Ask if you should proceed or if there's a better approach
@@ -629,6 +699,7 @@ git diff
 ### TODO.md Structure to Maintain
 
 **Required Sections:**
+
 - **In Progress 🚧** - Currently working on (move tasks here when starting)
 - **Up Next 📋** - Prioritized backlog (organized by phase/category)
 - **Completed ✅** - Done with dates (format: `- [x] Task (YYYY-MM-DD)`)
@@ -636,6 +707,7 @@ git diff
 - **Future 💡** - Ideas for later (not prioritized yet)
 
 **Optional Sections:**
+
 - This Week / This Sprint - Current focus
 - Technical Debt - Code that needs refactoring
 - By Phase (Phase 1, Phase 2, etc.)
@@ -644,6 +716,7 @@ git diff
 ### BUGS.md Structure to Maintain
 
 **Required Sections:**
+
 - **Critical 🔴** - Fix immediately
 - **High Priority 🟠** - Fix today/tomorrow
 - **Medium Priority 🟡** - Fix this week
@@ -652,6 +725,7 @@ git diff
 - **Won't Fix / By Design** - Closed without fixing (with reason)
 
 **Optional Sections:**
+
 - In Progress 🚧 - Currently fixing
 - Bug Statistics - Summary counts
 - Notes - Common patterns, prevention strategies
@@ -667,6 +741,7 @@ git diff
 ### When Generating Reports
 
 **Daily Status:**
+
 ```
 - Completed today: X features, Y bugs
 - In progress: [current task]
@@ -675,6 +750,7 @@ git diff
 ```
 
 **Weekly Summary:**
+
 ```
 - Features completed: [list from TODO.md]
 - Bugs fixed: [list from BUGS.md with severity]
@@ -684,6 +760,7 @@ git diff
 ```
 
 **Sprint Review:**
+
 ```
 - Planned vs actual completion
 - Bug trends (discovered vs fixed)
@@ -749,6 +826,7 @@ git diff
 ## Quick Reference
 
 ### Key Commands
+
 ```bash
 # Build frontend
 ./snappy-build.sh
@@ -765,6 +843,7 @@ grep "CREATE TABLE" snappy-dev.sql
 ```
 
 ### Key Files
+
 - `snappy-dev.sql` - Database schema (READ ONLY without permission)
 - `snappy-build.sh` - Build script (READ ONLY without permission)
 - `TODO.md` - Feature and enhancement tracking
@@ -773,6 +852,7 @@ grep "CREATE TABLE" snappy-dev.sql
 - `.clinerules` - This file (AI assistant instructions)
 
 ### Priority Quick Reference
+
 1. 🔴 Critical bugs - Drop everything
 2. 🟠 High bugs - Fix soon (today/tomorrow)
 3. ✅ Complete current TODO task
@@ -785,12 +865,14 @@ grep "CREATE TABLE" snappy-dev.sql
 ## Summary: Your Primary Responsibilities
 
 ### Every Session Start:
+
 1. ✅ Read .clinerules (this file)
 2. ✅ Read TODO.md and BUGS.md
 3. ✅ Report status (bugs by severity, TODO progress)
 4. ✅ Recommend priority (Critical bugs → High bugs → TODO tasks)
 
 ### Every Task:
+
 1. ✅ Check `snappy-dev.sql` for schema if needed
 2. ✅ Follow code standards (prepared statements, error handling, etc.)
 3. ✅ Test thoroughly (backend direct, frontend in browser)
@@ -800,6 +882,7 @@ grep "CREATE TABLE" snappy-dev.sql
 7. ✅ Suggest next priority
 
 ### Always:
+
 - ✅ Use prepared statements in PHP (never concatenate SQL)
 - ✅ Reference `snappy-dev.sql` for exact schema
 - ✅ Run build after frontend changes
@@ -811,6 +894,7 @@ grep "CREATE TABLE" snappy-dev.sql
 - ✅ Document important decisions in COMPLETED.md
 
 ### Never:
+
 - ❌ Modify `snappy-dev.sql` without explicit permission
 - ❌ Modify `snappy-build.sh` without explicit permission
 - ❌ Use SQL string concatenation (SQL injection risk)
@@ -825,6 +909,7 @@ grep "CREATE TABLE" snappy-dev.sql
 ## Philosophy
 
 **You are a collaborative partner in this project.** Your role is to:
+
 - Help plan and organize work (TODO.md, BUGS.md)
 - Write high-quality, tested code following project patterns
 - Maintain clear documentation of what was done (COMPLETED.md)

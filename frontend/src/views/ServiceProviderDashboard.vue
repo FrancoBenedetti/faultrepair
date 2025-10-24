@@ -1563,11 +1563,10 @@
       v-if="editingJobForModal"
       :job="editingJobForModal"
       :user-role="userRole"
-      :user-id="currentUserId"
-      :entity-id="profile?.id || 0"
-      :entity-type="'service_provider'"
+      :technicians="technicians"
+      :current-user-id="currentUserId"
       @close="editingJobForModal = null"
-      @updated="handleJobUpdated"
+      @job-updated="handleJobUpdated"
     />
 
     <!-- Quote Details Modal -->

@@ -28,12 +28,14 @@ This is a full-stack web application built with:
 ### Client Side
 
 #### **Reporting Employee**
+
 - Create and submit fault reports
 - View own submitted reports
 - Edit reports before assignment
 - Upload fault images
 
 #### **Site Budget Controller** ⭐
+
 - All Reporting Employee permissions
 - Acts as initial user for new client organizations
 - Manage team members (add Reporting Employees)
@@ -44,6 +46,7 @@ This is a full-stack web application built with:
 ### Service Provider Side
 
 #### **Service Provider Admin** ⭐
+
 - Manage company technicians
 - View all jobs assigned to company
 - Assign jobs to specific technicians
@@ -51,6 +54,7 @@ This is a full-stack web application built with:
 - View comprehensive reports
 
 #### **Technician**
+
 - View assigned jobs only
 - Add repair notes
 - Update job status (In Progress → Repaired/Not Repairable)
@@ -73,6 +77,7 @@ Jobs progress through these statuses:
 ## 📱 Technology Stack
 
 ### Backend
+
 - **PHP 8.0+**: Server-side scripting
 - **MariaDB/MySQL**: Relational database
 - **PDO**: Database abstraction layer
@@ -80,6 +85,7 @@ Jobs progress through these statuses:
 - **Custom REST API**: No external frameworks
 
 ### Frontend
+
 - **Vue.js 3**: Progressive framework
 - **Vue Router 4**: Client-side routing
 - **Axios**: HTTP client
@@ -89,6 +95,7 @@ Jobs progress through these statuses:
 - **Material Symbols**: Icon library
 
 ### Infrastructure
+
 - **Apache/Nginx**: Web server
 - **Standard LAMP Stack**: Linux, Apache, MySQL, PHP
 
@@ -134,6 +141,7 @@ fault-reporter/
 ## 🛠️ Quick Start
 
 ### Prerequisites
+
 - PHP 8.0+ with PDO MySQL extension
 - MariaDB/MySQL 5.7+
 - Node.js 16+ and npm
@@ -142,6 +150,7 @@ fault-reporter/
 ### Installation
 
 1. **Database Setup**
+   
    ```bash
    # Create database and run schema
    mysql -u root -p < schema.sql
@@ -150,6 +159,7 @@ fault-reporter/
    ```
 
 2. **Backend Configuration**
+   
    ```bash
    cd backend/config
    cp database.php.example database.php
@@ -158,6 +168,7 @@ fault-reporter/
    ```
 
 3. **Frontend Setup**
+   
    ```bash
    cd frontend
    npm install
@@ -165,6 +176,7 @@ fault-reporter/
    ```
 
 4. **Web Server Configuration**
+   
    - Configure virtual host pointing to `backend/public/`
    - Enable URL rewriting
    - Set up SSL (optional but recommended)
@@ -183,17 +195,20 @@ npm run dev
 ## 🔧 API Endpoints
 
 ### Authentication
+
 - `POST /backend/api/auth.php` - User login
 - `POST /backend/api/register-client.php` - Client registration
 - `POST /backend/api/register-service-provider.php` - Provider registration
 
 ### Job Management
+
 - `GET /backend/api/client-jobs.php` - List client jobs
 - `POST /backend/api/client-jobs.php` - Create new job
 - `PUT /backend/api/client-jobs.php` - Update job
 - `GET /backend/api/technician-jobs.php` - List technician jobs
 
 ### User Management
+
 - `GET /backend/api/technicians.php` - List technicians
 - `POST /backend/api/technicians.php` - Create technician
 - `PUT /backend/api/technicians.php` - Update technician
@@ -211,6 +226,7 @@ npm run dev
 ## 📊 Database Schema
 
 Key tables:
+
 - `users` - Authentication and role management
 - `clients` - Client company information
 - `service_providers` - Provider company information
@@ -222,6 +238,7 @@ Key tables:
 ## 🚀 Deployment
 
 ### Production Setup
+
 1. Configure production database
 2. Update site configuration files
 3. Build frontend: `npm run build`
@@ -230,6 +247,7 @@ Key tables:
 6. Set up file permissions for uploads
 
 ### Environment Variables
+
 - Database credentials
 - JWT secret key
 - Site URL and email settings
@@ -250,6 +268,7 @@ This project is proprietary software. All rights reserved.
 ## 📞 Support
 
 For technical support or questions:
+
 - Check the backend/README.md and frontend/README.md
 - Review setup documentation in setup-*.sh files
 - Test endpoints using provided curl examples
