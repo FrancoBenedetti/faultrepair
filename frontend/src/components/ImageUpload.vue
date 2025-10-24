@@ -102,11 +102,16 @@
         class="image-preview-item border border-gray-200 rounded-lg overflow-hidden bg-white"
       >
         <div class="image-container relative h-32 overflow-hidden">
-          <img :src="image.preview" :alt="image.name" class="preview-image w-full h-full object-cover">
+          <img :src="image.preview" :alt="image.name" class="preview-image w-full h-full object-cover cursor-pointer" @click="viewFullSize(image, index)">
           <div class="image-overlay absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center opacity-0 hover:opacity-100">
-            <button @click="removeImage(index)" class="remove-image-btn bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-700 transition-colors" title="Remove image">
-              <span class="material-icon-sm">delete</span>
-            </button>
+            <div class="overlay-buttons flex gap-2">
+              <button @click.stop="viewFullSize(image, index)" class="view-image-btn bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-blue-700 transition-colors" title="View full size">
+                <span class="material-icon-sm">zoom_in</span>
+              </button>
+              <button @click.stop="removeImage(index)" class="remove-image-btn bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-700 transition-colors" title="Remove image">
+                <span class="material-icon-sm">delete</span>
+              </button>
+            </div>
           </div>
         </div>
         <div class="image-info p-3">
@@ -132,6 +137,31 @@
       <span class="material-icon-sm mr-2">error</span>
       {{ error }}
     </div>
+
+    <!-- Full Size Image Modal -->
+    <div v-if="selectedImage !== null" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" @click="closeImageModal">
+      <div class="relative max-w-4xl max-h-screen p-4">
+        <img
+          :src="selectedImage.preview"
+          :alt="selectedImage.name"
+          class="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+          @click.stop
+        />
+        <div class="absolute top-4 right-4 flex gap-2">
+          <button
+            @click.stop="closeImageModal"
+            class="bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-all"
+            title="Close"
+          >
+            <span class="material-icon-sm">close</span>
+          </button>
+        </div>
+        <div class="absolute bottom-4 left-4 right-4 bg-black bg-opacity-75 text-white p-3 rounded-lg">
+          <div class="font-semibold">{{ selectedImage.name }}</div>
+          <div class="text-sm opacity-80">{{ formatFileSize(selectedImage.size) }}</div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -146,6 +176,10 @@ export default {
     maxFileSize: {
       type: Number,
       default: 10 * 1024 * 1024 // 10MB
+    },
+    existingImages: {
+      type: Array,
+      default: () => []
     }
   },
   data() {
@@ -156,11 +190,21 @@ export default {
       cameraSupported: false,
       uploading: false,
       uploadProgress: 0,
-      error: null
+      error: null,
+      selectedImage: null
     }
   },
   mounted() {
     this.checkCameraSupport()
+    this.initializeExistingImages(this.existingImages)
+  },
+  watch: {
+    existingImages: {
+      handler(newImages) {
+        this.initializeExistingImages(newImages)
+      },
+      immediate: false
+    }
   },
   beforeUnmount() {
     this.stopCamera()
@@ -243,6 +287,14 @@ export default {
     removeImage(index) {
       this.images.splice(index, 1)
       this.$emit('images-changed', this.images)
+    },
+
+    viewFullSize(image) {
+      this.selectedImage = image
+    },
+
+    closeImageModal() {
+      this.selectedImage = null
     },
 
     async openCamera() {
@@ -398,6 +450,31 @@ export default {
       } else {
         console.log('ImageUpload: Some uploads failed')
       }
+    },
+
+    initializeExistingImages(images = this.existingImages) {
+      if (!images || images.length === 0) return
+
+      // Clear current images and add existing ones
+      this.images = []
+
+      images.forEach(existingImage => {
+        // Use the URL provided by API or generate our own
+        const preview = existingImage.url ||
+          `/backend/api/serve-image.php?filename=${existingImage.filename}&token=${encodeURIComponent(localStorage.getItem('token'))}`
+
+        // Add existing image in component format
+        this.images.push({
+          file: null, // No file object for existing images
+          name: existingImage.original_filename,
+          size: existingImage.file_size || 0,
+          type: existingImage.mime_type || '',
+          preview: preview,
+          existing: true, // Mark as existing image
+          id: existingImage.id, // Keep ID for potential deletion
+          filename: existingImage.filename // Keep filename for reference
+        })
+      })
     },
 
     formatFileSize(bytes) {

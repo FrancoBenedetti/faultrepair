@@ -176,6 +176,9 @@ try {
             $provider['is_approved'] = false;
             $provider['approval_details'] = null;
         }
+
+        // Get provider statistics
+        $provider['statistics'] = getProviderStatistics($provider['id']);
     }
 
     // Get available filters (services and regions)
@@ -211,8 +214,81 @@ try {
 
     echo json_encode($response);
 
+
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Failed to retrieve service providers: ' . $e->getMessage()]);
+}
+
+// Function to calculate provider statistics
+function getProviderStatistics($provider_id) {
+    global $pdo;
+
+    try {
+        // Get basic job counts
+        $stmt = $pdo->prepare("
+            SELECT
+                COUNT(*) as total_jobs,
+                SUM(CASE WHEN job_status IN ('Completed', 'Confirmed') THEN 1 ELSE 0 END) as completed_jobs
+            FROM jobs
+            WHERE assigned_provider_participant_id = ?
+        ");
+        $stmt->execute([$provider_id]);
+        $job_stats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $total_jobs = (int)$job_stats['total_jobs'];
+        $completed_jobs = (int)$job_stats['completed_jobs'];
+        $completion_rate = $total_jobs > 0 ? round(($completed_jobs / $total_jobs) * 100, 1) : 0;
+
+        // Calculate average response time (time from job creation to provider assignment)
+        $stmt = $pdo->prepare("
+            SELECT
+                AVG(TIMESTAMPDIFF(HOUR, j.created_at, jsh.changed_at)) as avg_response_hours
+            FROM jobs j
+            JOIN job_status_history jsh ON j.id = jsh.job_id
+            WHERE j.assigned_provider_participant_id = ?
+            AND jsh.status IN ('Assigned', 'Accepted')
+            AND jsh.changed_by_user_id IN (
+                SELECT u.userId FROM users u WHERE u.entity_id = ?
+            )
+        ");
+        $stmt->execute([$provider_id, $provider_id]);
+        $response_stats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $avg_response_hours = $response_stats['avg_response_hours'];
+        $response_time_display = null;
+
+        if ($avg_response_hours !== null) {
+            if ($avg_response_hours < 1) {
+                $response_time_display = '< 1h';
+            } elseif ($avg_response_hours < 24) {
+                $response_time_display = round($avg_response_hours, 1) . 'h';
+            } else {
+                $days = round($avg_response_hours / 24, 1);
+                $response_time_display = $days . 'd';
+            }
+        }
+
+        // Customer rating (placeholder - would need a ratings table)
+        // For now, return N/A since there's no rating system
+        $customer_rating = null;
+
+        return [
+            'jobs_completed' => $completed_jobs,
+            'completion_rate' => $completion_rate,
+            'response_time_avg' => $response_time_display,
+            'customer_rating' => $customer_rating
+        ];
+
+    } catch (Exception $e) {
+        // Return default values on error
+        error_log('Error calculating provider statistics: ' . $e->getMessage());
+        return [
+            'jobs_completed' => 0,
+            'completion_rate' => 0,
+            'response_time_avg' => 'N/A',
+            'customer_rating' => null
+        ];
+    }
 }
 ?>

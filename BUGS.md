@@ -151,6 +151,8 @@ Quotation cards in the Service Provider Dashboard need proper styling applied. C
 - May involve layout, colors, typography, spacing improvements
 - Requires detailed analysis of current styling issues
 
+
+
 ### 🟡 [BUG] ClientDashboard Archive Function Not Working
 **Discovered:** 2025-10-24
 **Area:** Frontend - Client Dashboard Archive Functionality
@@ -208,6 +210,8 @@ The archive function in ServiceProviderDashboard is not working. This functional
 - Archive functionality is important for job completion workflow
 - Similar issue to client dashboard archive problem
 
+
+
 ### 🟡 [BUG] ClientDashboard Business Profile Section Missing
 **Discovered:** 2025-10-24
 **Area:** Frontend - Client Dashboard Business Profile Management
@@ -242,6 +246,7 @@ The ClientDashboard has lost the ability to define organization/business details
 - Should mirror the business profile functionality available to service providers
 - Affects important business information management (VAT numbers, registration, contact details)
 - Similar profile management exists for service providers and should be available for clients
+
 
 ## Fixed ✅
 
@@ -282,3 +287,79 @@ Database queries were using incorrect column names - 'due_date' instead of 'quot
 
 **Verification:**
 Service provider dashboard now loads successfully without 500 errors. Jobs display correctly.
+
+### 🟠 [BUG] Failed to Create External Service Provider - participantType Data Truncation
+
+**Discovered:** 2025-10-24
+**Fixed:** 2025-10-24
+**Area:** Backend Database - XS Provider Creation
+**Impact:** Critical core functionality broken - role 2 users cannot create external service providers
+
+**Issue Description:**
+When attempting to add an external service provider, the API returns error 500 with "SQLSTATE[01000]: Warning: 1265 Data truncated for column 'participantType' at row 1". This prevents role 2 client users from creating XS providers.
+
+**Error Details:**
+```
+POST http://snappy.local/backend/api/client-xs-providers.php?token=... 500 (Internal Server Error)
+Error: Failed to create XS provider: SQLSTATE[01000]: Warning: 1265 Data truncated for column 'participantType' at row 1
+```
+
+**Root Cause:**
+The database participant_type enum column did not include 'XS' value. Code attempted to insert 'XS' but the enum was still ('C','S'), causing data truncation error.
+
+**Resolution:**
+- [x] Applied database migration script update-participant-type-enum.sql to update enum to ('C','S','XS')
+- [x] Verified enum now includes 'XS' option
+- [x] Confirmed code correctly inserts 'XS' for external providers
+- [x] Frontend build completed successfully without errors
+
+**Code Changes:**
+1. **Database Schema**: Updated participant_type.participantType enum to include 'XS' value
+2. **Migration Script**: Applied `ALTER TABLE participant_type MODIFY COLUMN participantType ENUM('C','S','XS') NOT NULL DEFAULT 'S';`
+
+**Testing Results:**
+- ✅ Database enum verified to include 'XS': `enum('C','S','XS')`
+- ✅ Frontend build succeeded (no console errors)
+- ✅ Backend code correctly inserts 'XS' participant type for external providers
+
+**Verification:**
+XS provider creation should now work without data truncation errors. Role 2 users can successfully add external service providers.
+
+### 🟡 [BUG] Service Provider Details Modal Statistics Not Showing
+
+**Discovered:** 2025-10-24
+**Fixed:** 2025-10-24
+**Area:** Frontend/Backend - Service Provider Details Modal Statistics
+**Impact:** Users could not view important service provider performance statistics
+
+**Issue Description:**
+Service provider details modal was missing a statistics section displaying performance metrics like jobs completed, completion rate, response time, and customer rating.
+
+**Expected Behavior:**
+- Statistics section shows in provider details modal
+- Displays: jobs completed, completion rate %, avg response time, customer rating
+
+**Current Behavior:**
+- Modal showed only basic info (name, address, services, regions)
+- No performance or statistical data visible
+
+**Resolution:**
+- [x] Added statistics section to ClientServiceProviderBrowser.vue modal
+- [x] Created getProviderStatistics() function in service-providers.php API
+- [x] Statistics calculated from jobs and job_status_history tables
+- [x] Added responsive CSS styling for statistics grid
+- [x] Frontend build completed successfully
+
+**Code Changes:**
+1. **ClientServiceProviderBrowser.vue**: Added statistics HTML section and CSS styling
+2. **service-providers.php**: Added getProviderStatistics() function calculating jobs completed, completion rate, response time
+3. **Database Integration**: Statistics pulled from jobs and job_status_history tables
+
+**Testing Results:**
+- ✅ Modal now displays statistics section with 4 metrics
+- ✅ API returns statistics data for each provider
+- ✅ Frontend build succeeds without errors
+- ✅ CSS styling applied correctly for responsive grid
+
+**Verification:**
+Service provider details modal now shows comprehensive performance statistics for informed decision making.

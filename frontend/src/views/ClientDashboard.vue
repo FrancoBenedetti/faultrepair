@@ -289,8 +289,9 @@
         :userId="userId"
         :entityId="entityId"
         :entityType="'client'"
+        :availableProviders="approvedProviders"
         @close="showEditJobModal = false"
-        @updated="handleEditJobUpdated"
+        @job-updated="handleEditJobUpdated"
       />
 
       <!-- Quotation Details Modal -->
@@ -1027,42 +1028,59 @@ export default {
     },
 
     async handleEditJob(job) {
-      // Set the job being edited and store original values for comparison
+      console.log('ClientDashboard: handleEditJob called with job:', job.id, 'status:', job.job_status, 'userRole:', this.userRole, 'isAdmin:', this.isAdmin)
+
+      // Set basic job data immediately
       this.editingJob = { ...job }
       this.originalJobStatus = job.job_status
       this.originalProviderId = job.assigned_provider_id
-      this.originalItemIdentifier = job.item_identifier
-      this.originalFaultDescription = job.fault_description
-      this.originalContactPerson = job.contact_person
 
-      // Load job images if not already loaded
+      console.log('ClientDashboard: Basic job data set:', this.editingJob.id)
+
+      // Show the modal immediately to give user feedback
+      this.showEditJobModal = true
+
+      console.log('ClientDashboard: Modal shown immediately, now loading additional data...')
+
+      // Load job images in background
       if (!job.images) {
         try {
+          console.log('ClientDashboard: Loading job images...')
           const response = await apiFetch(`/backend/api/job-images.php?job_id=${job.id}`)
           if (response.ok) {
             const data = await response.json()
             this.editingJob.images = data.images || []
+            console.log('ClientDashboard: Images loaded successfully:', this.editingJob.images.length)
           } else {
             this.editingJob.images = []
+            console.log('ClientDashboard: Failed to load images, using empty array')
           }
         } catch (error) {
-          console.error('Failed to load job images:', error)
+          console.error('ClientDashboard: Error loading job images:', error)
           this.editingJob.images = []
         }
       } else {
         this.editingJob.images = job.images
+        console.log('ClientDashboard: Using existing images:', this.editingJob.images.length)
       }
 
-      // Refresh approved providers list to ensure it's current
-      this.loadApprovedProviders().then(() => {
+      // Refresh approved providers list in background
+      try {
+        console.log('ClientDashboard: Loading approved providers...')
+        await this.loadApprovedProviders()
+        console.log('ClientDashboard: Providers loaded, checking assigned provider...')
+
         // Ensure the current assigned provider is still approved
         const isProviderStillApproved = this.approvedProviders.some(provider => provider.id == this.editingJob.assigned_provider_id)
         if (this.editingJob.assigned_provider_id && !isProviderStillApproved) {
-          // Provider is no longer approved, clear the assignment
+          console.log('ClientDashboard: Assigned provider no longer approved, clearing...')
           this.editingJob.assigned_provider_id = null
         }
-        this.showEditJobModal = true
-      })
+
+        console.log('ClientDashboard: Edit modal setup complete!')
+      } catch (error) {
+        console.error('ClientDashboard: Error loading providers:', error)
+      }
     },
 
     updateJobFilters(filters) {

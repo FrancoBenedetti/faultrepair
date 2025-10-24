@@ -341,6 +341,28 @@
                 </span>
               </div>
             </div>
+
+            <div class="provider-statistics-section">
+              <h4>Performance Statistics</h4>
+              <div class="statistics-grid">
+                <div class="stat-item">
+                  <div class="stat-value">{{ selectedProvider.statistics?.jobs_completed || 0 }}</div>
+                  <div class="stat-label">Jobs Completed</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value">{{ selectedProvider.statistics?.response_time_avg || 'N/A' }}</div>
+                  <div class="stat-label">Avg Response Time</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value">{{ selectedProvider.statistics?.completion_rate || 0 }}%</div>
+                  <div class="stat-label">Completion Rate</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value">{{ selectedProvider.statistics?.customer_rating || 'N/A' }}/5</div>
+                  <div class="stat-label">Customer Rating</div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="provider-details-actions">
@@ -1193,6 +1215,44 @@ export default {
 .primary-indicator {
   margin-left: 4px;
   color: #856404;
+}
+
+.provider-statistics-section {
+  margin-bottom: 25px;
+}
+
+.provider-statistics-section h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.1em;
+}
+
+.statistics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.stat-item {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #007bff;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 0.9em;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .provider-details-actions {

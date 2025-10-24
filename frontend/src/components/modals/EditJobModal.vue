@@ -21,19 +21,74 @@
             As a service provider administrator, you can assign technicians to this job and add instructions.
           </div>
 
+          <!-- Service Provider Selection (for Reported jobs) -->
+          <div v-if="job.job_status === 'Reported'" class="section">
+            <h4 class="section-subtitle">Service Provider Selection</h4>
+
+            <div class="form-group">
+              <label class="form-label">Select Service Provider *</label>
+              <select v-model="selectedProviderId" class="form-input">
+                <option value="">-- Choose a provider --</option>
+                <option v-for="provider in availableProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
+                  {{ provider.name }}
+                </option>
+              </select>
+              <p class="form-help">Required for Request Service or Request Quote options</p>
+            </div>
+          </div>
+
           <!-- State Transitions -->
           <div class="transitions">
-            <!-- Quote Request Transition -->
-            <div v-if="availableTransitions.includes('Quote Requested')" class="transition-group">
-              <button
-                @click="selectedStateTransition = 'Quote Requested'"
-                :class="{ 'active': selectedStateTransition === 'Quote Requested' }"
-                class="transition-btn"
-              >
-                Request Quote
-              </button>
+            <!-- Reported Job Transitions (radio button style) -->
+            <div v-if="job.job_status === 'Reported'" class="transition-group">
+              <div class="radio-options">
+                <div class="radio-option">
+                  <input
+                    id="request-service"
+                    type="radio"
+                    value="Assigned"
+                    v-model="selectedStateTransition"
+                    @change="handleTransitionChange"
+                    class="radio-input"
+                  />
+                  <label for="request-service" class="radio-label">
+                    <strong>Request a Service</strong>
+                    <span class="option-desc">Assign to provider for immediate work delivery</span>
+                  </label>
+                </div>
 
-              <!-- Quote Request Form -->
+                <div class="radio-option">
+                  <input
+                    id="request-quote"
+                    type="radio"
+                    value="Quote Requested"
+                    v-model="selectedStateTransition"
+                    @change="handleTransitionChange"
+                    class="radio-input"
+                  />
+                  <label for="request-quote" class="radio-label">
+                    <strong>Request a Quote</strong>
+                    <span class="option-desc">Request quotation before proceeding</span>
+                  </label>
+                </div>
+
+                <div class="radio-option">
+                  <input
+                    id="reject-job"
+                    type="radio"
+                    value="Rejected"
+                    v-model="selectedStateTransition"
+                    @change="handleTransitionChange"
+                    class="radio-input"
+                  />
+                  <label for="reject-job" class="radio-label">
+                    <strong>Reject Job</strong>
+                    <span class="option-desc">Terminate the request with a reason</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Action Forms based on selected transition -->
               <div v-if="selectedStateTransition === 'Quote Requested'" class="transition-form">
                 <div class="form-group">
                   <label for="quote-by-date" class="form-label">Quote By Date *</label>
@@ -66,17 +121,88 @@
                 <div class="form-actions">
                   <button @click="cancelTransition" class="btn-secondary">Cancel</button>
                   <button
-                    @click="saveTransition('Quote Requested')"
-                    :disabled="!quoteByDate || !isQuoteDateValid()"
+                    @click="executeTransition(selectedStateTransition)"
+                    :disabled="!selectedProviderId || !quoteByDate || !isQuoteDateValid()"
                     class="btn-primary"
                   >
                     Request Quote
                   </button>
                 </div>
               </div>
+
+              <div v-else-if="selectedStateTransition === 'Assigned'" class="transition-form">
+                <p class="form-explanation">
+                  <strong>Service Request:</strong> The selected provider will be assigned this job for immediate work delivery.
+                  Please provide any specific instructions if needed.
+                </p>
+
+                <div class="form-group">
+                  <label for="assignment-note" class="form-label">Instructions (Optional)</label>
+                  <textarea
+                    id="assignment-note"
+                    v-model="stateTransitionNote"
+                    class="form-textarea"
+                    placeholder="Any specific instructions for the service provider..."
+                    rows="3"
+                  ></textarea>
+                </div>
+
+                <div class="form-actions">
+                  <button @click="cancelTransition" class="btn-secondary">Cancel</button>
+                  <button
+                    @click="executeTransition(selectedStateTransition)"
+                    :disabled="!selectedProviderId"
+                    class="btn-primary"
+                  >
+                    Request Service
+                  </button>
+                </div>
+              </div>
+
+              <div v-else-if="selectedStateTransition === 'Rejected'" class="transition-form">
+                <p class="form-explanation">
+                  <strong>Job Rejection:</strong> This will terminate the service request.
+                  A reason is required.
+                </p>
+
+                <div class="form-group">
+                  <label for="rejection-note" class="form-label">Reason for Rejection *</label>
+                  <textarea
+                    id="rejection-note"
+                    v-model="stateTransitionNote"
+                    class="form-textarea"
+                    placeholder="Please provide the reason for rejecting this service request..."
+                    rows="3"
+                    required
+                  ></textarea>
+                </div>
+
+                <div class="form-actions">
+                  <button @click="cancelTransition" class="btn-secondary">Cancel</button>
+                  <button
+                    @click="executeTransition(selectedStateTransition)"
+                    :disabled="!stateTransitionNote || !stateTransitionNote.trim()"
+                    class="btn-primary"
+                  >
+                    Reject Job
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <!-- Other state transitions can be added here -->
+            <!-- Image Upload Section for Reported Jobs -->
+            <div v-if="job.job_status === 'Reported'" class="section">
+              <h4 class="section-subtitle">Add/Edit Images</h4>
+              <ImageUpload
+                ref="imageUpload"
+                :max-images="10"
+                :max-file-size="10 * 1024 * 1024"
+                :existing-images="existingImages"
+                @images-changed="handleImagesChanged"
+              />
+            </div>
+
+            <!-- Other state transitions (non-Reported) can be added here -->
           </div>
         </div>
 
@@ -129,14 +255,30 @@
       <!-- Modal Footer -->
       <div class="modal-footer">
         <button @click="$emit('close')" class="btn-secondary">Close</button>
+        <!-- Show save button when images have been modified -->
+        <button
+          v-if="hasImageChanges && !selectedStateTransition"
+          @click="saveImageChanges"
+          :disabled="saving"
+          class="btn-primary"
+        >
+          {{ saving ? 'Saving...' : 'Save Changes' }}
+        </button>
       </div>
     </div>
   </div>
 </template>
 
+
 <script>
+import { apiFetch } from '@/utils/api.js'
+import ImageUpload from '@/components/ImageUpload.vue'
+
 export default {
   name: 'EditJobModal',
+  components: {
+    ImageUpload
+  },
   props: {
     job: {
       type: Object,
@@ -153,6 +295,10 @@ export default {
     currentUserId: {
       type: Number,
       default: null
+    },
+    availableProviders: {
+      type: Array,
+      default: () => []
     }
   },
   emits: ['close', 'job-updated'],
@@ -179,7 +325,9 @@ export default {
       quoteByDate: this.calculateDefaultQuoteDueDate(),
       // Technician assignment data
       selectedTechnicianId: this.job.assigned_technician_user_id || '',
-      technicianNotes: this.job.technician_notes || ''
+      technicianNotes: this.job.technician_notes || '',
+      // Provider selection for Reported jobs
+      selectedProviderId: this.job.assigned_provider_id || ''
     }
   },
 
@@ -250,9 +398,26 @@ export default {
       this.quoteByDate = this.calculateDefaultQuoteDueDate();
     },
 
-    async saveTransition(targetStatus) {
+    handleTransitionChange() {
+      // Clear notes when switching between transition types
+      this.stateTransitionNote = '';
+      this.quoteByDate = this.calculateDefaultQuoteDueDate();
+    },
+
+    async executeTransition(targetStatus) {
+      // Validate inputs based on transition type
+      if (targetStatus === 'Rejected' && (!this.stateTransitionNote || !this.stateTransitionNote.trim())) {
+        alert('Please provide a reason for rejecting this job.');
+        return;
+      }
+
       if (targetStatus === 'Quote Requested' && !this.isQuoteDateValid()) {
-        this.error = 'Please select a valid quote deadline';
+        alert('Please select a valid quote deadline.');
+        return;
+      }
+
+      if ((targetStatus === 'Assigned' || targetStatus === 'Quote Requested') && !this.selectedProviderId) {
+        alert('Please select a service provider before proceeding.');
         return;
       }
 
@@ -263,24 +428,29 @@ export default {
         const payload = {
           action: targetStatus,
           note: this.stateTransitionNote,
-          provider_id: null // For quote requests, we'll let the system assign
+          assigned_provider_id: targetStatus !== 'Rejected' ? parseInt(this.selectedProviderId) : null
         };
+
+        // Set job status for non-quote transitions
+        if (targetStatus !== 'Quote Requested') {
+          payload.job_status = targetStatus;
+        }
 
         if (targetStatus === 'Quote Requested') {
           payload.quote_by_date = this.quoteByDate;
         }
 
-        const response = await fetch(`/api/client-jobs/${this.job.id}`, {
+        const response = await apiFetch('/backend/api/client-jobs.php', {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            job_id: this.job.id,
+            ...payload
+          })
         });
 
         if (!response.ok) {
-          throw new Error('Failed to update job status');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update job status');
         }
 
         const result = await response.json();
@@ -288,9 +458,14 @@ export default {
         this.$emit('close');
       } catch (error) {
         this.error = error.message;
+        alert('Failed to update job: ' + error.message);
       } finally {
         this.saving = false;
       }
+    },
+
+    handleImagesChanged(images) {
+      this.newImages = images;
     },
 
     async assignTechnician() {
@@ -334,10 +509,53 @@ export default {
       } finally {
         this.saving = false;
       }
+    },
+
+    async loadExistingImages() {
+      try {
+        const response = await apiFetch(`/backend/api/job-images.php?job_id=${this.job.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          this.existingImages = data.images || [];
+        } else {
+          console.error('Failed to load existing images');
+          this.existingImages = [];
+        }
+      } catch (error) {
+        console.error('Error loading existing images:', error);
+        this.existingImages = [];
+      }
+    },
+
+    async saveImageChanges() {
+      this.saving = true;
+      this.error = null;
+
+      try {
+        // The ImageUpload component already has the correct image list
+        // Just tell it to upload images for this job
+        await this.$refs.imageUpload.uploadImages(this.job.id);
+
+        // Close modal and refresh
+        this.$emit('job-updated', { success: true, message: 'Images updated successfully' });
+        this.$emit('close');
+
+      } catch (error) {
+        this.error = error.message;
+        alert('Failed to save image changes: ' + error.message);
+      } finally {
+        this.saving = false;
+      }
     }
   },
 
-  computed: {
+    computed: {
+    hasImageChanges() {
+      // Simple check: if we have any images at all, consider it a change for now
+      // This can be made smarter later to detect actual changes
+      return this.newImages.length > 0;
+    },
+
     availableTransitions() {
       // For now, only allow quote requests from 'Reported' status
       // This can be expanded based on business logic
@@ -349,8 +567,13 @@ export default {
     }
   },
 
-  mounted() {
+  async mounted() {
     this.quoteByDate = this.calculateDefaultQuoteDueDate();
+
+    // Load existing images for Reported jobs
+    if (this.job.job_status === 'Reported') {
+      await this.loadExistingImages();
+    }
   }
 }
 </script>
@@ -544,5 +767,76 @@ export default {
   margin-bottom: 16px;
   color: #1565c0;
   font-weight: 500;
+}
+
+/* Radio button styles for state transitions */
+.radio-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.radio-option:hover {
+  border-color: #007bff;
+  background: #f8f9fa;
+}
+
+.radio-option input[type="radio"] {
+  margin: 0;
+  margin-top: 2px;
+}
+
+.radio-label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.option-desc {
+  font-size: 0.9em;
+  color: #666;
+  font-weight: normal;
+}
+
+.form-explanation {
+  margin: 0 0 16px 0;
+  padding: 12px;
+  background: #fff3cd;
+  border: 1px solid #ffeeba;
+  border-radius: 4px;
+  color: #856404;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.section-subtitle {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #555;
+  border-left: 3px solid #007bff;
+  padding-left: 12px;
+}
+
+.technician-assignment {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
 }
 </style>
