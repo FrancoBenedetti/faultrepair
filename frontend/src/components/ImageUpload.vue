@@ -1,53 +1,22 @@
 <template>
-  <div class="image-upload border border-gray-300 rounded-xl p-6 bg-gray-50">
-    <div class="upload-header mb-6">
-      <h4 class="text-lg font-semibold text-gray-900 mb-4">Attach Images</h4>
-      <div class="upload-options grid gap-4">
-        <!-- File Upload Option -->
-        <div class="upload-option border border-dashed border-gray-400 rounded-lg p-6 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
-             @click.stop="triggerFileInput">
-          <div class="option-content flex flex-col items-center gap-3">
-            <div class="option-icon bg-blue-100 text-blue-600 rounded-full w-12 h-12 flex items-center justify-center">
-              <span class="material-icon-lg">upload_file</span>
-            </div>
-            <div class="option-text text-center">
-              <h5 class="font-semibold text-gray-900 mb-1">Select from Device</h5>
-              <p class="text-sm text-gray-600">Choose images from your gallery, photos, or files</p>
-              <span class="text-xs text-blue-600 font-medium">Supports JPG, PNG, GIF, WebP</span>
-            </div>
-            <button type="button" class="btn-filled btn-small mt-2" @click.stop="triggerFileInput">
-              Browse Files
-            </button>
-          </div>
-        </div>
-
-        <!-- Camera Upload Option -->
-        <div class="upload-option border border-dashed border-green-400 rounded-lg p-6 bg-green-50 hover:bg-green-100 transition-colors">
-          <div class="option-content flex flex-col items-center gap-3">
-            <div class="option-icon bg-green-100 text-green-600 rounded-full w-12 h-12 flex items-center justify-center">
-              <span class="material-icon-lg">photo_camera</span>
-            </div>
-            <div class="option-text text-center">
-              <h5 class="font-semibold text-gray-900 mb-1">Take New Photo</h5>
-              <p class="text-sm text-gray-600">Capture images directly from your camera</p>
-              <span class="text-xs text-green-600 font-medium">Requires camera permission</span>
-            </div>
-            <button type="button" class="btn-outlined btn-small mt-2" @click.stop="openCamera">
-              Open Camera
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Alternative compact buttons -->
-      <div class="alternative-actions flex gap-3 mt-4 pt-4 border-t border-gray-200">
-        <div class="text-sm text-gray-600 mr-2">Quick actions:</div>
-        <button type="button" @click.stop="triggerFileInput" class="btn-outlined btn-extra-small flex items-center gap-1">
-          <span class="material-icon-xs">upload_file</span>
-          Files
+  <div class="image-upload border border-gray-300 rounded-lg p-4 bg-gray-50">
+    <div class="upload-header flex items-center justify-between mb-4">
+      <h4 class="text-base font-semibold text-gray-900">Images</h4>
+      <div class="upload-actions flex gap-2">
+        <button
+          type="button"
+          @click.stop="triggerFileInput"
+          class="btn-secondary btn-sm flex items-center gap-1"
+          title="Upload files">
+          <span class="material-icon-sm">upload_file</span>
+          Upload
         </button>
-        <button type="button" @click.stop="openCamera" class="btn-filled btn-extra-small flex items-center gap-1">
-          <span class="material-icon-xs">photo_camera</span>
+        <button
+          type="button"
+          @click.stop="openCamera"
+          class="btn-secondary btn-sm flex items-center gap-1"
+          title="Take photo">
+          <span class="material-icon-sm">camera_alt</span>
           Camera
         </button>
       </div>
@@ -101,28 +70,34 @@
         :key="index"
         class="image-preview-item border border-gray-200 rounded-lg overflow-hidden bg-white"
       >
-        <div class="image-container relative h-32 overflow-hidden">
-          <img :src="image.preview" :alt="image.name" class="preview-image w-full h-full object-cover cursor-pointer" @click="viewFullSize(image, index)">
-          <div class="image-overlay absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center opacity-0 hover:opacity-100">
-            <div class="overlay-buttons flex gap-2">
-              <button @click.stop="viewFullSize(image, index)" class="view-image-btn bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-blue-700 transition-colors" title="View full size">
-                <span class="material-icon-sm">zoom_in</span>
-              </button>
-              <button
-                v-if="!image.existing"
-                @click.stop="removeImage(index)"
-                class="remove-image-btn bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-700 transition-colors"
-                title="Remove image">
-                <span class="material-icon-sm">delete</span>
-              </button>
-              <button
-                v-else
-                @click.stop="deleteExistingImage(index)"
-                class="remove-image-btn bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-700 transition-colors"
-                title="Delete image">
-                <span class="material-icon-sm">delete_forever</span>
-              </button>
-            </div>
+        <div class="image-container relative h-32 overflow-hidden group">
+          <img :src="image.preview" :alt="image.name" class="preview-image w-full h-full object-cover" @click="viewFullSize(image, index)">
+
+          <!-- View button (top-left) - always visible on hover -->
+          <button @click.stop="viewFullSize(image, index)" class="view-btn absolute top-2 left-2 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-opacity-75" title="View image">
+            <span class="material-icon-xs">zoom_in</span>
+          </button>
+
+          <!-- Delete button (top-right) - always visible on hover -->
+          <button
+            v-if="!image.existing"
+            @click.stop="removeImage(index)"
+            class="delete-btn absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
+            title="Remove image">
+            <span class="material-icon-xs">close</span>
+          </button>
+
+          <button
+            v-else
+            @click.stop="deleteExistingImage(index)"
+            class="delete-btn absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
+            title="Delete image permanently">
+            <span class="material-icon-xs">delete</span>
+          </button>
+
+          <!-- Image name overlay on bottom -->
+          <div class="image-name-overlay absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white text-xs px-2 py-1 truncate">
+            {{ image.name }}
           </div>
         </div>
         <div class="image-info p-3">
@@ -572,7 +547,7 @@ export default {
 <style scoped>
 /* Material Icons CSS Classes */
 .material-icon-lg {
-  font-family: 'Material Icons', sans-serif;
+  font-family: 'Material Symbols Outlined', sans-serif;
   font-weight: normal;
   font-style: normal;
   font-size: 24px;
@@ -586,7 +561,7 @@ export default {
 }
 
 .material-icon-sm {
-  font-family: 'Material Icons', sans-serif;
+  font-family: 'Material Symbols Outlined', sans-serif;
   font-weight: normal;
   font-style: normal;
   font-size: 18px;
@@ -600,7 +575,7 @@ export default {
 }
 
 .material-icon-xs {
-  font-family: 'Material Icons', sans-serif;
+  font-family: 'Material Symbols Outlined', sans-serif;
   font-weight: normal;
   font-style: normal;
   font-size: 14px;
