@@ -19,6 +19,15 @@
           </select>
         </div>
 
+        <!-- Archive filter for admins -->
+        <div v-if="userRole === 3" class="filter-group min-w-40">
+          <label for="archive-filter" class="form-label mb-1">Archive Status:</label>
+          <select id="archive-filter" v-model="jobFilters.archive_status" @change="$emit('update-job-filters', jobFilters)" class="form-input">
+            <option value="active">Active Jobs</option>
+            <option value="archived">Archived Jobs</option>
+          </select>
+        </div>
+
         <!-- Client filter for admins -->
         <div v-if="userRole === 3" class="filter-group min-w-40">
           <label for="client-filter" class="form-label mb-1">Client:</label>
@@ -60,6 +69,10 @@
               <button v-if="userRole === 3 || (userRole === 4 && job.assigned_technician_user_id == currentUserId)"
                       @click="$emit('edit-job', job)" class="btn-outlined btn-small">
                 <span class="material-icon-sm">edit</span>
+              </button>
+              <!-- Archive/Unarchive button for service provider admins -->
+              <button v-if="userRole === 3" @click.stop="$emit('toggle-archive-job', job)" class="btn-outlined btn-small" :class="{ 'text-orange-600 border-orange-600': job.archived_by_service_provider }">
+                <span class="material-icon-sm">{{ job.archived_by_service_provider ? 'unarchive' : 'archive' }}</span>
               </button>
             </div>
           </template>

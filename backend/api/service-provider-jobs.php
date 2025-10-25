@@ -76,6 +76,18 @@ try {
             $params[] = $_GET['client_id'];
         }
 
+        // Archive status filter for service providers
+        if (isset($_GET['archive_status'])) {
+            if ($_GET['archive_status'] === 'active') {
+                $where_conditions[] = "j.archived_by_service_provider = 0 OR j.archived_by_service_provider IS NULL";
+            } elseif ($_GET['archive_status'] === 'archived') {
+                $where_conditions[] = "j.archived_by_service_provider = 1";
+            }
+        } else {
+            // Default to active jobs only (matching client behavior)
+            $where_conditions[] = "j.archived_by_service_provider = 0 OR j.archived_by_service_provider IS NULL";
+        }
+
     // Filter for quote-related jobs if requested
     if (isset($_GET['quote_jobs']) && $_GET['quote_jobs'] === 'true') {
         $where_conditions[] = "j.job_status IN ('Quote Requested', 'Quote Provided')";
@@ -122,6 +134,7 @@ try {
                 j.client_location_id,
                 j.quotation_deadline,
                 j.quotation_deadline as due_date,
+                j.archived_by_service_provider,
                 j.created_at,
                 j.updated_at,
                 j.contact_person,
@@ -204,11 +217,12 @@ try {
     }
 
     $canEdit = false;
+    $canArchive = false;
 
-    // Service Provider Role 3 (Supervisor) can edit:
-    // - Technician assignment and notes in Assigned, Quote Provided, Incomplete states
-    // - Status changes for most jobs
+    // Service Provider Role 3 (Supervisor) can archive ANY job regardless of status
     if ($role_id === 3) {
+        $canArchive = true;
+        // Can also edit for core job management
         if (in_array($job['job_status'], ['Assigned', 'In Progress', 'Incomplete', 'Quote Requested', 'Quote Provided'])) {
             $canEdit = true;
         }
@@ -223,7 +237,17 @@ try {
         }
     }
 
-    if (!$canEdit) {
+    // Check if this is an archive operation - requires archive permission, not edit permission
+    $isArchiveOperation = isset($input['archived_by_service_provider']);
+
+    if ($isArchiveOperation && !$canArchive) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Access denied. You do not have permission to archive this job.']);
+        exit;
+    }
+
+    // For non-archive operations, check general edit permission
+    if (!$isArchiveOperation && !$canEdit) {
         http_response_code(403);
         echo json_encode(['error' => 'Access denied. You do not have permission to edit this job.']);
         exit;
@@ -231,6 +255,24 @@ try {
 
     $updates = [];
     $params = [];
+
+    // Handle archiving by service provider admins (Role 3 only)
+    if ($role_id === 3 && isset($input['archived_by_service_provider'])) {
+        // Convert boolean/false values properly
+        $archiveValue = $input['archived_by_service_provider'];
+        if ($archiveValue === false || $archiveValue === 0 || $archiveValue === '0' || $archiveValue === 'false') {
+            $archiveValue = 0; // Unarchive
+        } elseif ($archiveValue === true || $archiveValue === 1 || $archiveValue === '1' || $archiveValue === 'true') {
+            $archiveValue = 1; // Archive
+        } else {
+            $archiveValue = 0; // Default to unarchive for safety
+        }
+
+        $updates[] = "archived_by_service_provider = ?";
+        $params[] = $archiveValue;
+
+        error_log("service-provider-jobs.php - Archive operation: setting archived_by_service_provider = $archiveValue for job_id $job_id");
+    }
 
     // Handle technician assignment (Role 3 only)
     if ($role_id === 3 && isset($input['assigned_technician_user_id'])) {

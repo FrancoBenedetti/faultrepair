@@ -422,6 +422,7 @@
             @refresh-jobs="loadJobs"
             @view-job-details="selectedJob = $event; showJobDetailsModal = true"
             @edit-job="handleEditJob"
+            @toggle-archive-job="toggleArchiveJob"
           />
         </div>
       </div>
@@ -1837,6 +1838,7 @@ export default {
     searchTimeout: null, // For debounced search
     jobFilters: {
       status: '',
+      archive_status: 'active', // Default to active jobs for service providers
       client_id: '',
       technician_id: ''
     },
@@ -2406,10 +2408,11 @@ getCurrentUserName() {
           console.log('🏗️ loadJobs: Technician ID:', payload.user_id)
         } else {
           console.log('🏗️ loadJobs: Loading as service provider admin (role 3)')
-          // For admins, use the filter selections
-          if (this.jobFilters.status) params.append('status', this.jobFilters.status)
-          if (this.jobFilters.client_id) params.append('client_id', this.jobFilters.client_id)
-          if (this.jobFilters.technician_id) params.append('technician_id', this.jobFilters.technician_id)
+        // For admins, use the filter selections
+        if (this.jobFilters.status) params.append('status', this.jobFilters.status)
+        if (this.jobFilters.archive_status) params.append('archive_status', this.jobFilters.archive_status)
+        if (this.jobFilters.client_id) params.append('client_id', this.jobFilters.client_id)
+        if (this.jobFilters.technician_id) params.append('technician_id', this.jobFilters.technician_id)
         }
 
         const apiUrl = `/backend/api/service-provider-jobs.php?${params}`
@@ -3005,6 +3008,37 @@ getCurrentUserName() {
       await this.loadJobs()
       // Close might already be handled by the modal, but ensure cleanup
       this.editingJobForModal = null
+    },
+
+    // Archive Job Methods
+    async toggleArchiveJob(job) {
+      const action = job.archived_by_service_provider ? 'unarchive' : 'archive'
+      const confirmMessage = `Are you sure you want to ${action} this job?`
+
+      if (!confirm(confirmMessage)) {
+        return
+      }
+
+      try {
+        const response = await apiFetch('/backend/api/service-provider-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            job_id: job.id,
+            archived_by_service_provider: !job.archived_by_service_provider
+          })
+        })
+
+        if (response.ok) {
+          // Refresh jobs list from server to ensure proper filtering
+          await this.loadJobs()
+          alert(`Job ${action}d successfully!`)
+        } else {
+          const errorData = await response.json()
+          this.handleError(errorData)
+        }
+      } catch (error) {
+        alert(`Failed to ${action} job`)
+      }
     },
 
     // PDF Upload Methods
