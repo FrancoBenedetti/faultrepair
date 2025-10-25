@@ -93,86 +93,133 @@
           </div>
         </div>
 
-        <!-- User Management Section - Only for budget controllers -->
+
+        <!-- Administrator Settings Section - Only for budget controllers (role 2) -->
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8" v-if="userRole === 2">
-          <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('users')" style="cursor: pointer;">
+          <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('administrator-settings')" style="cursor: pointer;">
             <div class="section-title flex items-center gap-3">
-              <button class="expand-btn" :class="{ expanded: sectionsExpanded.users }">
-                <span class="material-icon-sm">expand_more</span>
+              <button class="expand-btn" :class="{ expanded: sectionsExpanded['administrator-settings'] }">
+                <span class="material-icon-sm">admin_panel_settings</span>
               </button>
               <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-                <span class="material-icon text-blue-600">group</span>
-                User Management
-                <span v-if="users?.length" class="text-sm font-normal text-blue-600">({{ users.length }})</span>
+                <span class="material-icon text-purple-600">admin_panel_settings</span>
+                Administrator Settings
               </h2>
             </div>
           </div>
 
-          <div v-show="sectionsExpanded.users" class="section-content transition-all duration-300 ease-in-out">
-            <UserManagementSection
-              :expanded="false"
-              :users="users"
-              :available-roles="availableRoles"
-              :is-admin="isAdmin"
-              :current-user-id="userId"
-              @add-user="showAddUserModal = true"
-              @edit-user="handleEditUser"
-              @delete-user="handleDeleteUser"
-            />
-          </div>
-        </div>
+          <!-- All administrator sub-sections -->
+          <div v-show="sectionsExpanded['administrator-settings']" class="section-content">
 
-        <!-- Locations Section - Only for budget controllers -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8" v-if="userRole === 2">
-          <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('locations')" style="cursor: pointer;">
-            <div class="section-title flex items-center gap-3">
-              <button class="expand-btn" :class="{ expanded: sectionsExpanded.locations }">
-                <span class="material-icon-sm">expand_more</span>
-              </button>
-              <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-                <span class="material-icon text-blue-600">location_on</span>
-                Locations
-                <span v-if="locations?.length" class="text-sm font-normal text-blue-600">({{ locations.length }})</span>
-              </h2>
+            <!-- Business Profile Sub-Section -->
+            <div class="mb-6" v-if="userRole === 2">
+              <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-200" @click="toggleSection('profile')" style="cursor: pointer;">
+                <div class="section-title flex items-center gap-3">
+                  <button class="expand-btn small" :class="{ expanded: sectionsExpanded.profile }">
+                    <span class="material-icon-sm">expand_more</span>
+                  </button>
+                  <h3 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                    <span class="material-icon text-blue-600">business</span>
+                    Business Profile
+                    <span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">{{ clientProfileCompleteness }}% Complete</span>
+                  </h3>
+                </div>
+              </div>
+
+              <div v-show="sectionsExpanded.profile" class="section-content transition-all duration-300 ease-in-out">
+                <BusinessProfileSection
+                  :expanded="sectionsExpanded.profile"
+                  :client-profile="clientProfile"
+                  :client-profile-completeness="clientProfileCompleteness"
+                  :is-admin="isAdmin"
+                  @toggle="toggleSection('profile')"
+                  @edit-profile="showEditProfileModal = true"
+                />
+              </div>
             </div>
-          </div>
 
-          <div v-show="sectionsExpanded.locations" class="section-content transition-all duration-300 ease-in-out">
-            <LocationManagementSection
-              :expanded="false"
-              :locations="locations"
-              :is-admin="isAdmin"
-              @edit-location="handleEditLocation"
-              @add-location="showAddLocationModal = true"
-              @filter-jobs="filterJobsByLocation"
-            />
-          </div>
-        </div>
+            <!-- User Management Sub-Section -->
+            <div class="mb-6" v-if="userRole === 2">
+              <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-200" @click="toggleSection('users')" style="cursor: pointer;">
+                <div class="section-title flex items-center gap-3">
+                  <button class="expand-btn small" :class="{ expanded: sectionsExpanded.users }">
+                    <span class="material-icon-sm">expand_more</span>
+                  </button>
+                  <h3 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                    <span class="material-icon text-blue-600">group</span>
+                    User Management
+                    <span v-if="users?.length" class="text-sm font-normal text-blue-600">({{ users.length }})</span>
+                  </h3>
+                </div>
+              </div>
 
-        <!-- Approved Providers Section - Only for budget controllers -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8" v-if="userRole === 2">
-          <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('providers')" style="cursor: pointer;">
-            <div class="section-title flex items-center gap-3">
-              <button class="expand-btn" :class="{ expanded: sectionsExpanded.providers }">
-                <span class="material-icon-sm">expand_more</span>
-              </button>
-              <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-                <span class="material-icon text-blue-600">business</span>
-                Approved Providers
-                <span v-if="approvedProviders?.length" class="text-sm font-normal text-blue-600">({{ approvedProviders.length }})</span>
-              </h2>
+              <div v-show="sectionsExpanded.users" class="section-content transition-all duration-300 ease-in-out">
+                <UserManagementSection
+                  :expanded="false"
+                  :users="users"
+                  :available-roles="availableRoles"
+                  :is-admin="isAdmin"
+                  :current-user-id="userId"
+                  @add-user="showAddUserModal = true"
+                  @edit-user="handleEditUser"
+                  @delete-user="handleDeleteUser"
+                />
+              </div>
             </div>
-          </div>
 
-          <div v-show="sectionsExpanded.providers" class="section-content transition-all duration-300 ease-in-out">
-            <ProviderManagementSection
-              :expanded="false"
-              :approved-providers="approvedProviders"
-              :is-admin="isAdmin"
-              @view-provider-jobs="handleViewProviderJobs"
-              @browse-providers="$router.push('/browse-providers')"
-              @add-xs-provider="showAddXSProviderModal = true"
-            />
+            <!-- Locations Sub-Section -->
+            <div class="mb-6" v-if="userRole === 2">
+              <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-200" @click="toggleSection('locations')" style="cursor: pointer;">
+                <div class="section-title flex items-center gap-3">
+                  <button class="expand-btn small" :class="{ expanded: sectionsExpanded.locations }">
+                    <span class="material-icon-sm">expand_more</span>
+                  </button>
+                  <h3 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                    <span class="material-icon text-blue-600">location_on</span>
+                    Locations
+                    <span v-if="locations?.length" class="text-sm font-normal text-blue-600">({{ locations.length }})</span>
+                  </h3>
+                </div>
+              </div>
+
+              <div v-show="sectionsExpanded.locations" class="section-content transition-all duration-300 ease-in-out">
+                <LocationManagementSection
+                  :expanded="false"
+                  :locations="locations"
+                  :is-admin="isAdmin"
+                  @edit-location="handleEditLocation"
+                  @add-location="showAddLocationModal = true"
+                  @filter-jobs="filterJobsByLocation"
+                />
+              </div>
+            </div>
+
+            <!-- Approved Providers Sub-Section -->
+            <div class="mb-6" v-if="userRole === 2">
+              <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-200" @click="toggleSection('providers')" style="cursor: pointer;">
+                <div class="section-title flex items-center gap-3">
+                  <button class="expand-btn small" :class="{ expanded: sectionsExpanded.providers }">
+                    <span class="material-icon-sm">expand_more</span>
+                  </button>
+                  <h3 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                    <span class="material-icon text-blue-600">business</span>
+                    Approved Providers
+                    <span v-if="approvedProviders?.length" class="text-sm font-normal text-blue-600">({{ approvedProviders.length }})</span>
+                  </h3>
+                </div>
+              </div>
+
+              <div v-show="sectionsExpanded.providers" class="section-content transition-all duration-300 ease-in-out">
+                <ProviderManagementSection
+                  :expanded="false"
+                  :approved-providers="approvedProviders"
+                  :is-admin="isAdmin"
+                  @view-provider-jobs="handleViewProviderJobs"
+                  @browse-providers="$router.push('/browse-providers')"
+                  @add-xs-provider="showAddXSProviderModal = true"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -524,19 +571,17 @@ export default {
       editingJob: null,
       originalJobStatus: null,
       originalProviderId: null,
-    editingImages: [], // Array to store additional images for editing
-    selectedQuotation: null,
-    // Section collapse/expand state
-    sectionsExpanded: {
-      profile: false, // Profile section collapsed by default
-      users: false,
-      locations: false,
-      providers: false,
-      jobs: true // Jobs section expanded by default
-    },
-
-    // EMERGENCY DEBUG FLAG - For testing modal blocking
-    forceModalReset: true
+      editingImages: [], // Array to store additional images for editing
+      selectedQuotation: null,
+      // Section collapse/expand state
+      sectionsExpanded: {
+        'administrator-settings': false, // Administrator settings collapsed by default
+        profile: false, // Profile section collapsed by default
+        users: false,
+        locations: false,
+        providers: false,
+        jobs: true // Jobs section expanded by default
+      }
     }
   },
   async mounted() {
