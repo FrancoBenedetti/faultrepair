@@ -302,9 +302,6 @@ try {
             exit;
         }
 
-        // Check permissions based on user role and job status
-        $canEdit = false;
-
         // Get job details to check ownership and status
         $stmt = $pdo->prepare("
             SELECT j.reporting_user_id, j.job_status FROM jobs j
@@ -319,20 +316,35 @@ try {
             exit;
         }
 
-        // Reporting employees can edit their own jobs when status is 'Reported'
-        if ($role_id === 1 && $job['reporting_user_id'] === $user_id && $job['job_status'] === 'Reported') {
-            $canEdit = true;
-        }
+        // Check if this is an archiving operation - allow for role 2 users on any job status
+        $isArchivingAction = isset($input['archived_by_client']);
 
-        // Budget controllers can edit when status is 'Reported', 'Declined', 'Quote Requested', or 'Completed'
-        if ($role_id === 2 && in_array($job['job_status'], ['Reported', 'Declined', 'Quote Requested', 'Completed'])) {
-            $canEdit = true;
-        }
+        if ($isArchivingAction) {
+            // Archive/Unarchive permission: only role 2 (budget controllers) allowed, any job status
+            if ($role_id !== 2) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Access denied. Only budget controllers can archive jobs.']);
+                exit;
+            }
+        } else {
+            // Regular edit permissions for other operations
+            $canEdit = false;
 
-        if (!$canEdit) {
-            http_response_code(403);
-            echo json_encode(['error' => 'Access denied. You do not have permission to edit this job.']);
-            exit;
+            // Reporting employees can edit their own jobs when status is 'Reported'
+            if ($role_id === 1 && $job['reporting_user_id'] === $user_id && $job['job_status'] === 'Reported') {
+                $canEdit = true;
+            }
+
+            // Budget controllers can edit when status is 'Reported', 'Declined', 'Quote Requested', or 'Completed'
+            if ($role_id === 2 && in_array($job['job_status'], ['Reported', 'Declined', 'Quote Requested', 'Completed'])) {
+                $canEdit = true;
+            }
+
+            if (!$canEdit) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Access denied. You do not have permission to edit this job.']);
+                exit;
+            }
         }
 
         $updates = [];

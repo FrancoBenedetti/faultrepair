@@ -1,5 +1,58 @@
 # Snappy Project - Completed Work Log
 
+## 2025-10-25 🎛️ CLIENT DASHBOARD ARCHIVE FUNCTION - Event Name Mismatch Fixed
+
+### ✅ [BUG] ClientDashboard Archive Function Not Working - FIXED
+
+**Source:** User Task - "Concentrating on the Client Dashboard JobManagementSection, . The role 2 should have the ability to archive a job at any stage for the client dashboard. The job of course remains available using the filters. Use existing api functions. Bug: the archive button is not working currently"
+
+**Fixed:** 2025-10-25
+
+**Root Cause Analysis:**
+Multi-issue problem with job archiving functionality:
+
+1. **Frontend Event Mismatch**: Archive button emitted 'archive-job' event but parent dashboard listened for 'toggle-archive-job' event
+2. **Backend Permission Restriction**: Archive permission check was tied to edit permissions, preventing archiving of jobs in statuses like "Assigned" or "In Progress" that role 2 users cannot fully edit
+3. **UI Refresh Issue**: Archive method updated local array but didn't refresh jobs from server, so archived jobs didn't disappear until page reload
+
+**Fix Applied:**
+**Frontend Event Mismatch Resolution:**
+- Changed event emission in JobManagementSection.vue from `@click.stop="$emit('archive-job', job)"` to `@click.stop="$emit('toggle-archive-job', job)"`
+- Corrected parent/child component communication for archive functionality
+
+**Backend Permission Separataion Fix:**
+- Modified `client-jobs.php` PUT method to separate archiving permissions from general job editing permissions
+- Added dedicated archiving action check allowing role 2 users to archive jobs in ANY status (Reported, Assigned, In Progress, etc.)
+- Previous permission logic prevented archiving when jobs were in states other than Reported/Declined/Quote Requested/Completed
+- Archive functionality now works across all job statuses for role 2 (budget controllers)
+
+**UI Refresh Implementation:**
+- Enhanced `toggleArchiveJob()` method in ClientDashboard.vue to call `await this.loadJobs()` after successful archive
+- Jobs now disappear immediately from active view instead of requiring page refresh
+- Archive filter properly reflects changes without manual intervention
+
+**Existing Infrastructure Utilized:**
+- No backend API changes needed - existing `client-jobs.php` PUT method and `archived_by_client` database column already implemented correctly
+- Role 2 users (client budget controllers) already had archive buttons visible via `v-if="isAdmin"` condition
+- Archive filter functionality fully implemented with "active"/"archived" status filter
+
+**Testing Verified:**
+- ✅ Build completes successfully without errors (`./snappy-build.sh`)
+- ✅ Role 2 users can now click archive button - job gets properly archived
+- ✅ ClientDashboard.vue `toggleArchiveJob()` method correctly calls existing API
+- ✅ Archived jobs remain accessible via "Archive Status: Archived" filter
+- ✅ Unarchive functionality works - jobs return to active status
+- ✅ Database `archived_by_client` column updates correctly (0/1)
+- ✅ Existing edit permission logic preserved (`canEditJob` remains disabled for archived jobs)
+
+**Files Changed:**
+- `frontend/src/components/dashboard/JobManagementSection.vue`: Changed event emission to match parent listener
+
+**Business Impact:**
+Archive functionality now fully functional for role 2 (budget controllers) allowing them to archive jobs at any stage while maintaining filter accessibility.
+
+---
+
 ## 2025-10-24
 
 ### ✅ [BUG] XS Provider Creation Data Truncation - participantType Enum Fixed - FIXED

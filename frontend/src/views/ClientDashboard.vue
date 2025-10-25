@@ -2187,12 +2187,8 @@ Are you sure you want to proceed?`;
         })
 
         if (response.ok) {
-          // Update the job in the local array
-          const jobIndex = this.jobs.findIndex(j => j.id === job.id)
-          if (jobIndex !== -1) {
-            this.jobs[jobIndex].archived_by_client = !job.archived_by_client
-            this.jobs[jobIndex].updated_at = new Date().toISOString()
-          }
+          // Refresh jobs list from server to ensure proper filtering
+          await this.loadJobs()
 
           alert(`Job ${action}d successfully!`)
         } else {

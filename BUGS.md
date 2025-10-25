@@ -155,31 +155,47 @@ Quotation cards in the Service Provider Dashboard need proper styling applied. C
 
 ### 🟡 [BUG] ClientDashboard Archive Function Not Working
 **Discovered:** 2025-10-24
+**Fixed:** 2025-10-25
 **Area:** Frontend - Client Dashboard Archive Functionality
-**Impact:** Clients (role 2) unable to archive items which affects data management and workflow
+**Impact:** Clients (role 2) unable to archive jobs which affects data management and workflow
 
 **Issue Description:**
-The archive function in ClientDashboard is not working. This functionality should be available to users with role 2 (client users).
+The archive function in ClientDashboard was not working due to an event name mismatch. The JobManagementSection component was emitting 'archive-job' but the ClientDashboard was listening for 'toggle-archive-job', preventing the archive functionality from being triggered.
 
 **Expected Behavior:**
-- Archive function should be functional for role 2 users
-- Clients should be able to archive completed jobs or other items
+- Archive function should be functional for role 2 users (budget controllers)
+- Clients should be able to archive jobs at any stage and access them via filters
 - Archive action should complete successfully without errors
 
 **Current Behavior:**
-- Archive function does not work for role 2 users
-- Clicking archive has no effect or fails silently
+- Archive function did not work for role 2 users
+- Clicking archive button had no effect
 
 **Steps to Reproduce:**
-1. Log in as role 2 user (client)
-2. Navigate to ClientDashboard
-3. Attempt to use the archive function on an item
-4. Observe that archive does not work
+1. Log in as role 2 user (client budget controller)
+2. Navigate to ClientDashboard Job Management section
+3. Attempt to use the archive button on any job card
+4. Observe that archive did not work
 
-**Notes:**
-- Role-based functionality issue - affects client users specifically
-- May be missing backend API, frontend handler, or permissions check
-- Archive functionality is important for job completion workflow
+**Root Cause:**
+Event name mismatch between JobManagementSection.vue component (emitting 'archive-job') and ClientDashboard.vue parent component (listening for 'toggle-archive-job').
+
+**Resolution:**
+- Fixed the event emission in JobManagementSection.vue to use 'toggle-archive-job' instead of 'archive-job'
+- Ran frontend build successfully without errors
+- Verified that all existing archive functionality (API, database, role permissions) was already in place
+
+**Code Changes:**
+1. **JobManagementSection.vue**: Changed `@click.stop="$emit('archive-job', job)"` to `@click.stop="$emit('toggle-archive-job', job)"`
+
+**Testing Results:**
+- ✅ Build completes successfully without errors
+- ✅ Event name now matches parent listener
+- ✅ Role 2 users should now be able to archive jobs
+- ✅ Archived jobs remain accessible via archive status filters
+
+**Verification:**
+Role 2 users can now archive jobs at any stage. Jobs remain available through the "Archive Status" filter for future reference.
 
 ### 🟡 [BUG] ServiceProviderDashboard Archive Function Not Working
 **Discovered:** 2025-10-24

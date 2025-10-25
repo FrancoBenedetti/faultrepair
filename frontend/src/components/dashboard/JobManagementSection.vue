@@ -73,7 +73,7 @@
             </template>
 
             <!-- Archive/Unarchive button for budget controllers -->
-            <button v-if="isAdmin" @click.stop="$emit('archive-job', job)" class="btn-outlined btn-small" :class="{ 'text-orange-600 border-orange-600': job.archived_by_client }">
+            <button v-if="isAdmin" @click.stop="$emit('toggle-archive-job', job)" class="btn-outlined btn-small" :class="{ 'text-orange-600 border-orange-600': job.archived_by_client }">
               <span class="material-icon-sm">{{ job.archived_by_client ? 'unarchive' : 'archive' }}</span>
             </button>
           </div>
