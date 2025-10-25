@@ -71,6 +71,7 @@ try {
                 END as location_name,
                 l.address as location_address,
                 sp.name as assigned_provider_name,
+                spt.participantType as assigned_provider_type,
                 CONCAT(u.first_name, ' ', u.last_name) as reporting_user,
                 CONCAT(tu.first_name, ' ', tu.last_name) as assigned_technician,
                 (SELECT COUNT(*) FROM job_images WHERE job_id = j.id) as image_count,
@@ -97,6 +98,7 @@ try {
             FROM jobs j
             LEFT JOIN locations l ON j.client_location_id = l.id
             LEFT JOIN participants sp ON j.assigned_provider_participant_id = sp.participantId
+            LEFT JOIN participant_type spt ON sp.participantId = spt.participantId
             LEFT JOIN users u ON j.reporting_user_id = u.userId
             LEFT JOIN users tu ON j.assigned_technician_user_id = tu.userId
             LEFT JOIN job_quotations jq ON j.current_quotation_id = jq.id
@@ -302,9 +304,15 @@ try {
             exit;
         }
 
-        // Get job details to check ownership and status
+        // Get job details including provider type to check ownership and status
         $stmt = $pdo->prepare("
-            SELECT j.reporting_user_id, j.job_status FROM jobs j
+            SELECT
+                j.reporting_user_id,
+                j.job_status,
+                pt.participantType as provider_type
+            FROM jobs j
+            LEFT JOIN participants p ON j.assigned_provider_participant_id = p.participantId
+            LEFT JOIN participant_type pt ON pt.participantId = p.participantId AND pt.participantType = 'XS'
             WHERE j.id = ?
         ");
         $stmt->execute([$job_id]);
@@ -316,8 +324,12 @@ try {
             exit;
         }
 
+        // Check if this job is assigned to an XS (External Service Provider)
+        $isXSProvider = ($job['provider_type'] === 'XS');
+
         // Check if this is an archiving operation - allow for role 2 users on any job status
         $isArchivingAction = isset($input['archived_by_client']);
+        $isStatusChangeAction = isset($input['job_status']) || isset($input['request_state_change']);
 
         if ($isArchivingAction) {
             // Archive/Unarchive permission: only role 2 (budget controllers) allowed, any job status
@@ -335,9 +347,18 @@ try {
                 $canEdit = true;
             }
 
-            // Budget controllers can edit when status is 'Reported', 'Declined', 'Quote Requested', or 'Completed'
-            if ($role_id === 2 && in_array($job['job_status'], ['Reported', 'Declined', 'Quote Requested', 'Completed'])) {
-                $canEdit = true;
+            // Budget controllers have expanded permissions:
+            // - Can edit when status is 'Reported', 'Declined', 'Quote Requested', or 'Completed' (existing rule)
+            // - Can also edit ALL fields and change ANY status when provider is XS (external)
+            if ($role_id === 2) {
+                // Role 2 can always edit XS provider jobs in any status
+                if ($isXSProvider) {
+                    $canEdit = true;
+                }
+                // Role 2 has normal editing permissions for non-XS jobs
+                elseif (in_array($job['job_status'], ['Reported', 'Declined', 'Quote Requested', 'Completed'])) {
+                    $canEdit = true;
+                }
             }
 
             if (!$canEdit) {
@@ -347,11 +368,70 @@ try {
             }
         }
 
+        // For XS provider jobs, validate mandatory notes on status changes
+        if ($isStatusChangeAction && $isXSProvider && $role_id === 2) {
+            if (!isset($input['transition_notes']) || empty(trim($input['transition_notes']))) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Notes are required for external provider transitions to document external system interactions.']);
+                exit;
+            }
+        }
+
         $updates = [];
         $params = [];
         error_log(__FILE__.'/'.__LINE__.'/ >>>> '.json_encode($role_id));
+
+        // For role 2 with XS providers: Allow editing ALL fields except origin fields
+        if ($role_id === 2 && $isXSProvider) {
+            // All editable fields for XS provider jobs
+            if (isset($input['item_identifier'])) {
+                $updates[] = "item_identifier = ?";
+                $params[] = $input['item_identifier'];
+            }
+
+            if (isset($input['fault_description'])) {
+                $updates[] = "fault_description = ?";
+                $params[] = $input['fault_description'];
+            }
+
+            if (isset($input['contact_person'])) {
+                $updates[] = "contact_person = ?";
+                $params[] = $input['contact_person'];
+            }
+
+            if (isset($input['technician_notes'])) {
+                $updates[] = "technician_notes = ?";
+                $params[] = $input['technician_notes'];
+            }
+
+            // Can change assigned provider (even to another provider) for XS jobs
+            if (isset($input['assigned_provider_id'])) {
+                $updates[] = "assigned_provider_participant_id = ?";
+                $params[] = $input['assigned_provider_id'];
+
+                // Verify new provider is approved for this client
+                if ($input['assigned_provider_id']) {
+                    $stmt = $pdo->prepare("
+                        SELECT id FROM participant_approvals
+                        WHERE client_participant_id = ? AND provider_participant_id = ?
+                    ");
+                    $stmt->execute([$entity_id, $input['assigned_provider_id']]);
+                    if (!$stmt->fetch()) {
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Service provider is not approved for this client']);
+                        exit;
+                    }
+                }
+            }
+
+            // Can assign/reassign technicians for XS jobs
+            if (isset($input['assigned_technician_user_id'])) {
+                $updates[] = "assigned_technician_user_id = ?";
+                $params[] = $input['assigned_technician_user_id'] ?: null;
+            }
+        }
         // Handle fields that can be edited by reporting employees when status is 'Reported'
-        if ($role_id === 1 && $job['job_status'] === 'Reported') {
+        elseif ($role_id === 1 && $job['job_status'] === 'Reported') {
             if (isset($input['item_identifier'])) {
                 $updates[] = "item_identifier = ?";
                 $params[] = $input['item_identifier'];
@@ -369,9 +449,8 @@ try {
 
             // Reporting employees CANNOT assign providers - only budget controllers can
         }
-
-        // Also handle basic fields that can be edited by budget controllers when status is 'Reported'
-        if ($role_id === 2 && $job['job_status'] === 'Reported') {
+        // Also handle basic fields that can be edited by budget controllers when status is 'Reported' (non-XS jobs)
+        elseif ($role_id === 2 && $job['job_status'] === 'Reported') {
             if (isset($input['item_identifier'])) {
                 $updates[] = "item_identifier = ?";
                 $params[] = $input['item_identifier'];
@@ -388,8 +467,8 @@ try {
             }
         }
 
-        // Handle fields that can be edited by budget controllers (including provider assignment and archiving)
-        if ($role_id === 2) {
+        // Handle fields that can be edited by budget controllers (including provider assignment and archiving) - non-XS jobs
+        if ($role_id === 2 && !$isXSProvider) {
             if (isset($input['assigned_provider_id'])) {
                 $updates[] = "assigned_provider_participant_id = ?";
                 $params[] = $input['assigned_provider_id'];
@@ -532,11 +611,12 @@ try {
 
         // Insert status history if status changed
         if (isset($input['job_status'])) {
+            $notes = ($isXSProvider && isset($input['transition_notes'])) ? trim($input['transition_notes']) : null;
             $stmt = $pdo->prepare("
-                INSERT INTO job_status_history (job_id, status, changed_by_user_id)
-                VALUES (?, ?, ?)
+                INSERT INTO job_status_history (job_id, status, changed_by_user_id, notes)
+                VALUES (?, ?, ?, ?)
             ");
-            $stmt->execute([$job_id, $input['job_status'], $user_id]);
+            $stmt->execute([$job_id, $input['job_status'], $user_id, $notes]);
         } elseif (isset($input['request_state_change'])) {
             // Also insert status history for state change requests
             $stateMapping = [
@@ -550,11 +630,12 @@ try {
                 'cannot_repair' => 'Cannot repair'
             ];
             if (isset($stateMapping[$input['request_state_change']])) {
+                $notes = ($isXSProvider && isset($input['transition_notes'])) ? trim($input['transition_notes']) : null;
                 $stmt = $pdo->prepare("
-                    INSERT INTO job_status_history (job_id, status, changed_by_user_id)
-                    VALUES (?, ?, ?)
+                    INSERT INTO job_status_history (job_id, status, changed_by_user_id, notes)
+                    VALUES (?, ?, ?, ?)
                 ");
-                $stmt->execute([$job_id, $stateMapping[$input['request_state_change']], $user_id]);
+                $stmt->execute([$job_id, $stateMapping[$input['request_state_change']], $user_id, $notes]);
             }
         }
 

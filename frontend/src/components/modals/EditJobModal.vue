@@ -4,7 +4,13 @@
     <div class="modal-content">
       <!-- Modal Header -->
       <div class="modal-header">
-        <h2 class="modal-title">Edit Job: {{ job.item_identifier }}</h2>
+        <div class="title-container">
+          <h2 class="modal-title">Edit Job: {{ job.item_identifier }}</h2>
+          <div v-if="isXSProviderMode" class="xs-mode-banner">
+            <span class="material-icon xs-indicator-icon">settings</span>
+            External Provider Mode
+          </div>
+        </div>
         <button class="modal-close" @click="$emit('close')">
           <span class="material-icon">close</span>
         </button>
@@ -147,14 +153,12 @@
                 <select v-model="selectedProviderId" class="form-input">
                   <option value="">-- Choose a provider --</option>
                   <option v-for="provider in availableProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
-                    {{ provider.name }}
-                    <span v-if="provider.participant_type === 'XS'" class="provider-type external-provider">(External)</span>
-                    <span v-else class="provider-type platform-provider">(Platform)</span>
+                    {{ provider.name }}<span v-if="provider.provider_type === 'XS'" class="provider-type external-provider"> (External)</span>
                   </option>
                 </select>
                 <p class="form-help">
                   <strong>External providers</strong> use their own systems for service delivery.
-                  <strong>Platform providers</strong> work within our integrated system.
+                  Platform providers work within our integrated system.
                 </p>
               </div>
 
@@ -279,20 +283,271 @@
           </div>
         </template>
 
-        <!-- Legacy Layout for Non-Reported Jobs -->
+        <!-- Non-Reported Jobs Layout -->
         <template v-else>
           <!-- Job Status Section -->
           <div class="section">
-            <h3 class="section-title">Current Status: {{ job.job_status }}</h3>
+            <h3 class="section-title">
+              Current Status: {{ job.job_status }}
+              <span v-if="isXSProviderMode" class="xs-status-indicator">(External Provider)</span>
+            </h3>
 
             <!-- Show a message for Assigned jobs with admin access -->
             <div v-if="job.job_status === 'Assigned' && userRole === 3" class="status-message">
               As a service provider administrator, you can assign technicians to this job and add instructions.
             </div>
+
+            <!-- Show transition options for XS provider jobs -->
+            <div v-if="isXSProviderMode" class="xs-transition-section">
+              <h4 class="transition-section-title">Available Actions for External Provider</h4>
+              <p class="transition-section-desc">As proxy for the external service provider, you can change the job status:</p>
+
+              <div class="transition-buttons-grid">
+                <!-- Assigned status can go to In Progress -->
+                <button
+                  v-if="job.job_status === 'Assigned'"
+                  @click="initiateTransition('In Progress')"
+                  class="transition-action-btn status-in-progress"
+                  :disabled="saving"
+                >
+                  <span class="btn-icon">▶️</span>
+                  Mark In Progress
+                </button>
+
+                <!-- In Progress can go to Completed -->
+                <button
+                  v-if="job.job_status === 'In Progress'"
+                  @click="initiateTransition('Completed')"
+                  class="transition-action-btn status-completed"
+                  :disabled="saving"
+                >
+                  <span class="btn-icon">✅</span>
+                  Mark Completed
+                </button>
+
+                <!-- Completed can be marked Incomplete -->
+                <button
+                  v-if="job.job_status === 'Completed'"
+                  @click="initiateTransition('Incomplete')"
+                  class="transition-action-btn status-incomplete"
+                  :disabled="saving"
+                >
+                  <span class="btn-icon">↩️</span>
+                  Mark Incomplete
+                </button>
+
+                <!-- Incomplete can be marked In Progress again -->
+                <button
+                  v-if="job.job_status === 'Incomplete'"
+                  @click="initiateTransition('In Progress')"
+                  class="transition-action-btn status-in-progress"
+                  :disabled="saving"
+                >
+                  <span class="btn-icon">🔄</span>
+                  Continue Work
+                </button>
+
+                <!-- Cannot repair option -->
+                <button
+                  v-if="job.job_status === 'In Progress'"
+                  @click="initiateTransition('Cannot repair')"
+                  class="transition-action-btn status-cannot-repair"
+                  :disabled="saving"
+                >
+                  <span class="btn-icon">❌</span>
+                  Cannot Repair
+                </button>
+
+                <!-- Confirm option for Cannot repair -->
+                <button
+                  v-if="job.job_status === 'Cannot repair'"
+                  @click="initiateTransition('Confirmed')"
+                  class="transition-action-btn status-confirmed"
+                  :disabled="saving"
+                >
+                  <span class="btn-icon">👍</span>
+                  Confirm Receipt
+                </button>
+
+                <!-- Complete job option -->
+                <button
+                  @click="initiateTransition('Confirmed')"
+                  class="transition-action-btn status-confirmed"
+                  :disabled="saving"
+                >
+                  <span class="btn-icon">🏁</span>
+                  Complete Job
+                </button>
+              </div>
+
+              <!-- Transition Notes Form (shown when transitioning) -->
+              <div v-if="selectedTransition" class="transition-notes-form">
+                <h4>Transition Notes Required</h4>
+                <p class="notes-explanation">
+                  Please document what occurred with the external service provider system:
+                </p>
+
+                <div class="form-group">
+                  <label for="transition-notes" class="form-label">
+                    External Provider Interaction Notes *
+                  </label>
+                  <textarea
+                    id="transition-notes"
+                    v-model="transitionNotes"
+                    class="form-textarea"
+                    placeholder="Describe communications, resolutions, or next steps with the external provider..."
+                    rows="4"
+                    required
+                  ></textarea>
+                  <p class="form-help">
+                    This note will be saved in the job history for audit purposes.
+                  </p>
+                </div>
+
+                <div class="transition-actions">
+                  <button @click="executePendingTransition" :disabled="saving || !transitionNotes.trim()" class="btn-primary">
+                    {{ saving ? 'Processing...' : `Confirm ${selectedTransition}` }}
+                  </button>
+                  <button @click="cancelTransition" class="btn-secondary">Cancel</button>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- Read-Only Job Details (for non-reported jobs) -->
-          <div class="section readonly-job-details">
+          <!-- Editable Job Details (for XS provider jobs in all statuses) -->
+          <div v-if="isXSProviderMode" class="job-section job-details-section">
+            <div class="section-header">
+              <h3 class="section-title">
+                <span class="material-icon section-icon">edit_note</span>
+                Job Details (Editable)
+              </h3>
+            </div>
+
+            <div class="section-content">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="item-identifier" class="form-label">
+                    <span class="material-icon field-icon">build</span>
+                    Item Identifier
+                  </label>
+                  <input
+                    id="item-identifier"
+                    type="text"
+                    v-model="editableJob.item_identifier"
+                    class="form-input"
+                    maxlength="100"
+                    placeholder="Enter item identifier..."
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="contact-person" class="form-label">
+                    <span class="material-icon field-icon">contact_mail</span>
+                    Contact Person
+                  </label>
+                  <input
+                    id="contact-person"
+                    type="text"
+                    v-model="editableJob.contact_person"
+                    class="form-input"
+                    maxlength="100"
+                    placeholder="Contact person for this job..."
+                  />
+                </div>
+
+                <div class="form-group full-width">
+                  <label for="fault-description" class="form-label">
+                    <span class="material-icon field-icon">description</span>
+                    Fault Description
+                  </label>
+                  <textarea
+                    id="fault-description"
+                    v-model="editableJob.fault_description"
+                    class="form-textarea"
+                    rows="4"
+                    maxlength="1000"
+                    placeholder="Describe the fault or issue in detail..."
+                  ></textarea>
+                </div>
+
+                <div class="form-group full-width">
+                  <label for="technician-notes" class="form-label">
+                    <span class="material-icon field-icon">assignment</span>
+                    Technician Notes
+                  </label>
+                  <textarea
+                    id="technician-notes"
+                    v-model="editableJob.technician_notes"
+                    class="form-textarea"
+                    rows="3"
+                    maxlength="1000"
+                    placeholder="Additional notes or instructions..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Provider and Technician Assignment for XS jobs -->
+              <div class="assignment-section">
+                <h4>Assignment Management</h4>
+
+                <div class="form-grid">
+                  <!-- Provider Selection -->
+                  <div class="form-group">
+                    <label for="provider-select" class="form-label">
+                      <span class="material-icon field-icon">business</span>
+                      Change Service Provider
+                    </label>
+                    <select v-model="selectedProviderId" class="form-input">
+                      <option value="">-- Keep Current Provider --</option>
+                    <option v-for="provider in availableProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
+                      {{ provider.name }}<span v-if="provider.provider_type === 'XS'" class="provider-type external-provider"> (External)</span>
+                    </option>
+                    </select>
+                  </div>
+
+                  <!-- Technician Assignment -->
+                  <div class="form-group">
+                    <label for="technician-select" class="form-label">
+                      <span class="material-icon field-icon">person</span>
+                      Assigned Technician
+                    </label>
+                    <select v-model="selectedTechnicianId" class="form-input">
+                      <option value="">-- Unassigned --</option>
+                      <option v-for="tech in technicians" :key="tech.id" :value="tech.id">
+                        {{ tech.full_name || tech.username }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Image Upload Area -->
+              <div class="image-upload-area">
+                <ImageUpload
+                  ref="imageUpload"
+                  :max-images="10"
+                  :max-file-size="10 * 1024 * 1024"
+                  :existing-images="existingImages"
+                  @images-changed="handleImagesChanged"
+                />
+              </div>
+
+              <!-- Save Actions -->
+              <div class="section-actions">
+                <button @click="saveXSJobChanges" :disabled="saving" class="btn-filled btn-save-continue">
+                  <span class="material-icon icon-left">save</span>
+                  Save Changes
+                </button>
+                <button @click="$emit('close')" :disabled="saving" class="btn-outlined btn-save-close">
+                  <span class="material-icon icon-left">close</span>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Read-Only Job Details (for non-XS provider jobs) -->
+          <div v-else class="section readonly-job-details">
             <h3 class="section-title">Job Details</h3>
 
             <div class="info-grid">
@@ -314,6 +569,11 @@
               <div class="info-item full-width">
                 <label class="info-label">Description:</label>
                 <div class="info-description">{{ job.fault_description }}</div>
+              </div>
+
+              <div class="info-item full-width" v-if="job.technician_notes">
+                <label class="info-label">Technician Notes:</label>
+                <div class="info-description">{{ job.technician_notes }}</div>
               </div>
             </div>
           </div>
@@ -394,6 +654,24 @@ export default {
     }
   },
   emits: ['close', 'job-updated'],
+  computed: {
+    // Check if this job is assigned to an external service provider (XS)
+    isXSProviderJob() {
+      if (!this.job || !this.availableProviders) return false;
+      const provider = this.availableProviders.find(p => p.service_provider_id === this.job.assigned_provider_participant_id);
+      return provider && provider.provider_type === 'XS';
+    },
+
+    // Check if role 2 (budget controller) is logged in
+    isRole2() {
+      return this.userRole === 2;
+    },
+
+    // Check if we're in XS provider mode (XS job + role 2)
+    isXSProviderMode() {
+      return this.isXSProviderJob && this.isRole2;
+    }
+  },
   data() {
     return {
       loading: false,
@@ -427,7 +705,11 @@ export default {
       selectedLocationId: '',
 
       // Scroll position preservation
-      originalScrollPosition: null
+      originalScrollPosition: null,
+
+      // XS Provider Transition State
+      selectedTransition: null,
+      transitionNotes: ''
     }
   },
   watch: {
@@ -728,7 +1010,8 @@ export default {
         const payload = {
           action: targetStatus,
           note: this.stateTransitionNote,
-          assigned_provider_id: targetStatus !== 'Rejected' ? parseInt(this.selectedProviderId) : null
+          assigned_provider_id: targetStatus !== 'Rejected' ? parseInt(this.selectedProviderId) : null,
+          transition_notes: this.isXSProviderMode ? this.stateTransitionNote || '' : undefined
         };
 
         // Set job status for non-quote transitions
@@ -949,6 +1232,126 @@ export default {
       } finally {
         this.saving = false;
       }
+    },
+
+    // XS Provider specific methods
+    initiateTransition(targetStatus) {
+      this.selectedTransition = targetStatus;
+      this.transitionNotes = '';
+    },
+
+    cancelTransition() {
+      this.selectedTransition = null;
+      this.transitionNotes = '';
+      this.selectedStateTransition = null;
+      this.stateTransitionNote = '';
+      this.quoteByDate = this.calculateDefaultQuoteDueDate();
+    },
+
+    async executePendingTransition() {
+      if (!this.selectedTransition || !this.transitionNotes.trim()) {
+        alert('Please provide required transition notes.');
+        return;
+      }
+
+      this.saving = true;
+      try {
+        const payload = {
+          job_id: this.job.id,
+          job_status: this.selectedTransition,
+          transition_notes: this.transitionNotes.trim()
+        };
+
+        const response = await apiFetch('/backend/api/client-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update job status');
+        }
+
+        const result = await response.json();
+        alert(`Job status updated to "${this.selectedTransition}". External provider proxy action completed.`);
+        this.$emit('job-updated', result);
+        this.$emit('close');
+      } catch (error) {
+        console.error('Error in executePendingTransition:', error);
+        alert('Failed to update job: ' + error.message);
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async saveXSJobChanges() {
+      this.saving = true;
+      try {
+        const updateData = {
+          job_id: this.job.id
+        };
+
+        // Include changed job fields
+        if (this.editableJob.item_identifier !== this.originalJob.item_identifier) {
+          updateData.item_identifier = this.editableJob.item_identifier || null;
+        }
+        if (this.editableJob.contact_person !== this.originalJob.contact_person) {
+          updateData.contact_person = this.editableJob.contact_person || null;
+        }
+        if (this.editableJob.fault_description !== this.originalJob.fault_description) {
+          updateData.fault_description = this.editableJob.fault_description || null;
+        }
+        if (this.editableJob.technician_notes !== this.originalJob.technician_notes) {
+          updateData.technician_notes = this.editableJob.technician_notes || null;
+        }
+
+        // Include provider/technician changes
+        if (this.selectedProviderId && this.selectedProviderId !== this.job.assigned_provider_participant_id) {
+          updateData.assigned_provider_id = parseInt(this.selectedProviderId);
+        }
+        if (this.selectedTechnicianId !== (this.job.assigned_technician_user_id || '')) {
+          updateData.assigned_technician_user_id = this.selectedTechnicianId || null;
+        }
+
+        if (Object.keys(updateData).length <= 1) {
+          this.$emit('close');
+          return;
+        }
+
+        const response = await apiFetch('/backend/api/client-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify(updateData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update job');
+        }
+
+        const result = await response.json();
+
+        // Also save images if any changes
+        if (this.hasImageChanges) {
+          try {
+            await this.saveImageChanges();
+          } catch (imageError) {
+            console.error('Image save failed:', imageError);
+            alert('Job details saved successfully, but image upload failed. You can try uploading images again.');
+            this.$emit('job-updated', result);
+            this.$emit('close');
+            return;
+          }
+        }
+
+        alert('External service provider job updated successfully.');
+        this.$emit('job-updated', result);
+        this.$emit('close');
+      } catch (error) {
+        console.error('Error in saveXSJobChanges:', error);
+        alert('Failed to save changes: ' + error.message);
+      } finally {
+        this.saving = false;
+      }
     }
   },
 
@@ -1055,6 +1458,11 @@ export default {
   overflow-y: auto;
   position: relative;
   z-index: 1001;
+}
+
+.modal-content.xs-provider-mode {
+  border: 3px solid #ff6b35;
+  box-shadow: 0 8px 16px rgba(255, 107, 53, 0.3);
 }
 
 .modal-header {
@@ -1614,5 +2022,180 @@ export default {
   color: #666;
   font-style: normal;
   font-weight: normal;
+}
+
+/* XS Provider Mode Styles */
+.title-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+}
+
+.xs-mode-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ff6b35;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
+}
+
+.xs-indicator-icon {
+  color: white;
+  font-size: 16px;
+}
+
+.xs-status-indicator {
+  color: #ff6b35;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.xs-transition-section {
+  background: #fff3cd;
+  border: 2px solid #ff6b35;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.transition-section-title {
+  color: #856404;
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.transition-section-desc {
+  color: #856404;
+  font-size: 0.9em;
+  margin: 0 0 16px 0;
+}
+
+.transition-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.transition-action-btn {
+  background: #ff6b35;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.transition-action-btn:hover:not(:disabled) {
+  background: #e55a2b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+}
+
+.transition-action-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.transition-notes-form {
+  background: #f8f9fa;
+  border: 2px solid #ff6b35;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.transition-notes-form h4 {
+  color: #ff6b35;
+  font-size: 1.1em;
+  margin: 0 0 8px 0;
+  font-weight: 600;
+}
+
+.notes-explanation {
+  color: #856404;
+  font-size: 0.9em;
+  margin: 0 0 16px 0;
+  line-height: 1.4;
+}
+
+.assignment-section {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.assignment-section h4 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+/* Status-specific button colors */
+.status-in-progress {
+  background: #17a2b8;
+}
+
+.status-in-progress:hover:not(:disabled) {
+  background: #138496;
+}
+
+.status-completed {
+  background: #28a745;
+}
+
+.status-completed:hover:not(:disabled) {
+  background: #218838;
+}
+
+.status-incomplete {
+  background: #ffc107;
+  color: #212529;
+}
+
+.status-incomplete:hover:not(:disabled) {
+  background: #e0a800;
+}
+
+.status-cannot-repair {
+  background: #dc3545;
+}
+
+.status-cannot-repair:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.status-confirmed {
+  background: #6f42c1;
+}
+
+.status-confirmed:hover:not(:disabled) {
+  background: #5a359a;
 }
 </style>

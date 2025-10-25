@@ -52,10 +52,16 @@
         :key="job.id"
         clickable
         @click="$emit('view-job-details', job)"
+        :class="{ 'xs-provider-job': isXSProviderJob(job) }"
       >
         <template #header>
           <div class="job-status">
             <StatusBadge :status="job.job_status" />
+            <!-- XS Provider Indicator -->
+            <div v-if="isXSProviderJob(job)" class="xs-indicator">
+              <span class="material-icon-sm text-orange-600">settings</span>
+              <span class="xs-label text-xs font-medium text-orange-700 ml-1">External Provider</span>
+            </div>
           </div>
           <div class="job-actions flex gap-2">
             <!-- For admin users (budget controllers), always show edit button -->
@@ -99,7 +105,10 @@
             </div>
             <div class="meta-item">
               <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">Provider:</span>
-              <span class="meta-value text-body-small text-on-surface font-medium">{{ job.assigned_provider_name || 'Not assigned' }}</span>
+              <span class="meta-value text-body-small text-on-surface font-medium">
+                {{ job.assigned_provider_name || 'Not assigned' }}
+                <span v-if="isXSProviderJob(job)" class="text-orange-600 font-bold text-xs ml-1">(External)</span>
+              </span>
             </div>
             <div class="meta-item">
               <span class="meta-label text-label-small text-on-surface-variant uppercase tracking-wide">
@@ -235,6 +244,11 @@ export default {
     }
   },
   methods: {
+    isXSProviderJob(job) {
+      // Check if this job is assigned to an external service provider (XS)
+      return job && job.assigned_provider_type === 'XS';
+    },
+
     canEditJob(job) {
       // Cannot edit archived jobs
       if (job.archived_by_client) {
@@ -247,7 +261,8 @@ export default {
       }
 
       // Budget controllers can edit when status is 'Reported', 'Declined', or 'Quote Requested'
-      if (this.isAdmin && ['Reported', 'Declined', 'Quote Requested'].includes(job.job_status)) {
+      // Also XS provider jobs in ANY status
+      if (this.isAdmin && (['Reported', 'Declined', 'Quote Requested'].includes(job.job_status) || this.isXSProviderJob(job))) {
         return true
       }
 
@@ -523,5 +538,55 @@ export default {
   .meta-item {
     min-width: 0;
   }
+}
+
+/* XS Provider Job Card Styling - Subtle orange accent */
+.xs-provider-job {
+  position: relative;
+  border-left: 3px solid #ff8c69;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.015), rgba(255, 107, 53, 0.025));
+}
+
+.xs-provider-job:hover {
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.02), rgba(255, 107, 53, 0.035));
+}
+
+.xs-provider-job::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 20px 20px 0;
+  border-color: transparent #ff6b35 transparent transparent;
+}
+
+.xs-provider-job::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.xs-indicator {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  color: #ff6b35;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.xs-label {
+  line-height: 1.2;
+  font-size: 11px !important;
 }
 </style>
