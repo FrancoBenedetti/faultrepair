@@ -31,9 +31,14 @@
                 <option value="">-- Choose a provider --</option>
                 <option v-for="provider in availableProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
                   {{ provider.name }}
+                  <span v-if="provider.participant_type === 'XS'" class="xs-indicator">(External)</span>
+                  <span v-else class="platform-indicator">(Platform)</span>
                 </option>
               </select>
-              <p class="form-help">Required for Request Service or Request Quote options</p>
+              <p class="form-help">
+                Required for Request Service or Request Quote options.
+                External providers use their own systems.
+              </p>
             </div>
           </div>
 
@@ -121,11 +126,11 @@
                 <div class="form-actions">
                   <button @click="cancelTransition" class="btn-secondary">Cancel</button>
                   <button
-                    @click="executeTransition(selectedStateTransition)"
+                    @click="executeTransitionAndSaveImages(selectedStateTransition)"
                     :disabled="!selectedProviderId || !quoteByDate || !isQuoteDateValid()"
                     class="btn-primary"
                   >
-                    Request Quote
+                    Request Quote & Save Images
                   </button>
                 </div>
               </div>
@@ -150,11 +155,11 @@
                 <div class="form-actions">
                   <button @click="cancelTransition" class="btn-secondary">Cancel</button>
                   <button
-                    @click="executeTransition(selectedStateTransition)"
+                    @click="executeTransitionAndSaveImages(selectedStateTransition)"
                     :disabled="!selectedProviderId"
                     class="btn-primary"
                   >
-                    Request Service
+                    Request Service & Save Images
                   </button>
                 </div>
               </div>
@@ -180,11 +185,11 @@
                 <div class="form-actions">
                   <button @click="cancelTransition" class="btn-secondary">Cancel</button>
                   <button
-                    @click="executeTransition(selectedStateTransition)"
+                    @click="executeTransitionAndSaveImages(selectedStateTransition)"
                     :disabled="!stateTransitionNote || !stateTransitionNote.trim()"
                     class="btn-primary"
                   >
-                    Reject Job
+                    Reject Job & Save Images
                   </button>
                 </div>
               </div>
@@ -262,7 +267,7 @@
           :disabled="saving"
           class="btn-primary"
         >
-          {{ saving ? 'Saving...' : 'Save Changes' }}
+          {{ saving ? 'Saving...' : 'Save Images Only' }}
         </button>
       </div>
     </div>
@@ -532,17 +537,120 @@ export default {
       this.error = null;
 
       try {
-        // The ImageUpload component already has the correct image list
-        // Just tell it to upload images for this job
-        await this.$refs.imageUpload.uploadImages(this.job.id);
+        console.log('EditJobModal: Calling uploadImages on ImageUpload component');
+        const result = await this.$refs.imageUpload.uploadImages(this.job.id);
 
-        // Close modal and refresh
-        this.$emit('job-updated', { success: true, message: 'Images updated successfully' });
+        console.log('EditJobModal: uploadImages result:', result);
+
+        if (!result || !result.success) {
+          throw new Error(result?.error || 'Failed to upload images');
+        }
+
+        // Close modal and refresh, even if no images were uploaded (no error)
+        this.$emit('job-updated', {
+          success: true,
+          message: result.message || 'Images updated successfully'
+        });
         this.$emit('close');
 
       } catch (error) {
+        console.error('EditJobModal: Error in saveImageChanges:', error);
         this.error = error.message;
         alert('Failed to save image changes: ' + error.message);
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async executeTransitionAndSaveImages(targetStatus) {
+      this.saving = true;
+      this.error = null;
+
+      try {
+        // First, try to upload/save images if any have been changed
+        let imageUploadSuccessful = true;
+        let imageUploadMessage = '';
+
+        if (this.hasImageChanges) {
+          console.log('EditJobModal: Uploading images first before state transition');
+          const imageResult = await this.$refs.imageUpload.uploadImages(this.job.id);
+
+          console.log('EditJobModal: Image upload result:', imageResult);
+
+          if (!imageResult || !imageResult.success) {
+            imageUploadSuccessful = false;
+            imageUploadMessage = imageResult?.error || 'Failed to upload images';
+            console.error('EditJobModal: Image upload failed:', imageUploadMessage);
+          } else {
+            imageUploadMessage = imageResult.message;
+            console.log('EditJobModal: Images uploaded successfully');
+          }
+        } else {
+          console.log('EditJobModal: No images to upload, proceeding with state transition only');
+        }
+
+        // Now execute the state transition (regardless of image upload result)
+        console.log('EditJobModal: Executing state transition:', targetStatus);
+
+        // Use the existing executeTransition method but modify to handle combined results
+        const payload = {
+          action: targetStatus,
+          note: this.stateTransitionNote,
+          assigned_provider_id: targetStatus !== 'Rejected' ? parseInt(this.selectedProviderId) : null
+        };
+
+        // Set job status for non-quote transitions
+        if (targetStatus !== 'Quote Requested') {
+          payload.job_status = targetStatus;
+        }
+
+        if (targetStatus === 'Quote Requested') {
+          payload.quote_by_date = this.quoteByDate;
+        }
+
+        const response = await apiFetch('/backend/api/client-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            job_id: this.job.id,
+            ...payload
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update job status');
+        }
+
+        const result = await response.json();
+
+        // Prepare success message that includes both image and transition results
+        let combinedMessage = `${targetStatus === 'Rejected' ? 'Job rejected' : targetStatus === 'Assigned' ? 'Service requested' : 'Quote requested'} successfully`;
+
+        if (!imageUploadSuccessful) {
+          combinedMessage += `, but image upload failed: ${imageUploadMessage}`;
+        } else if (this.hasImageChanges) {
+          combinedMessage += ` and ${imageUploadMessage || 'images saved'}`;
+        }
+
+        this.$emit('job-updated', {
+          ...result,
+          message: combinedMessage
+        });
+
+        // Still close modal even if images failed, but show the combined message
+        this.$emit('close');
+
+        if (!imageUploadSuccessful) {
+          // Show a delayed alert about image upload failure
+          setTimeout(() => {
+            alert(`Warning: ${imageUploadMessage}. You can try uploading images again by editing the job.`);
+          }, 500);
+        }
+
+      } catch (error) {
+        console.error('EditJobModal: Error in executeTransitionAndSaveImages:', error);
+        this.error = error.message;
+        alert('Failed to update job: ' + error.message);
       } finally {
         this.saving = false;
       }
@@ -551,9 +659,9 @@ export default {
 
     computed: {
     hasImageChanges() {
-      // Simple check: if we have any images at all, consider it a change for now
-      // This can be made smarter later to detect actual changes
-      return this.newImages.length > 0;
+      // Check if there are any new (non-existing) images to upload
+      const newImages = this.existingImages.filter(img => !img.existing)
+      return newImages.length > 0
     },
 
     availableTransitions() {
@@ -838,5 +946,113 @@ export default {
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 16px;
+}
+
+/* Provider type indicators in dropdown */
+.xs-indicator {
+  color: #856404;
+  font-style: italic;
+  font-weight: normal;
+}
+
+.platform-indicator {
+  color: #155724;
+  font-style: italic;
+  font-weight: normal;
+}
+
+/* Material Icons CSS Classes */
+.material-icon {
+  font-family: 'Material Icons', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+}
+
+/* Button Style Improvements */
+.btn-primary, .btn-secondary {
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  min-height: 40px;
+  font-size: 15px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.btn-secondary {
+  background: #f8f9fa;
+  color: #495057;
+  border: 1px solid #dee2e6;
+}
+
+.btn-secondary:hover {
+  background: #e9ecef;
+}
+
+/* Form Improvements */
+.form-input, .form-textarea {
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-input:focus, .form-textarea:focus {
+  border-color: #007bff;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Section Spacing */
+.section {
+  margin-bottom: 28px;
+}
+
+.section-title {
+  font-size: 1.3em;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #2c3e50;
+}
+
+.section-subtitle {
+  font-size: 1.15em;
+  font-weight: 600;
+  margin-bottom: 14px;
+  color: #34495e;
+  border-left: 3px solid #007bff;
+  padding-left: 14px;
+}
+
+/* Modal Container Improvements */
+.modal-content {
+  max-width: 650px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+/* Footer Button Layout */
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-top: 1px solid #e9ecef;
 }
 </style>

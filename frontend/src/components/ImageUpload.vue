@@ -108,8 +108,19 @@
               <button @click.stop="viewFullSize(image, index)" class="view-image-btn bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-blue-700 transition-colors" title="View full size">
                 <span class="material-icon-sm">zoom_in</span>
               </button>
-              <button @click.stop="removeImage(index)" class="remove-image-btn bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-700 transition-colors" title="Remove image">
+              <button
+                v-if="!image.existing"
+                @click.stop="removeImage(index)"
+                class="remove-image-btn bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-700 transition-colors"
+                title="Remove image">
                 <span class="material-icon-sm">delete</span>
+              </button>
+              <button
+                v-else
+                @click.stop="deleteExistingImage(index)"
+                class="remove-image-btn bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-700 transition-colors"
+                title="Delete image">
+                <span class="material-icon-sm">delete_forever</span>
               </button>
             </div>
           </div>
@@ -289,6 +300,49 @@ export default {
       this.$emit('images-changed', this.images)
     },
 
+    async deleteExistingImage(index) {
+      const image = this.images[index]
+
+      if (!image || !image.existing || !image.id) {
+        console.error('ImageUpload: Cannot delete - invalid existing image data')
+        return
+      }
+
+      if (!confirm(`Are you sure you want to permanently delete "${image.name}"?`)) {
+        return
+      }
+
+      const token = localStorage.getItem('token')
+      if (!token) {
+        this.error = 'Authentication required'
+        return
+      }
+
+      try {
+        const url = `/backend/api/job-images.php?image_id=${image.id}&token=${encodeURIComponent(token)}`
+        const response = await fetch(url, {
+          method: 'DELETE'
+        })
+
+        if (response.ok) {
+          console.log('ImageUpload: Successfully deleted existing image:', image.id)
+          // Remove from local array
+          this.images.splice(index, 1)
+          this.$emit('images-changed', this.images)
+
+          // Emit event that image was deleted
+          this.$emit('image-deleted', image.id)
+        } else {
+          const errorData = await response.json()
+          this.error = `Failed to delete image: ${errorData.error || 'Unknown error'}`
+          console.error('ImageUpload: Delete failed:', errorData)
+        }
+      } catch (error) {
+        console.error('ImageUpload: Delete error:', error)
+        this.error = `Failed to delete image: ${error.message}`
+      }
+    },
+
     viewFullSize(image) {
       this.selectedImage = image
     },
@@ -388,8 +442,8 @@ export default {
       console.log('ImageUpload: uploadImages called with jobId:', uploadJobId, 'images:', this.images.length)
 
       if (!uploadJobId || this.images.length === 0) {
-        console.log('ImageUpload: Skipping upload - jobId or images missing')
-        return
+        console.log('ImageUpload: Skipping upload - no images to upload')
+        return { success: true, uploadedCount: 0, message: 'No new images to upload' }
       }
 
       this.uploading = true
@@ -397,21 +451,37 @@ export default {
       this.error = null
 
       const token = localStorage.getItem('token')
+      if (!token) {
+        this.error = 'No authentication token found'
+        this.uploading = false
+        return { success: false, error: 'Authentication required' }
+      }
+
       console.log('ImageUpload: Using token:', token ? 'present' : 'missing')
 
       let successCount = 0
+      let errors = []
 
-      for (let i = 0; i < this.images.length; i++) {
-        const image = this.images[i]
+      // Only upload images that have actual files (not existing images)
+      const imagesToUpload = this.images.filter(img => !img.existing)
+
+      if (imagesToUpload.length === 0) {
+        console.log('ImageUpload: No new images to upload - all are existing')
+        this.uploading = false
+        return { success: true, uploadedCount: 0, message: 'No new images to upload' }
+      }
+
+      console.log('ImageUpload: Will upload', imagesToUpload.length, 'new images out of', this.images.length, 'total')
+
+      for (let i = 0; i < imagesToUpload.length; i++) {
+        const image = imagesToUpload[i]
         const formData = new FormData()
         formData.append('image', image.file)
         formData.append('job_id', uploadJobId.toString())
 
-        console.log('ImageUpload: Uploading image', i + 1, 'of', this.images.length, 'for job', uploadJobId)
+        console.log('ImageUpload: Uploading image', i + 1, 'of', imagesToUpload.length, 'for job', uploadJobId, 'file:', image.name)
 
         try {
-          // Use query parameter authentication for file uploads (FormData)
-          // Note: Don't set Content-Type header for FormData - browser sets it automatically
           const url = `/backend/api/upload-job-image.php?token=${encodeURIComponent(token)}`
           console.log('ImageUpload: Making request to:', url)
 
@@ -427,28 +497,39 @@ export default {
             console.log('ImageUpload: Upload successful:', responseData)
             successCount++
           } else {
-            const errorData = await response.json()
+            let errorData
+            try {
+              errorData = await response.json()
+            } catch (parseError) {
+              errorData = { error: 'Unknown server error' }
+            }
             console.error('ImageUpload: Upload failed with response:', errorData)
-            throw new Error(errorData.error || 'Upload failed')
+            const errorMsg = errorData.error || 'Upload failed'
+            errors.push(`Failed to upload ${image.name}: ${errorMsg}`)
           }
         } catch (error) {
           console.error('ImageUpload: Upload error:', error)
-          this.error = `Failed to upload ${image.name}: ${error.message}`
-          break
+          errors.push(`Failed to upload ${image.name}: ${error.message}`)
         }
 
-        this.uploadProgress = Math.round(((i + 1) / this.images.length) * 100)
+        this.uploadProgress = Math.round(((i + 1) / imagesToUpload.length) * 100)
       }
 
       this.uploading = false
-      console.log('ImageUpload: Upload process complete. Success count:', successCount, 'of', this.images.length)
+      console.log('ImageUpload: Upload process complete. Success count:', successCount, 'errors:', errors.length)
 
-      if (successCount === this.images.length) {
-        console.log('ImageUpload: All uploads successful, clearing images')
-        this.images = []
-        this.$emit('upload-complete', successCount)
-      } else {
-        console.log('ImageUpload: Some uploads failed')
+      if (errors.length > 0) {
+        this.error = errors.join('. ')
+      }
+
+      return {
+        success: successCount > 0,
+        uploadedCount: successCount,
+        totalAttempted: imagesToUpload.length,
+        message: successCount === imagesToUpload.length
+          ? `Successfully uploaded ${successCount} images`
+          : `Uploaded ${successCount} of ${imagesToUpload.length} images`,
+        errors: errors
       }
     },
 
@@ -487,3 +568,48 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* Material Icons CSS Classes */
+.material-icon-lg {
+  font-family: 'Material Icons', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+}
+
+.material-icon-sm {
+  font-family: 'Material Icons', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+}
+
+.material-icon-xs {
+  font-family: 'Material Icons', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+}
+</style>
