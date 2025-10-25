@@ -430,7 +430,39 @@ export default {
       originalScrollPosition: null
     }
   },
+  watch: {
+    // Watch for changes to the job prop to reinitialize data when modal is reused
+    job: {
+      handler(newJob, oldJob) {
+        console.log('EditJobModal: job prop changed, reinitializing data');
+        console.log('EditJobModal: new job fault_description:', newJob?.fault_description);
+        console.log('EditJobModal: old job fault_description:', oldJob?.fault_description);
 
+        // Completely replace the objects to ensure reactivity
+        this.editableJob = { ...newJob };
+        this.originalJob = { ...newJob };
+
+        // Reset other job-specific data
+        this.selectedProviderId = newJob?.assigned_provider_id || '';
+        this.selectedTechnicianId = newJob?.assigned_technician_user_id || '';
+        this.technicianNotes = newJob?.technician_notes || '';
+
+        // Force Vue to update bindings using nextTick
+        this.$nextTick(() => {
+          console.log('EditJobModal: After nextTick, editableJob.fault_description:', this.editableJob.fault_description);
+          this.$forceUpdate();
+        });
+
+        // Reload images and locations if needed
+        if (this.job?.job_status === 'Reported') {
+          this.loadExistingImages();
+          this.loadLocations();
+        }
+      },
+      immediate: false, // Don't run on initial mount
+      deep: false // Avoid deep watching for better performance
+    }
+  },
   methods: {
     formatDate(dateString) {
       if (!dateString) return '';
@@ -508,6 +540,12 @@ export default {
     },
 
     async saveJobDetails() {
+      // Debug: Log current state of editable and original data
+      console.log('DEBUG saveJobDetails():');
+      console.log('- editableJob.fault_description:', this.editableJob.fault_description);
+      console.log('- originalJob.fault_description:', this.originalJob.fault_description);
+      console.log('- Are they equal?', this.editableJob.fault_description === this.originalJob.fault_description);
+
       // Prepare updated job data
       const updateData = {
         job_id: this.job.id
@@ -518,6 +556,9 @@ export default {
       jobFields.forEach(field => {
         if (this.editableJob[field] !== this.originalJob[field]) {
           updateData[field] = this.editableJob[field] || null;
+          console.log('DEBUG: Including changed field', field, ':', this.editableJob[field]);
+        } else {
+          console.log('DEBUG: Field', field, 'not changed');
         }
       });
 
@@ -526,12 +567,15 @@ export default {
         updateData.client_location_id = this.selectedLocationId;
       }
 
+      console.log('DEBUG: Final updateData:', updateData);
+
       if (Object.keys(updateData).length <= 1) {
-        console.log('No job details to update');
+        console.log('DEBUG: No job details to update, returning early');
         return;
       }
 
       try {
+        console.log('DEBUG: Making API call with data:', updateData);
         const response = await apiFetch('/backend/api/client-jobs.php', {
           method: 'PUT',
           body: JSON.stringify(updateData)
@@ -539,14 +583,15 @@ export default {
 
         if (!response.ok) {
           const errorData = await response.json();
+          console.error('DEBUG: API call failed:', errorData);
           throw new Error(errorData.error || 'Failed to update job details');
         }
 
         const result = await response.json();
-        console.log('Job details saved successfully:', result);
+        console.log('DEBUG: Job details saved successfully:', result);
         return result;
       } catch (error) {
-        console.error('Failed to save job details:', error);
+        console.error('DEBUG: Failed to save job details:', error);
         throw error;
       }
     },

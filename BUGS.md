@@ -212,40 +212,41 @@ The archive function in ServiceProviderDashboard is not working. This functional
 
 
 
-### 🟡 [BUG] ClientDashboard Business Profile Section Missing
-**Discovered:** 2025-10-24
-**Area:** Frontend - Client Dashboard Business Profile Management
-**Impact:** Clients cannot edit or capture their organization's details, affecting business data management
+### 🟡 [BUG] EditJobModal Reactivity Issue - Shows Old Data When Reopened
+
+**Discovered:** 2025-10-25
+**Area:** Frontend - EditJobModal Data Synchronization
+**Impact:** Users experience confusion when editing jobs as the modal appears to lose changes, forcing users to recapture data
 
 **Issue Description:**
-The ClientDashboard has lost the ability to define organization/business details. The section that allows editing/capturing business information is no longer visible.
+When users edit a job description in EditJobModal, save it, and reopen the modal, it displays the old data instead of the updated data. This causes users to think their changes were lost and need to recapture information.
 
 **Expected Behavior:**
-- Business profile section should be visible in ClientDashboard
-- Clients should be able to edit/capture business details including:
-  - Business name
-  - Address
-  - Manager
-  - VAT number
-  - Company registration number
-- Functionality should be similar to what exists for service providers
+- When reopening an EditJobModal, it should display the most recent saved data
+- Save & Continue followed by reopening should show updated information
+- User changes should persist across modal open/close cycles
 
 **Current Behavior:**
-- Business profile section is not visible in ClientDashboard
-- No way for clients to edit organization details
-- Critical business information cannot be updated
+- Saves work correctly (data is updated in database)
+- But reopening the modal shows old/stale data
+- Users think their changes were lost and recapture information unnecessarily
 
 **Steps to Reproduce:**
-1. Log in as a client user
-2. Navigate to ClientDashboard
-3. Look for organization/business profile editing section
-4. Observe that the section is missing/no longer visible
+1. Open a job in EditJobModal
+2. Edit the fault description
+3. Click "Save & Continue"
+4. Close the modal
+5. Click "Edit" on the same job again
+6. Observe modal shows old description instead of updated text
 
 **Notes:**
-- Business profile functionality is essential for client organizations
-- Should mirror the business profile functionality available to service providers
-- Affects important business information management (VAT numbers, registration, contact details)
-- Similar profile management exists for service providers and should be available for clients
+- Saves work (API receives correct new data)
+- Database is updated correctly
+- Issue is client-side reactivity/data synchronization
+- Modal watcher and data reinitialization logic implemented but still not working
+- Requires deeper debugging of Vue component lifecycle and prop changes
+- Temporary debug code added to modal for diagnostics
+- Affects user experience and workflow efficiency
 
 
 ## Fixed ✅
