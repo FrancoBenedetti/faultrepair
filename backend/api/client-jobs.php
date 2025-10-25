@@ -71,7 +71,7 @@ try {
                 END as location_name,
                 l.address as location_address,
                 sp.name as assigned_provider_name,
-                u.username as reporting_user,
+                CONCAT(u.first_name, ' ', u.last_name) as reporting_user,
                 CONCAT(tu.first_name, ' ', tu.last_name) as assigned_technician,
                 (SELECT COUNT(*) FROM job_images WHERE job_id = j.id) as image_count,
                 CASE

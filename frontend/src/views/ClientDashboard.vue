@@ -997,9 +997,19 @@ export default {
       this.showEditLocationModal = true
     },
 
-    handleEditJobUpdated() {
-      // Refresh jobs list after edit modal updates
-      this.loadJobs()
+    async handleEditJobUpdated(updatedJobData) {
+      console.log('ClientDashboard: handleEditJobUpdated called with:', updatedJobData)
+
+      // Refresh jobs list after edit modal updates to ensure we have the latest data
+      await this.loadJobs()
+
+      // Optional: Emit a success message if we have one
+      if (updatedJobData?.message) {
+        // Show success message after a brief delay to allow data to settle
+        setTimeout(() => {
+          alert(updatedJobData.message)
+        }, 100)
+      }
     },
 
     handleViewProviderJobs(provider) {
@@ -1030,12 +1040,19 @@ export default {
     async handleEditJob(job) {
       console.log('ClientDashboard: handleEditJob called with job:', job.id, 'status:', job.job_status, 'userRole:', this.userRole, 'isAdmin:', this.isAdmin)
 
-      // Set basic job data immediately
-      this.editingJob = { ...job }
-      this.originalJobStatus = job.job_status
-      this.originalProviderId = job.assigned_provider_id
+      // IMPORTANT FIX: Get the latest job data from the jobs array to ensure we have the most recent version
+      // This is critical for cases where jobs were just updated
+      const latestJob = this.jobs.find(j => j.id === job.id) || job
 
-      console.log('ClientDashboard: Basic job data set:', this.editingJob.id)
+      console.log('ClientDashboard: Latest job data - fault_description:', latestJob.fault_description)
+      console.log('ClientDashboard: Original job data - fault_description:', job.fault_description)
+
+      // Set basic job data immediately using the latest data
+      this.editingJob = { ...latestJob }
+      this.originalJobStatus = latestJob.job_status
+      this.originalProviderId = latestJob.assigned_provider_id
+
+      console.log('ClientDashboard: Basic job data set for editingJob.fault_description:', this.editingJob.fault_description)
 
       // Show the modal immediately to give user feedback
       this.showEditJobModal = true
