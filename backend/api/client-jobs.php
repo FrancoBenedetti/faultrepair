@@ -65,6 +65,7 @@ try {
                 j.reporting_user_id,
                 j.archived_by_client,
                 j.current_quotation_id,
+                j.assigned_provider_participant_id as assigned_provider_participant_id,
                 CASE
                     WHEN j.client_location_id IS NULL THEN 'Default'
                     ELSE l.name
@@ -329,7 +330,8 @@ try {
 
         // Check if this is an archiving operation - allow for role 2 users on any job status
         $isArchivingAction = isset($input['archived_by_client']);
-        $isStatusChangeAction = isset($input['job_status']) || isset($input['request_state_change']);
+        // Only count direct status changes, not field updates that might set job_status as a side effect
+        $isDirectStatusChangeAction = isset($input['job_status']) && !isset($input['assigned_provider_id']) && !isset($input['assigned_technician_user_id']);
 
         if ($isArchivingAction) {
             // Archive/Unarchive permission: only role 2 (budget controllers) allowed, any job status
@@ -368,8 +370,8 @@ try {
             }
         }
 
-        // For XS provider jobs, validate mandatory notes on status changes
-        if ($isStatusChangeAction && $isXSProvider && $role_id === 2) {
+        // For XS provider jobs, validate mandatory notes on ALL status changes
+        if (isset($input['job_status']) && $isXSProvider && $role_id === 2) {
             if (!isset($input['transition_notes']) || empty(trim($input['transition_notes']))) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Notes are required for external provider transitions to document external system interactions.']);

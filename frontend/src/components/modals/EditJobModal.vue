@@ -1,12 +1,13 @@
 <template>
   <div class="edit-job-modal">
+    <div style="display: none">{{ console.log('Vue template rendering - component loaded:', { isXSProviderMode, canEditJobDetails, jobStatus: job?.job_status }) }}</div>
     <div class="modal-overlay" @click="$emit('close')"></div>
     <div class="modal-content">
       <!-- Modal Header -->
       <div class="modal-header">
         <div class="title-container">
           <h2 class="modal-title">Edit Job: {{ job.item_identifier }}</h2>
-          <div v-if="isXSProviderMode" class="xs-mode-banner">
+          <div v-if="job?.assigned_provider_participant_id && userRole === 2 && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="xs-mode-banner">
             <span class="material-icon xs-indicator-icon">settings</span>
             External Provider Mode
           </div>
@@ -18,7 +19,8 @@
 
       <!-- Modal Body -->
       <div class="modal-body">
-        <!-- Conditional Layout Based on Job Status -->
+
+        <!-- Assignment Workflow - Only for Reported Jobs That Need Provider Assignment -->
         <template v-if="job.job_status === 'Reported'">
           <!-- Job Origin Area (Read-Only) -->
           <div class="job-origin-area">
@@ -72,7 +74,7 @@
                     <option value="">{{ loadingLocations ? 'Loading...' : '-- Select Location --' }}</option>
                     <option v-for="location in availableLocations" :key="location.id" :value="location.id">
                       {{ location.name }}
-                      <span v-if="location.address" class="location-address">– {{ location.address }}</span>
+                      <span v-if="location.address" class="location-address"> – {{ location.address }}</span>
                     </option>
                   </select>
                 </div>
@@ -205,6 +207,32 @@
                       <span class="option-desc">Get pricing before proceeding</span>
                     </label>
                   </div>
+
+                  <div class="radio-option reject-option">
+                    <input
+                      id="reject-job"
+                      type="radio"
+                      value="Rejected"
+                      v-model="selectedStateTransition"
+                      @change="handleTransitionChange"
+                      class="radio-input"
+                    />
+                    <label for="reject-job" class="radio-label">
+                      <div class="option-header">
+                        <strong>Reject Job</strong>
+                        <span class="material-icon option-icon">cancel</span>
+                      </div>
+                      <span class="option-desc">Terminate this service request</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Provider selection note for non-reject options -->
+                <div v-if="selectedStateTransition && selectedStateTransition !== 'Rejected'" class="provider-selection-note">
+                  <p class="text-sm text-gray-600">
+                    <span class="material-icon text-blue-500 mr-1">info</span>
+                    A service provider selection is required to proceed with this option.
+                  </p>
                 </div>
 
                 <!-- Action Forms based on selected transition -->
@@ -266,18 +294,46 @@
                     ></textarea>
                   </div>
                 </div>
-              </div>
 
-              <!-- Section Actions -->
-              <div class="section-actions">
-                <button @click="saveAndContinue(jobAssignmentSection)" :disabled="saving || !selectedProviderId || !selectedStateTransition" class="btn-assignment-continue">
-                  <span class="material-icon icon-left">navigate_next</span>
-                  Save & Continue
-                </button>
-                <button @click="saveAndClose(jobAssignmentSection)" :disabled="saving" class="btn-assignment-close">
-                  <span class="material-icon icon-left">check_circle</span>
-                  Save & Close
-                </button>
+                <div v-else-if="selectedStateTransition === 'Rejected'" class="transition-form rejection-form">
+                  <div class="rejection-explanation">
+                    <div class="explanation-header">
+                      <span class="material-icon explanation-icon">warning</span>
+                      <strong>Reject Service Request</strong>
+                    </div>
+                    <p>This will terminate the service request and no further work will be performed. This action cannot be undone.</p>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="rejection-note" class="form-label">
+                      <span class="material-icon field-icon">comment</span>
+                      Reason for Rejection *
+                    </label>
+                    <textarea
+                      id="rejection-note"
+                      v-model="stateTransitionNote"
+                      class="form-textarea"
+                      placeholder="Please provide a reason for rejecting this service request..."
+                      rows="4"
+                      required
+                    ></textarea>
+                    <p class="form-help">
+                      This reason will be recorded for audit purposes and sent to the service provider.
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Section Actions -->
+                <div class="section-actions" v-if="selectedProviderId || selectedStateTransition === 'Rejected'">
+                  <button @click="saveAndContinue(jobAssignmentSection)" :disabled="saving || (!selectedProviderId && selectedStateTransition !== 'Rejected') || !selectedStateTransition" class="btn-assignment-continue">
+                    <span class="material-icon icon-left">navigate_next</span>
+                    Save & Continue
+                  </button>
+                  <button @click="saveAndClose(jobAssignmentSection)" :disabled="saving" class="btn-assignment-close">
+                    <span class="material-icon icon-left">check_circle</span>
+                    Save & Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -289,7 +345,7 @@
           <div class="section">
             <h3 class="section-title">
               Current Status: {{ job.job_status }}
-              <span v-if="isXSProviderMode" class="xs-status-indicator">(External Provider)</span>
+              <span v-if="job?.assigned_provider_participant_id && userRole === 2 && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="xs-status-indicator">(External Provider)</span>
             </h3>
 
             <!-- Show a message for Assigned jobs with admin access -->
@@ -298,7 +354,7 @@
             </div>
 
             <!-- Show transition options for XS provider jobs -->
-            <div v-if="isXSProviderMode" class="xs-transition-section">
+            <div v-if="job?.assigned_provider_participant_id && userRole === 2 && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="xs-transition-section">
               <h4 class="transition-section-title">Available Actions for External Provider</h4>
               <p class="transition-section-desc">As proxy for the external service provider, you can change the job status:</p>
 
@@ -415,7 +471,7 @@
           </div>
 
           <!-- Editable Job Details (for XS provider jobs in all statuses) -->
-          <div v-if="isXSProviderMode" class="job-section job-details-section">
+          <div v-if="job?.assigned_provider_participant_id && userRole === 2 && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="job-section job-details-section">
             <div class="section-header">
               <h3 class="section-title">
                 <span class="material-icon section-icon">edit_note</span>
@@ -499,9 +555,9 @@
                     </label>
                     <select v-model="selectedProviderId" class="form-input">
                       <option value="">-- Keep Current Provider --</option>
-                    <option v-for="provider in availableProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
-                      {{ provider.name }}<span v-if="provider.provider_type === 'XS'" class="provider-type external-provider"> (External)</span>
-                    </option>
+                      <option v-for="provider in availableProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
+                        {{ provider.name }}<span v-if="provider.provider_type === 'XS'" class="provider-type external-provider"> (External)</span>
+                      </option>
                     </select>
                   </div>
 
@@ -657,9 +713,10 @@ export default {
   computed: {
     // Check if this job is assigned to an external service provider (XS)
     isXSProviderJob() {
-      if (!this.job || !this.availableProviders) return false;
-      const provider = this.availableProviders.find(p => p.service_provider_id === this.job.assigned_provider_participant_id);
-      return provider && provider.provider_type === 'XS';
+      // Use participant ID matching for consistency (same as template condition)
+      return this.job?.assigned_provider_participant_id &&
+             this.userRole === 2 &&
+             this.availableProviders?.some(p => p.service_provider_id === this.job.assigned_provider_participant_id && p.provider_type === 'XS');
     },
 
     // Check if role 2 (budget controller) is logged in
@@ -669,7 +726,7 @@ export default {
 
     // Check if we're in XS provider mode (XS job + role 2)
     isXSProviderMode() {
-      return this.isXSProviderJob && this.isRole2;
+      return this.isXSProviderJob;
     }
   },
   data() {
@@ -697,7 +754,7 @@ export default {
       selectedTechnicianId: this.job.assigned_technician_user_id || '',
       technicianNotes: this.job.technician_notes || '',
       // Provider selection for Reported jobs
-      selectedProviderId: this.job.assigned_provider_id || '',
+      selectedProviderId: this.job.assigned_provider_participant_id || '',
 
       // Locations data for Role 2
       availableLocations: [],
@@ -725,13 +782,16 @@ export default {
         this.originalJob = { ...newJob };
 
         // Reset other job-specific data
-        this.selectedProviderId = newJob?.assigned_provider_id || '';
+        this.selectedProviderId = newJob?.assigned_provider_participant_id || '';
         this.selectedTechnicianId = newJob?.assigned_technician_user_id || '';
         this.technicianNotes = newJob?.technician_notes || '';
 
         // Force Vue to update bindings using nextTick
         this.$nextTick(() => {
           console.log('EditJobModal: After nextTick, editableJob.fault_description:', this.editableJob.fault_description);
+          // Force computed property recalculation by triggering full reactivity
+          console.log('EditJobModal: Triggering reactivity update');
+          console.log('EditJobModal: Forced computed values - isXSProviderJob:', this.isXSProviderJob, 'isRole2:', this.isRole2, 'isXSProviderMode:', this.isXSProviderMode);
           this.$forceUpdate();
         });
 
@@ -743,6 +803,31 @@ export default {
       },
       immediate: false, // Don't run on initial mount
       deep: false // Avoid deep watching for better performance
+    },
+
+    // FORCE REACTIVITY: Trigger computed recalculation when availableProviders loads
+    availableProviders: {
+      handler(newProviders, oldProviders) {
+        console.log('•••••• PROVIDER WATCHER FIRED ••••••');
+        console.log('New providers:', newProviders?.length || 'undefined');
+
+        if (newProviders && newProviders.length > 0) {
+          // Force immediate reactivity update
+          this.$nextTick(() => {
+            console.log('After providers loaded - forcing updates...');
+            this.$forceUpdate();
+
+            // Log current values to see what happened
+            setTimeout(() => {
+              console.log('TIMEOUT CHECK: isXSProviderJob:', this.isXSProviderJob);
+              console.log('TIMEOUT CHECK: isRole2:', this.isRole2);
+              console.log('TIMEOUT CHECK: isXSProviderMode:', this.isXSProviderMode);
+              console.log('TIMEOUT CHECK: canEditJobDetails:', this.canEditJobDetails);
+            }, 100);
+          });
+        }
+      },
+      immediate: false
     }
   },
   methods: {
@@ -1000,6 +1085,12 @@ export default {
 
       if ((targetStatus === 'Assigned' || targetStatus === 'Quote Requested') && !this.selectedProviderId) {
         alert('Please select a service provider before proceeding.');
+        return;
+      }
+
+      // For XS provider state transitions, require transition notes
+      if (this.isXSProviderMode && (!this.stateTransitionNote || !this.stateTransitionNote.trim())) {
+        alert('Please provide transition notes for external provider system documentation.');
         return;
       }
 
@@ -1352,10 +1443,18 @@ export default {
       } finally {
         this.saving = false;
       }
+    },
+
+    // Specify which transition will now be used for the form action
+    jobDetailsSection() {
+      return 'job-details';
+    },
+    jobAssignmentSection() {
+      return 'job-assignment';
     }
   },
 
-    computed: {
+  computed: {
     hasImageChanges() {
       // Check if there are any new (non-existing) images to upload
       const newImages = this.existingImages.filter(img => !img.existing)
@@ -1373,7 +1472,12 @@ export default {
     },
 
     canEditJobDetails() {
-      // Allow editing only during 'Reported' stage for Role 1 (Reporting Employee) and Role 2 (Budget Controller)
+      // Allow editing for XS provider jobs in ANY status when user is role 2
+      if (this.isXSProviderMode) {
+        return true;
+      }
+
+      // For non-XS jobs: Allow editing only during 'Reported' stage
       if (this.job.job_status !== 'Reported') {
         return false;
       }
@@ -1401,6 +1505,25 @@ export default {
   },
 
   async mounted() {
+    console.log('EditJobModal: ========= MOUNTED =========');
+    console.log('EditJobModal: job =', JSON.stringify(this.job, null, 2));
+    console.log('EditJobModal: availableProviders =', JSON.stringify(this.availableProviders, null, 2));
+    console.log('EditJobModal: userRole =', this.userRole);
+
+    // Check if this is an XS provider job
+    const assignedProviderId = this.job?.assigned_provider_participant_id;
+    const providers = this.availableProviders || [];
+    const provider = providers.find(p => p.service_provider_id == assignedProviderId);
+    console.log('EditJobModal: Looking for provider with ID:', assignedProviderId);
+    console.log('EditJobModal: Found provider:', provider);
+    console.log('EditJobModal: Is XS provider?', provider?.provider_type === 'XS');
+
+    // Check computed properties manually
+    console.log('EditJobModal: ========= COMPUTED CHECKS =========');
+    console.log('EditJobModal: isXSProviderJob result:', this.isXSProviderJob);
+    console.log('EditJobModal: isRole2 result:', this.isRole2);
+    console.log('EditJobModal: isXSProviderMode result:', this.isXSProviderMode);
+
     // Preserve original scroll position
     this.originalScrollPosition = window.pageYOffset;
 
