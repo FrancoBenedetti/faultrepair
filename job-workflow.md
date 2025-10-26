@@ -60,7 +60,7 @@ These service providers have independent job management using their own system o
        - Reject (backend saves state to `Rejected`)
 
 2. **Assigned** - Job is available for editing by the service provider (role 3):
-   
+
    - Permissions
      - Client Role 1 and Role 2 can view
      - Role 3 can change state and edit certain fields, such as instructions to technicians
@@ -68,12 +68,19 @@ These service providers have independent job management using their own system o
    - Allowed next states
      - `Declined` A reason must be provided (eg. 'No spares available, equipment is obsolete')
      - `In Progress` This can only be selected if a technician is allocated.
-   - Rules: 
+   - Rules:
      - A technician selection is required for the job to be moved into the `In Progress` state
+     - **For XS (External Service Provider) jobs:**
+       - Only Client Role 2 can change the state
+       - Allowed next states: `Declined`, `In Progress`
+       - No technician allocation required for `In Progress` state (internal to XS provider)
+       - Role 2 can edit ALL fields and change ANY status for XS jobs
    - UI implementation - Service Provider Dashboard
      - User Role 3 selects a technician when applicable and/or clicks a radio button with options to:
        - Accept the job (must have a technician), setting it to the `In Progress` state
        - Decline the job (must have a reason), setting it to the `Declined` state
+   - UI implementation - Client Dashboard (for XS providers)
+     - Client Role 2 can transition XS jobs directly to `In Progress` or `Declined` without technician assignment
 
 3. **In Progress** - Job is available to the allocated technician (Role 3 or 4) for work to proceed:
    
@@ -95,23 +102,30 @@ These service providers have independent job management using their own system o
      - `Incomplete` A note is required, the user could upload images
 
 5. **Incomplete** - Client representative (role 1 or role 2) rejects completion
-   
+
    - Permissions
      - Client Role 1 and 2 can view only
-     - Service provider role 3 can select a technician, include or modify instructions
+     - Service provider role 3 can select a technician, include or modify instructions, and transition state
+     - **For XS (External Service Provider) jobs:**
+       - Client Role 2 can select a technician (optional for internal tracking), change status, and edit all job details
    - Allowed next states
      - `In Progress` A technician must be allocated. Typically there would already be one, but this can be changed
      - `Completed` A note of explanation is required, images could be added
+     - **For XS jobs:** `In Progress` transition does NOT require technician assignment (handled internally by provider)
+   - Rules:
+     - This state behaves like 'Assigned' where technicians need to be assigned before work can restart
+     - XS providers manage technician assignment internally, so Role 2 can transition without assignment
 
 6. **Cannot repair** - Service Provider Role 4 and Role 3 (Technician) marks work as unrepairable.
-   
+
    - Permissions
      - Service provider (role 3 and 4) view only
      - Client role 1 (view only)
      - Client role 2 can change state and edit
    - Allowed next states:
      - `Confirmed` terminate the job
-     - `Incomplete` ask service provider to review
+     - `Incomplete` ask service provider to review this assessment
+     - `Assigned` reassign to a different service provider (client selects new provider)
 
 7. **Confirmed** - Client representative (role 1 or 2) accepts that the job is completed. This is a terminal state.
    

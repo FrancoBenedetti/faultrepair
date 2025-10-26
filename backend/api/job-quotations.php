@@ -256,9 +256,9 @@ try {
             $notes = $input['notes'] ?? '';
 
             // Validate action
-            if (!in_array($action, ['reject', 'request'])) {
+            if (!in_array($action, ['reject', 'request', 'accept'])) {
                 http_response_code(400);
-                echo json_encode(['error' => 'Invalid action. Must be "reject" or "request".']);
+                echo json_encode(['error' => 'Invalid action. Must be "reject", "request", or "accept".']);
                 exit;
             }
 
@@ -292,45 +292,88 @@ try {
             $pdo->beginTransaction();
 
             try {
-                $status = $action === 'reject' ? 'rejected' : 'expired';
-                $history_action = $action === 'reject' ? 'rejected' : 'expired';
-
-                // Update quote status
-                $stmt = $pdo->prepare("
-                    UPDATE job_quotations
-                    SET status = ?, responded_at = NOW(), response_notes = ?, updated_at = NOW()
-                    WHERE id = ?
-                ");
-                $stmt->execute([$status, $notes, $quote_id]);
-
-                // Insert quotation history
-                $stmt = $pdo->prepare("
-                    INSERT INTO job_quotation_history (quotation_id, action, changed_by_user_id, notes, created_at)
-                    VALUES (?, ?, ?, ?, NOW())
-                ");
-                $stmt->execute([$quote_id, $history_action, $user_id, $notes]);
-
-                if ($action === 'request') {
-                    // For requote request, change job status back to 'Quote Requested'
+                if ($action === 'accept') {
+                    // Handle quote acceptance - set quote to accepted and job to Assigned
                     $stmt = $pdo->prepare("
-                        UPDATE jobs SET job_status = 'Quote Requested', updated_at = NOW()
+                        UPDATE job_quotations
+                        SET status = 'accepted', responded_at = NOW(), response_notes = ?, updated_at = NOW()
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$notes, $quote_id]);
+
+                    // Insert quotation history
+                    $stmt = $pdo->prepare("
+                        INSERT INTO job_quotation_history (quotation_id, action, changed_by_user_id, notes, created_at)
+                        VALUES (?, 'accepted', ?, ?, NOW())
+                    ");
+                    $stmt->execute([$quote_id, $user_id, $notes]);
+
+                    // Update job status to 'Assigned'
+                    $stmt = $pdo->prepare("
+                        UPDATE jobs SET job_status = 'Assigned', quotation_deadline = NULL, updated_at = NOW()
                         WHERE id = ?
                     ");
                     $stmt->execute([$quote['job_id']]);
 
+                    // Update current quotation reference to ensure it points to accepted quote
+                    $stmt = $pdo->prepare("
+                        UPDATE jobs SET current_quotation_id = ?, updated_at = NOW()
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$quote_id, $quote['job_id']]);
+
                     // Insert job status history
                     $stmt = $pdo->prepare("
-                        INSERT INTO job_status_history (job_id, status, changed_by_user_id, changed_at)
-                        VALUES (?, 'Quote Requested', ?, NOW())
+                        INSERT INTO job_status_history (job_id, status, changed_by_user_id, changed_at, notes)
+                        VALUES (?, 'Assigned', ?, NOW(), ?)
                     ");
-                    $stmt->execute([$quote['job_id'], $user_id]);
+                    $stmt->execute([$quote['job_id'], $user_id, "Quote accepted: " . $notes]);
+
+                } else {
+                    // Handle reject/request actions
+                    $status = $action === 'reject' ? 'rejected' : 'expired';
+                    $history_action = $action === 'reject' ? 'rejected' : 'expired';
+
+                    // Update quote status
+                    $stmt = $pdo->prepare("
+                        UPDATE job_quotations
+                        SET status = ?, responded_at = NOW(), response_notes = ?, updated_at = NOW()
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$status, $notes, $quote_id]);
+
+                    // Insert quotation history
+                    $stmt = $pdo->prepare("
+                        INSERT INTO job_quotation_history (quotation_id, action, changed_by_user_id, notes, created_at)
+                        VALUES (?, ?, ?, ?, NOW())
+                    ");
+                    $stmt->execute([$quote_id, $history_action, $user_id, $notes]);
+
+                    if ($action === 'request') {
+                        // For requote request, change job status back to 'Quote Requested'
+                        $stmt = $pdo->prepare("
+                            UPDATE jobs SET job_status = 'Quote Requested', updated_at = NOW()
+                            WHERE id = ?
+                        ");
+                        $stmt->execute([$quote['job_id']]);
+
+                        // Insert job status history
+                        $stmt = $pdo->prepare("
+                            INSERT INTO job_status_history (job_id, status, changed_by_user_id, changed_at)
+                            VALUES (?, 'Quote Requested', ?, NOW())
+                        ");
+                        $stmt->execute([$quote['job_id'], $user_id]);
+                    }
                 }
 
                 $pdo->commit();
 
+                $message = $action === 'accept' ? 'Quote accepted and job assigned' :
+                          ($action === 'reject' ? 'Quote rejected successfully' : 'Quote expired successfully');
+
                 echo json_encode([
                     'success' => true,
-                    'message' => "Quote {$status} successfully"
+                    'message' => $message
                 ]);
 
             } catch (Exception $e) {

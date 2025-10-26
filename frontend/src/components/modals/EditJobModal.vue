@@ -363,10 +363,10 @@
                   v-if="job.job_status === 'Assigned'"
                   @click="initiateTransition('In Progress')"
                   class="transition-action-btn status-in-progress"
-                  :disabled="saving || !selectedTechnicianId"
+                  :disabled="saving"
                 >
                   <span class="btn-icon">▶️</span>
-                  {{ selectedTechnicianId ? 'Mark In Progress' : 'Select Technician First' }}
+                  Mark In Progress
                 </button>
 
                 <button
@@ -434,8 +434,9 @@
                   Confirm Receipt
                 </button>
 
-                <!-- Complete job option -->
+                <!-- Complete job option (only for Completed status) -->
                 <button
+                  v-if="job.job_status === 'Completed'"
                   @click="initiateTransition('Confirmed')"
                   class="transition-action-btn status-confirmed"
                   :disabled="saving"
@@ -444,36 +445,122 @@
                   Complete Job
                 </button>
               </div>
+            </div>
 
-              <!-- Transition Notes Form (shown when transitioning) -->
-              <div v-if="selectedTransition" class="transition-notes-form">
-                <h4>Transition Notes Required</h4>
-                <p class="notes-explanation">
-                  Please document what occurred with the external service provider system:
-                </p>
+            <!-- Reassignment Options for Cannot Repair Jobs - Role 2 Only -->
+            <div v-if="job.job_status === 'Cannot repair' && userRole === 2" class="section">
+              <h3 class="section-title">Cannot Repair Options</h3>
+              <p class="section-description">This job has been determined unreparable. Choose how to proceed:</p>
 
-                <div class="form-group">
-                  <label for="transition-notes" class="form-label">
-                    External Provider Interaction Notes *
-                  </label>
-                  <textarea
-                    id="transition-notes"
-                    v-model="transitionNotes"
-                    class="form-textarea"
-                    placeholder="Describe communications, resolutions, or next steps with the external provider..."
-                    rows="4"
-                    required
-                  ></textarea>
-                  <p class="form-help">
-                    This note will be saved in the job history for audit purposes.
-                  </p>
+              <!-- Provider Reassignment Section -->
+              <div class="provider-reassignment-section">
+                <h4 class="subsection-title">
+                  <span class="material-icon text-blue-600">sync</span>
+                  Reassign to Different Provider
+                </h4>
+                <p class="subsection-desc">Try another approved service provider for this job</p>
+
+                <div class="form-grid">
+                  <!-- Provider Selection -->
+                  <div class="form-group">
+                    <label for="reassign-provider-select" class="form-label">
+                      <span class="material-icon field-icon">business</span>
+                      Select New Provider *
+                    </label>
+                    <select
+                      id="reassign-provider-select"
+                      v-model="selectedReassignProviderId"
+                      class="form-input"
+                    >
+                      <option value="">-- Choose a different provider --</option>
+                      <option
+                        v-for="provider in availableProviders"
+                        :key="provider.service_provider_id"
+                        :value="provider.service_provider_id"
+                        :disabled="provider.service_provider_id == job.assigned_provider_participant_id"
+                      >
+                        {{ provider.name }}
+                        <span v-if="provider.provider_type === 'XS'" class="provider-type external-provider"> (External)</span>
+                        <span v-else class="current-provider">(Current)</span>
+                      </option>
+                    </select>
+                    <p class="form-help">
+                      Only showing providers different from the current one. The current provider is marked as "(Current)" and disabled.
+                    </p>
+                  </div>
+
+                  <!-- Reassignment Reason -->
+                  <div class="form-group full-width">
+                    <label for="reassignment-reason" class="form-label">
+                      <span class="material-icon field-icon">comment</span>
+                      Reason for Reassignment *
+                    </label>
+                    <textarea
+                      id="reassignment-reason"
+                      v-model="reassignmentNotes"
+                      class="form-textarea"
+                      rows="4"
+                      placeholder="Explain why this job is being reassigned to a different provider..."
+                      required
+                    ></textarea>
+                    <p class="form-help">
+                      This reason will be documented in the job history and sent as notes to the new provider.
+                    </p>
+                  </div>
                 </div>
 
-                <div class="transition-actions">
-                  <button @click="executePendingTransition" :disabled="saving || !transitionNotes.trim()" class="btn-primary">
-                    {{ saving ? 'Processing...' : `Confirm ${selectedTransition}` }}
+                <!-- Reassign Action -->
+                <div class="reassignment-actions">
+                  <button
+                    @click="reassignProvider"
+                    :disabled="saving || !selectedReassignProviderId || !reassignmentNotes.trim()"
+                    class="btn-primary btn-reassign"
+                  >
+                    <span class="material-icon-sm">sync</span>
+                    {{ saving ? 'Reassigning...' : 'Reassign to Provider' }}
                   </button>
-                  <button @click="cancelTransition" class="btn-secondary">Cancel</button>
+                </div>
+              </div>
+
+              <!-- Alternative Actions Section -->
+              <div class="alternative-actions-section">
+                <h4 class="subsection-title">
+                  <span class="material-icon text-gray-600">more_horiz</span>
+                  Other Actions
+                </h4>
+
+                <div class="alternative-actions-grid">
+                  <!-- Confirm Receipt -->
+                  <div class="alternative-action-card">
+                    <div class="action-icon">
+                      <span class="material-icon">check_circle</span>
+                    </div>
+                    <h5 class="action-title">Confirm Receipt</h5>
+                    <p class="action-desc">Accept that this item cannot be repaired and close the job.</p>
+                    <button
+                      @click="initiateTransition('Confirmed')"
+                      :disabled="saving"
+                      class="btn-secondary btn-action"
+                    >
+                      Confirm Receipt
+                    </button>
+                  </div>
+
+                  <!-- Request Provider Review -->
+                  <div class="alternative-action-card">
+                    <div class="action-icon">
+                      <span class="material-icon">refresh</span>
+                    </div>
+                    <h5 class="action-title">Request Provider Review</h5>
+                    <p class="action-desc">Ask the current provider to reassess their assessment.</p>
+                    <button
+                      @click="initiateTransition('Incomplete')"
+                      :disabled="saving"
+                      class="btn-secondary btn-action"
+                    >
+                      Request Review
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -676,6 +763,49 @@
             </div>
           </div>
         </div>
+
+        <!-- Technician Assignment for Incomplete Jobs (Role 3 and Role 2 for XS jobs) -->
+        <div v-if="job.job_status === 'Incomplete' && ((userRole === 3) || (userRole === 2 && job?.assigned_provider_participant_id && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')))" class="section">
+          <h3 class="section-title">
+            Technician Assignment
+            <span v-if="userRole === 2 && job?.assigned_provider_participant_id && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="xs-tech-note">(Optional - for external provider tracking)</span>
+          </h3>
+
+          <div class="technician-assignment">
+            <div class="form-group">
+              <label class="form-label">
+                Assigned Technician
+                <span v-if="userRole === 2 && job?.assigned_provider_participant_id && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="optional-label">(Optional)</span>
+              </label>
+              <select v-model="selectedTechnicianId" class="form-input">
+                <option value="">-- Unassigned --</option>
+                <option v-for="tech in technicians" :key="tech.id" :value="tech.id">
+                  {{ tech.full_name || tech.username }}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Technician Notes</label>
+              <textarea
+                v-model="technicianNotes"
+                :placeholder="userRole === 3 ? 'Instructions for the technician...' : 'Notes for external provider coordination...'"
+                class="form-textarea"
+                rows="3"
+              ></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button
+                @click="assignTechnician"
+                :disabled="userRole === 3 ? (!selectedTechnicianId || saving) : saving"
+                class="btn-primary"
+              >
+                {{ saving ? 'Assigning...' : (userRole === 3 ? 'Assign Technician' : 'Update Assignment') }}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Modal Footer -->
@@ -775,7 +905,11 @@ export default {
 
       // XS Provider Transition State
       selectedTransition: null,
-      transitionNotes: ''
+      transitionNotes: '',
+
+      // Cannot repair reassignment data
+      selectedReassignProviderId: '',
+      reassignmentNotes: ''
     }
   },
   watch: {
@@ -1479,6 +1613,68 @@ export default {
     },
     jobAssignmentSection() {
       return 'job-assignment';
+    },
+
+    // Provider reassignment method for 'Cannot repair' jobs
+    async reassignProvider() {
+      // Validate required fields
+      if (!this.selectedReassignProviderId) {
+        alert('Please select a new service provider to reassign this job.');
+        return;
+      }
+
+      if (!this.reassignmentNotes || !this.reassignmentNotes.trim()) {
+        alert('Please provide a reason for this provider reassignment.');
+        return;
+      }
+
+      // Additional validation - don't allow reassignment to the same provider
+      if (parseInt(this.selectedReassignProviderId) === this.job.assigned_provider_participant_id) {
+        alert('Please select a different service provider. The job cannot be reassigned to the same provider.');
+        return;
+      }
+
+      this.saving = true;
+      try {
+        // Prepare the update payload for provider reassignment
+        const payload = {
+          job_id: this.job.id,
+          action: 'reassign_provider',
+          assigned_provider_id: parseInt(this.selectedReassignProviderId),
+          notes: this.reassignmentNotes.trim()
+        };
+
+        // Make the API call using the client-jobs endpoint
+        const response = await apiFetch('/backend/api/client-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to reassign provider');
+        }
+
+        const result = await response.json();
+
+        // Success message with reassignment details
+        const newProvider = this.availableProviders.find(p => p.service_provider_id == this.selectedReassignProviderId);
+        const providerName = newProvider ? newProvider.name : 'Unknown Provider';
+
+        alert(`Job reassigned successfully!\n\nThis job has been reassigned from "${this.job.provider_name}" to "${providerName}" and is now in "Assigned" status. All provider-specific data has been reset for the new provider.`);
+
+        // Emit the job update event to refresh the parent component
+        this.$emit('job-updated', result);
+
+        // Close the modal
+        this.$emit('close');
+
+      } catch (error) {
+        console.error('Error in reassignProvider:', error);
+        alert(`Failed to reassign provider: ${error.message}`);
+      } finally {
+        this.saving = false;
+      }
     }
   },
 

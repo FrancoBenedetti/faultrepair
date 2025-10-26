@@ -18,6 +18,20 @@ class JobStatusValidator {
             'Quote Provided' => ['provider_can_quote' => true],
             'Unable to quote' => ['reason_required' => true]
         ],
+        'Unable to quote' => [
+            'Reported' => ['reassignment' => true],
+            'Rejected' => ['reason_required' => true]
+        ],
+        'Quote Rejected' => [
+            'Quote Requested' => ['provider_selected' => true],
+            'Reported' => ['reassignment' => true],
+            'Rejected' => ['reason_required' => true]
+        ],
+        'Quote Expired' => [
+            'Quote Requested' => ['provider_selected' => true],
+            'Reported' => ['reassignment' => true],
+            'Rejected' => ['reason_required' => true]
+        ],
         'Quote Provided' => [
             'Assigned' => ['quote_accepted' => true],
             'Quote Requested' => ['revision_requested' => true],
@@ -37,7 +51,8 @@ class JobStatusValidator {
         ],
         'Cannot repair' => [
             'Confirmed' => ['client_approval' => true],
-            'Incomplete' => ['provider_review' => true]
+            'Incomplete' => ['provider_review' => true],
+            'Assigned' => ['provider_selected' => true]
         ],
         'Incomplete' => [
             'In Progress' => ['technician_assigned' => true],
@@ -163,12 +178,18 @@ class JobStatusValidator {
 
     private function validateTechnicianAssigned($jobId) {
         $stmt = $this->pdo->prepare("
-            SELECT assigned_technician_user_id
-            FROM jobs
-            WHERE id = ?
+            SELECT j.assigned_technician_user_id, p.participantType
+            FROM jobs j
+            LEFT JOIN participants p ON j.assigned_provider_participant_id = p.participantId
+            WHERE j.id = ?
         ");
         $stmt->execute([$jobId]);
         $job = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Skip technician validation for XS providers - they manage technicians internally
+        if ($job && strtoupper($job['participantType']) === 'XS') {
+            return ['valid' => true];
+        }
 
         if (!$job || !$job['assigned_technician_user_id']) {
             return [
@@ -244,6 +265,11 @@ class JobStatusValidator {
             ];
         }
 
+        return ['valid' => true];
+    }
+
+    private function validateReassignment($jobId) {
+        // Allow reassignment back to Reported state for provider who couldn't quote
         return ['valid' => true];
     }
 

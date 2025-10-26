@@ -573,6 +573,67 @@ try {
             $params[] = $input['job_status'];
         }
 
+        // Handle special action-based requests (like provider reassignment)
+        if (isset($input['action'])) {
+            $action = $input['action'];
+
+            if ($action === 'reassign_provider') {
+                // Provider reassignment: clear provider-specific fields and assign to new provider
+                // Validate that a new provider is selected
+                if (!isset($input['assigned_provider_id']) || !$input['assigned_provider_id']) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'New service provider must be selected for reassignment']);
+                    exit;
+                }
+
+                // Validate that reassignment notes are provided
+                if (!isset($input['notes']) || empty(trim($input['notes']))) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Reassignment notes are required']);
+                    exit;
+                }
+
+                // Clear provider-specific fields: technician assignment and technician notes
+                $updates[] = "assigned_technician_user_id = ?";
+                $params[] = null; // Clear technician assignment
+
+                $updates[] = "technician_notes = ?";
+                $params[] = null; // Clear technician notes
+
+                // Set the new provider
+                $updates[] = "assigned_provider_participant_id = ?";
+                $params[] = $input['assigned_provider_id'];
+
+                // Set status to Assigned
+                $updates[] = "job_status = ?";
+                $params[] = 'Assigned';
+
+                // Verify new provider is approved for this client
+                $stmt = $pdo->prepare("
+                    SELECT id FROM participant_approvals
+                    WHERE client_participant_id = ? AND provider_participant_id = ?
+                ");
+                $stmt->execute([$entity_id, $input['assigned_provider_id']]);
+                if (!$stmt->fetch()) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Service provider is not approved for this client']);
+                    exit;
+                }
+
+                // Insert reassignment history entry with notes
+                $stmt = $pdo->prepare("
+                    INSERT INTO job_status_history (job_id, status, changed_by_user_id, notes)
+                    VALUES (?, 'Assigned', ?, ?)
+                ");
+                $stmt->execute([$job_id, $user_id, 'Provider reassigned: ' . trim($input['notes'])]);
+
+            } else {
+                http_response_code(400);
+                echo json_encode(['error' => 'Unknown action: ' . $action]);
+                exit;
+            }
+        }
+
         // Handle state change requests (even without other field updates)
         if (isset($input['request_state_change'])) {
             // Map frontend state transition keys to actual job statuses

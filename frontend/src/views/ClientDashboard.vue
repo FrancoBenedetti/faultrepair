@@ -2460,8 +2460,8 @@ Are you sure you want to proceed?`;
       const confirmMessage = `Accept this quotation for "${quotation.item_identifier}"?
 
 Quote Details:
-• New job will be created with status "Assigned"
-• Original quote job will remain in history
+• Job status will change to "Assigned"
+• Quote will be marked as accepted
 • Service provider can begin work immediately
 
 Are you sure you want to proceed?`
@@ -2471,19 +2471,20 @@ Are you sure you want to proceed?`
       }
 
       try {
-        const response = await apiFetch('/backend/api/accept-quote-and-duplicate.php', {
+        const response = await apiFetch('/backend/api/job-quotations.php', {
           method: 'PUT',
           body: JSON.stringify({
             quote_id: quotation.id,
+            action: 'accept',
             notes: notes
           })
         });
 
         if (response.ok) {
           const data = await response.json();
-          alert(`Quote accepted successfully! New job created with ID: ${data.new_job_id}`);
+          alert('Quote accepted and job assigned to provider!');
           this.showQuotationDetailsModal = false;
-          this.loadJobs(); // Refresh jobs list to show both the original job and the new assigned job
+          this.loadJobs(); // Refresh jobs list to show updated status
         } else {
           const errorData = await response.json();
           this.handleError(errorData);
