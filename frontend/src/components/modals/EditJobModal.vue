@@ -1,6 +1,5 @@
 <template>
   <div class="edit-job-modal">
-    <div style="display: none">{{ console.log('Vue template rendering - component loaded:', { isXSProviderMode, canEditJobDetails, jobStatus: job?.job_status }) }}</div>
     <div class="modal-overlay" @click="$emit('close')"></div>
     <div class="modal-content">
       <!-- Modal Header -->
@@ -356,18 +355,28 @@
             <!-- Show transition options for XS provider jobs -->
             <div v-if="job?.assigned_provider_participant_id && userRole === 2 && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="xs-transition-section">
               <h4 class="transition-section-title">Available Actions for External Provider</h4>
-              <p class="transition-section-desc">As proxy for the external service provider, you can change the job status:</p>
+              <p class="transition-section-desc">{{ getTransitionDescription() }}</p>
 
               <div class="transition-buttons-grid">
-                <!-- Assigned status can go to In Progress -->
+                <!-- Assigned status: can go to In Progress or Declined -->
                 <button
                   v-if="job.job_status === 'Assigned'"
                   @click="initiateTransition('In Progress')"
                   class="transition-action-btn status-in-progress"
-                  :disabled="saving"
+                  :disabled="saving || !selectedTechnicianId"
                 >
                   <span class="btn-icon">▶️</span>
-                  Mark In Progress
+                  {{ selectedTechnicianId ? 'Mark In Progress' : 'Select Technician First' }}
+                </button>
+
+                <button
+                  v-if="job.job_status === 'Assigned'"
+                  @click="initiateTransition('Declined')"
+                  class="transition-action-btn status-declined"
+                  :disabled="saving"
+                >
+                  <span class="btn-icon">✋</span>
+                  Decline Job
                 </button>
 
                 <!-- In Progress can go to Completed -->
@@ -1322,6 +1331,25 @@ export default {
         alert('Failed to update job: ' + error.message);
       } finally {
         this.saving = false;
+      }
+    },
+
+    // Get description for current transition section based on status
+    getTransitionDescription() {
+      const status = this.job.job_status;
+      switch (status) {
+        case 'Assigned':
+          return 'This job is currently assigned to the external provider. Select what action to take, or change technician assignment first.';
+        case 'In Progress':
+          return 'The external provider is currently working on this job. Update status when work is completed or if issues arise.';
+        case 'Completed':
+          return 'Work has been completed. Confirm receipt of work or mark as needing correction.';
+        case 'Cannot repair':
+          return 'The external provider determined this cannot be repaired. Confirm receipt or request further evaluation.';
+        case 'Incomplete':
+          return 'Work was previously marked as incomplete. Start work again or update status.';
+        default:
+          return 'Manage this external service provider job by selecting the appropriate action.';
       }
     },
 
