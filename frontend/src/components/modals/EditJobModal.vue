@@ -423,6 +423,17 @@
                   Cannot Repair
                 </button>
 
+                <!-- Reassign Provider option (only for Cannot repair status) -->
+                <button
+                  v-if="job.job_status === 'Cannot repair' && userRole === 2"
+                  @click="showReassignmentForm = true"
+                  class="transition-action-btn status-reassign"
+                  :disabled="saving"
+                >
+                  <span class="btn-icon">🔄</span>
+                  Reassign Provider
+                </button>
+
                 <!-- Confirm option for Cannot repair -->
                 <button
                   v-if="job.job_status === 'Cannot repair'"
@@ -445,20 +456,14 @@
                   Complete Job
                 </button>
               </div>
-            </div>
 
-            <!-- Reassignment Options for Cannot Repair Jobs - Role 2 Only -->
-            <div v-if="job.job_status === 'Cannot repair' && userRole === 2" class="section">
-              <h3 class="section-title">Cannot Repair Options</h3>
-              <p class="section-description">This job has been determined unreparable. Choose how to proceed:</p>
-
-              <!-- Provider Reassignment Section -->
-              <div class="provider-reassignment-section">
-                <h4 class="subsection-title">
+              <!-- Reassignment Form (shown when Reassign Provider is clicked) -->
+              <div v-if="showReassignmentForm" class="reassignment-form">
+                <h4 class="form-title">
                   <span class="material-icon text-blue-600">sync</span>
                   Reassign to Different Provider
                 </h4>
-                <p class="subsection-desc">Try another approved service provider for this job</p>
+                <p class="form-description">Select a new approved service provider for this job. The reassignment reason will be documented in the job history.</p>
 
                 <div class="form-grid">
                   <!-- Provider Selection -->
@@ -509,61 +514,27 @@
                   </div>
                 </div>
 
-                <!-- Reassign Action -->
-                <div class="reassignment-actions">
+                <!-- Reassignment Actions -->
+                <div class="form-actions">
                   <button
                     @click="reassignProvider"
                     :disabled="saving || !selectedReassignProviderId || !reassignmentNotes.trim()"
                     class="btn-primary btn-reassign"
                   >
                     <span class="material-icon-sm">sync</span>
-                    {{ saving ? 'Reassigning...' : 'Reassign to Provider' }}
+                    {{ saving ? 'Reassigning...' : 'Reassign Provider' }}
+                  </button>
+                  <button
+                    @click="showReassignmentForm = false"
+                    :disabled="saving"
+                    class="btn-secondary btn-cancel"
+                  >
+                    Cancel
                   </button>
                 </div>
               </div>
-
-              <!-- Alternative Actions Section -->
-              <div class="alternative-actions-section">
-                <h4 class="subsection-title">
-                  <span class="material-icon text-gray-600">more_horiz</span>
-                  Other Actions
-                </h4>
-
-                <div class="alternative-actions-grid">
-                  <!-- Confirm Receipt -->
-                  <div class="alternative-action-card">
-                    <div class="action-icon">
-                      <span class="material-icon">check_circle</span>
-                    </div>
-                    <h5 class="action-title">Confirm Receipt</h5>
-                    <p class="action-desc">Accept that this item cannot be repaired and close the job.</p>
-                    <button
-                      @click="initiateTransition('Confirmed')"
-                      :disabled="saving"
-                      class="btn-secondary btn-action"
-                    >
-                      Confirm Receipt
-                    </button>
-                  </div>
-
-                  <!-- Request Provider Review -->
-                  <div class="alternative-action-card">
-                    <div class="action-icon">
-                      <span class="material-icon">refresh</span>
-                    </div>
-                    <h5 class="action-title">Request Provider Review</h5>
-                    <p class="action-desc">Ask the current provider to reassess their assessment.</p>
-                    <button
-                      @click="initiateTransition('Incomplete')"
-                      :disabled="saving"
-                      class="btn-secondary btn-action"
-                    >
-                      Request Review
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
+
           </div>
 
           <!-- Editable Job Details (for XS provider jobs in all statuses) -->
@@ -909,7 +880,8 @@ export default {
 
       // Cannot repair reassignment data
       selectedReassignProviderId: '',
-      reassignmentNotes: ''
+      reassignmentNotes: '',
+      showReassignmentForm: false
     }
   },
   watch: {
@@ -2544,5 +2516,34 @@ export default {
 
 .status-confirmed:hover:not(:disabled) {
   background: #5a359a;
+}
+
+.status-reassign {
+  background: #28a745;
+}
+
+.status-reassign:hover:not(:disabled) {
+  background: #218838;
+}
+
+.reassignment-form {
+  background: #f8f9fa;
+  border: 2px solid #28a745;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 16px;
+}
+
+.reassignment-form .form-title {
+  color: #155724;
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+}
+
+.reassignment-form .form-description {
+  color: #6c757d;
+  font-size: 0.95em;
+  margin: 0 0 16px 0;
 }
 </style>
