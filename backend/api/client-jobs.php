@@ -104,7 +104,7 @@ try {
             LEFT JOIN users tu ON j.assigned_technician_user_id = tu.userId
             LEFT JOIN job_quotations jq ON j.current_quotation_id = jq.id
             LEFT JOIN participants qsp ON jq.provider_participant_id = qsp.participantId
-            WHERE (l.participant_id = ? OR j.client_location_id IS NULL)
+            WHERE j.client_id = ?
         ";
 
         $params = [$entity_id];
@@ -222,16 +222,18 @@ try {
         $stmt = $pdo->prepare("
             INSERT INTO jobs (
                 client_location_id,
+                client_id,
                 item_identifier,
                 fault_description,
                 reporting_user_id,
                 contact_person,
                 job_status
-            ) VALUES (?, ?, ?, ?, ?, 'Reported')
+            ) VALUES (?, ?, ?, ?, ?, ?, 'Reported')
         ");
 
         $stmt->execute([
             $client_location_id,
+            $entity_id, // client_id
             $input['item_identifier'] ?? null,
             $input['fault_description'],
             $user_id,
@@ -273,18 +275,12 @@ try {
 
         $job_id = (int)$input['job_id'];
 
-        // Verify job belongs to this client (either via location or as a client-created job)
+        // Verify job belongs to this client using direct client_id reference
         $stmt = $pdo->prepare("
             SELECT j.id FROM jobs j
-            LEFT JOIN locations l ON j.client_location_id = l.id
-            WHERE j.id = ? AND (
-                l.participant_id = ? OR
-                (j.client_location_id IS NULL AND j.reporting_user_id IN (
-                    SELECT u.userId FROM users u WHERE u.entity_id = ?
-                ))
-            )
+            WHERE j.id = ? AND j.client_id = ?
         ");
-        $stmt->execute([$job_id, $entity_id, $entity_id]);
+        $stmt->execute([$job_id, $entity_id]);
         if (!$stmt->fetch()) {
             http_response_code(403);
             echo json_encode(['error' => 'Access denied. Job not found or does not belong to your organization.']);

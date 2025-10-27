@@ -84,7 +84,7 @@ try {
                 echo json_encode(['error' => 'Access denied. Admin access required.']);
             }
         } elseif ($entity_type === 'client') {
-            // Clients can see quotes for their jobs
+            // Clients can see quotes for their jobs using direct client_id
             $query = "
                 SELECT
                     jq.id,
@@ -102,9 +102,8 @@ try {
                     sp.name as provider_name
                 FROM job_quotations jq
                 JOIN jobs j ON jq.job_id = j.id
-                JOIN locations l ON j.client_location_id = l.id
                 JOIN participants sp ON jq.provider_participant_id = sp.participantId
-                WHERE l.participant_id = ?
+                WHERE j.client_id = ?
             ";
             $params = [$entity_id];
 
@@ -262,18 +261,15 @@ try {
                 exit;
             }
 
-            // Verify the quote belongs to this client's organization
+            // Verify the quote belongs to this client's organization using direct client_id
             $stmt = $pdo->prepare("
                 SELECT jq.id, jq.status, jq.job_id
                 FROM job_quotations jq
                 JOIN jobs j ON jq.job_id = j.id
-                LEFT JOIN locations l ON j.client_location_id = l.id
                 WHERE jq.id = ?
-                AND (l.participant_id = ? OR (j.client_location_id IS NULL AND j.reporting_user_id IN (
-                    SELECT u.userId FROM users u WHERE u.entity_id = ?
-                )))
+                AND j.client_id = ?
             ");
-            $stmt->execute([$quote_id, $entity_id, $entity_id]);
+            $stmt->execute([$quote_id, $entity_id]);
             $quote = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$quote) {

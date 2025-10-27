@@ -123,10 +123,11 @@ try {
     $where_clause = implode(" AND ", $where_conditions);
     error_log("service-provider-jobs.php - WHERE clause: $where_clause, params: " . json_encode($params));
 
-    // Get filtered jobs assigned to this service provider
+        // Get filtered jobs assigned to this service provider
         $stmt = $pdo->prepare("
             SELECT
                 j.id,
+                j.client_id,
                 j.item_identifier,
                 j.fault_description,
                 j.technician_notes,
@@ -148,14 +149,14 @@ try {
                 l.access_rules as location_access_rules,
                 l.access_instructions as location_access_instructions,
                 p.name as client_name,
-                p.participantId as client_id,
+                p.participantId as client_participant_id,
                 u.username as reporting_user,
                 CONCAT(tu.first_name, ' ', tu.last_name) as assigned_technician,
                 tu.userId as assigned_technician_user_id,
                 (SELECT COUNT(*) FROM job_images ji WHERE ji.job_id = j.id) as image_count
             FROM jobs j
+            LEFT JOIN participants p ON j.client_id = p.participantId
             LEFT JOIN locations l ON j.client_location_id = l.id
-            LEFT JOIN participants p ON l.participant_id = p.participantId
             LEFT JOIN users u ON j.reporting_user_id = u.userId
             LEFT JOIN users tu ON j.assigned_technician_user_id = tu.userId
             WHERE {$where_clause}

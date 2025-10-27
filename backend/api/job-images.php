@@ -51,11 +51,10 @@ try {
 
         // Verify job belongs to this user (client or service provider)
         if ($entity_type === 'client') {
-            // Client: verify job belongs to their organization
+            // Client: verify job belongs to their organization using direct client_id
             $stmt = $pdo->prepare("
                 SELECT j.id FROM jobs j
-                JOIN locations l ON j.client_location_id = l.id
-                WHERE j.id = ? AND l.participant_id = ?
+                WHERE j.id = ? AND j.client_id = ?
             ");
             $stmt->execute([$job_id, $entity_id]);
         } else {
@@ -119,12 +118,11 @@ try {
 
         // Get image details and verify ownership
         if ($entity_type === 'client') {
-            // Client: verify image belongs to their organization
+            // Client: verify image belongs to their organization using direct client_id
             $stmt = $pdo->prepare("
                 SELECT ji.file_path, ji.job_id FROM job_images ji
                 JOIN jobs j ON ji.job_id = j.id
-                JOIN locations l ON j.client_location_id = l.id
-                WHERE ji.id = ? AND l.participant_id = ?
+                WHERE ji.id = ? AND j.client_id = ?
             ");
             $stmt->execute([$image_id, $entity_id]);
         } else {

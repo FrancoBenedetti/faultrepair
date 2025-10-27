@@ -177,6 +177,7 @@ CREATE TABLE IF NOT EXISTS `invitation_access_log` (
 CREATE TABLE IF NOT EXISTS `jobs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `client_location_id` int(11) DEFAULT NULL,
+  `client_id` int(11) NOT NULL COMMENT 'Direct reference to the client participant',
   `item_identifier` varchar(100) DEFAULT NULL,
   `fault_description` text DEFAULT NULL,
   `technician_notes` text DEFAULT NULL,
@@ -195,15 +196,17 @@ CREATE TABLE IF NOT EXISTS `jobs` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `client_location_id` (`client_location_id`),
+  KEY `client_id` (`client_id`),
   KEY `assigned_provider_participant_id` (`assigned_provider_participant_id`),
   KEY `reporting_user_id` (`reporting_user_id`),
   KEY `assigning_user_id` (`assigning_user_id`),
   KEY `assigned_technician_user_id` (`assigned_technician_user_id`),
   CONSTRAINT `jobs_ibfk_1` FOREIGN KEY (`client_location_id`) REFERENCES `locations` (`id`),
-  CONSTRAINT `jobs_ibfk_2` FOREIGN KEY (`assigned_provider_participant_id`) REFERENCES `participants` (`participantId`),
-  CONSTRAINT `jobs_ibfk_3` FOREIGN KEY (`reporting_user_id`) REFERENCES `users` (`userId`),
-  CONSTRAINT `jobs_ibfk_4` FOREIGN KEY (`assigning_user_id`) REFERENCES `users` (`userId`),
-  CONSTRAINT `jobs_ibfk_5` FOREIGN KEY (`assigned_technician_user_id`) REFERENCES `users` (`userId`)
+  CONSTRAINT `jobs_ibfk_2` FOREIGN KEY (`client_id`) REFERENCES `participants` (`participantId`),
+  CONSTRAINT `jobs_ibfk_3` FOREIGN KEY (`assigned_provider_participant_id`) REFERENCES `participants` (`participantId`),
+  CONSTRAINT `jobs_ibfk_4` FOREIGN KEY (`reporting_user_id`) REFERENCES `users` (`userId`),
+  CONSTRAINT `jobs_ibfk_5` FOREIGN KEY (`assigning_user_id`) REFERENCES `users` (`userId`),
+  CONSTRAINT `jobs_ibfk_6` FOREIGN KEY (`assigned_technician_user_id`) REFERENCES `users` (`userId`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data exporting was unselected.

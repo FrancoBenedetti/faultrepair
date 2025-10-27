@@ -108,13 +108,14 @@ try {
             j.updated_at,
             l.name as location_name,
             l.address as location_address,
-            c.name as client_name,
+            p.name as client_name,
             u.username as reporting_user,
-            sp.name as service_provider_name
+            spp.name as service_provider_name
         FROM jobs j
-        JOIN locations l ON j.client_location_id = l.id
-        JOIN clients c ON l.client_id = c.id
-        JOIN service_providers sp ON j.assigned_provider_participant_id = sp.id
+        -- Direct client_id relationship for client info
+        JOIN participants p ON j.client_id = p.participantId
+        JOIN participants spp ON j.assigned_provider_participant_id = spp.participantId
+        LEFT JOIN locations l ON j.client_location_id = l.id
         LEFT JOIN users u ON j.reporting_user_id = u.userId
         WHERE j.assigned_technician_user_id = ?
         ORDER BY j.created_at DESC

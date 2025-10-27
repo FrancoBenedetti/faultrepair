@@ -72,9 +72,9 @@ try {
             j.assigned_provider_participant_id,
             sp.name as provider_name
         FROM jobs j
-        LEFT JOIN locations l ON j.client_location_id = l.id
+        -- Direct client_id relationship - simplified join
         JOIN participants sp ON j.assigned_provider_participant_id = sp.participantId
-        WHERE j.id = ? AND (l.participant_id = ? OR j.client_location_id IS NULL)
+        WHERE j.id = ? AND j.client_id = ?
     ");
     $stmt->execute([$job_id, $entity_id]);
     $job = $stmt->fetch(PDO::FETCH_ASSOC);

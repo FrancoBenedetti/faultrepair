@@ -479,37 +479,35 @@ try {
 
                     // Get recent jobs/activity
                     if ($participant['participantType'] === 'C') {
-                        // For clients, get jobs from their locations
+                        // For clients, get jobs directly via client_id relationship
                         $stmt = $pdo->prepare("
                             SELECT
                                 j.id,
-                                j.title,
-                                j.description,
-                                j.status,
+                                j.item_identifier,
+                                j.fault_description,
+                                j.job_status,
                                 j.created_at,
                                 j.updated_at
                             FROM jobs j
-                            JOIN locations l ON j.client_location_id = l.id
-                            WHERE l.participant_id = ?
+                            WHERE j.client_id = ?
                             ORDER BY j.created_at DESC
                             LIMIT 10
                         ");
                         $stmt->execute([$participant_id]);
                         $recent_jobs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     } elseif ($participant['participantType'] === 'S') {
-                        // For service providers, get jobs they've been assigned to
+                        // For service providers, get jobs they've been assigned to using client_id for relationships
                         $stmt = $pdo->prepare("
                             SELECT
                                 j.id,
-                                j.title,
-                                j.description,
-                                j.status,
+                                j.item_identifier,
+                                j.fault_description,
+                                j.job_status,
                                 j.created_at,
                                 j.updated_at,
                                 p.name as client_name
                             FROM jobs j
-                            JOIN locations l ON j.client_location_id = l.id
-                            JOIN participants p ON l.participant_id = p.participantId
+                            JOIN participants p ON j.client_id = p.participantId
                             WHERE j.assigned_provider_participant_id = ?
                             ORDER BY j.created_at DESC
                             LIMIT 10
@@ -1251,14 +1249,11 @@ function getAdminDashboardStats() {
         $stmt->execute();
         $revenue_result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Get total jobs created/reported (simplified, using jobs table)
+        // Get total jobs created/reported using direct client_id relationship
         $stmt = $pdo->prepare("
             SELECT COUNT(*) as count FROM jobs j
-            JOIN locations l ON j.client_location_id = l.id
-            JOIN participants p ON l.participant_id = p.participantId
             WHERE DATE_FORMAT(j.created_at, '%Y-%m') = ?
         ");
-        $stmt->execute([date('Y-m')]);
         $jobs_result = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return [
