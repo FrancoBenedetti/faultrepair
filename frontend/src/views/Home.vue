@@ -1,5 +1,23 @@
 <template>
   <div class="home">
+    <!-- Trial Deployment Warning Banner - Only visible on try.snappyapp.co.za -->
+    <div v-if="isTrialDeployment" class="bg-amber-50 border-b border-amber-200 px-6 py-4">
+      <div class="max-w-4xl mx-auto">
+        <div class="flex items-start gap-3">
+          <span class="material-icon text-amber-600 mt-1">warning</span>
+          <div class="flex-1 text-sm text-amber-900">
+            <p class="font-semibold mb-2">Trial Environment Notice</p>
+            <p class="mb-2">
+              This is a trial environment for prospective users to explore Snappy. You can subscribe on this page to test the platform as asset owners, clients, or service providers. Please note that this is a demonstration site, and the database is reset periodically, resulting in the loss of all data.
+            </p>
+            <p class="font-medium">
+              For production use, please subscribe at <a href="https://snappyapp.co.za" class="text-amber-800 underline hover:text-amber-900" target="_blank">https://snappyapp.co.za</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Hero Section -->
     <div class="hero bg-gradient-to-br from-blue-50 to-indigo-100 py-16 px-6">
       <div class="max-w-4xl mx-auto text-center">
@@ -56,6 +74,19 @@
             <router-link to="/subscription" class="text-green-800 hover:text-green-900 underline ml-1">
               Learn about future subscription options
             </router-link>
+          </p>
+        </div>
+
+        <!-- Trial Experience Banner - Visible on production, test, and local deployments -->
+        <div v-if="isProductionDeployment" class="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto mb-8">
+          <div class="flex items-center justify-center gap-2 text-blue-800 mb-2">
+            <span class="material-icon-sm">explore</span>
+            <span class="font-medium">Experience Before You Commit</span>
+          </div>
+          <p class="text-sm text-blue-700">
+            Curious about our platform but not ready to subscribe? Experience Snappy firsthand by visiting our
+            <a href="https://try.snappyapp.co.za" class="text-blue-800 underline hover:text-blue-900 font-medium" target="_blank">trial environment</a>.
+            Sign up there to explore features as an asset owner, client, or service provider. When you're ready for production use, return here to subscribe.
           </p>
         </div>
       </div>
@@ -159,6 +190,15 @@ export default {
   computed: {
     siteName() {
       return import.meta.env.VITE_SITE_NAME || 'Fault Reporter'
+    },
+    isTrialDeployment() {
+      return window.location.hostname === 'try.snappyapp.co.za'
+    },
+    isProductionDeployment() {
+      const hostname = window.location.hostname
+      return hostname === 'snappyapp.co.za' ||
+             hostname === 'test.snappyapp.co.za' ||
+             hostname === 'snappy.local'
     }
   },
   mounted() {

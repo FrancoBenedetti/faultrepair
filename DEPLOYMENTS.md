@@ -12,14 +12,24 @@
 
 ## 
 
-## Warning Banner
+## Trial Environment Warning Banner
 
-A warning banner is required for try.snappyapp.co.za that automatically displays on the main or landing page. This does not otherwise display. This banner should say something like:
+An automatic warning banner displays exclusively on the try.snappyapp.co.za trial deployment (Home.vue landing page). This banner is not visible on other deployments.
 
-> This is a playground for users to checkout Snappy. You can do so by subscribing on this page. Try it out by subscribing as asset owners or clients of services, and as service providers, add users and use most of the facilities available. 
-> 
-> Don't expect your data on this playground to be retained, the database is cleared out regularly and all loaded data will be lost.
-> 
-> When you're ready to subscribe for real, you can do so at https://snappyapp.co.za
-> 
-> 
+**Warning Banner Text:**
+
+> Trial Environment Notice
+>
+> This is a trial environment for prospective users to explore Snappy. You can subscribe on this page to test the platform as asset owners, clients, or service providers. Please note that this is a demonstration site, and the database is reset periodically, resulting in the loss of all data.
+>
+> For production use, please subscribe at https://snappyapp.co.za.
+
+## Trial Experience Promotion Banner
+
+A promotional banner appears on production, test, and local deployments (snappyapp.co.za, test.snappyapp.co.za, snappy.local) and encourages visitors to try the trial environment before committing to a subscription. This banner is not visible on the trial deployment (try.snappyapp.co.za).
+
+**Promotion Banner Text:**
+
+> Experience Before You Commit
+>
+> Curious about our platform but not ready to subscribe? Experience Snappy firsthand by visiting our trial environment. Sign up there to explore features as an asset owner, client, or service provider. When you're ready for production use, return here to subscribe.
