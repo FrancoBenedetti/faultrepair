@@ -131,8 +131,10 @@ export const getRoleDisplayName = async (roleId) => {
 };
 
 export const apiFetch = async (endpoint, options = {}) => {
-  // Check for expired token before making request
-  if (handleTokenExpiration()) {
+  const isLoginRequest = endpoint.includes('/auth.php');
+
+  // Check for expired token before making request (skip for login)
+  if (!isLoginRequest && handleTokenExpiration()) {
     throw new Error('Token expired - redirecting to login');
   }
 
@@ -140,8 +142,9 @@ export const apiFetch = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
 
   // For live server compatibility, pass token as query parameter instead of Authorization header
+  // Skip token for login requests
   let finalUrl = url;
-  if (token) {
+  if (token && !isLoginRequest) {
     const separator = url.includes('?') ? '&' : '?';
     finalUrl = `${url}${separator}token=${encodeURIComponent(token)}`;
   }
@@ -157,7 +160,8 @@ export const apiFetch = async (endpoint, options = {}) => {
   const response = await fetch(finalUrl, config);
 
   // Handle 401 Unauthorized responses (token expired or invalid)
-  if (response.status === 401) {
+  // Skip automatic handling for login requests - let them handle 401s as auth errors
+  if (response.status === 401 && !isLoginRequest) {
     clearExpiredToken();
     // Redirect to login page
     if (window.location.pathname !== '/') {

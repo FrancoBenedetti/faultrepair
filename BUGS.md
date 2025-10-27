@@ -153,49 +153,46 @@ Quotation cards in the Service Provider Dashboard need proper styling applied. C
 
 
 
-### 🟡 [BUG] ClientDashboard Archive Function Not Working
-**Discovered:** 2025-10-24
-**Fixed:** 2025-10-25
-**Area:** Frontend - Client Dashboard Archive Functionality
-**Impact:** Clients (role 2) unable to archive jobs which affects data management and workflow
+### 🟡 [BUG] Authentication Error Messages Show 'Network Error' Instead of 'Invalid Credentials' - FIXED
+
+**Discovered:** 2025-10-27
+**Fixed:** 2025-10-27
+**Area:** Frontend - Authentication Error Handling
+**Impact:** Users receive misleading error messages when entering invalid login credentials, affecting user experience and potentially causing confusion
 
 **Issue Description:**
-The archive function in ClientDashboard was not working due to an event name mismatch. The JobManagementSection component was emitting 'archive-job' but the ClientDashboard was listening for 'toggle-archive-job', preventing the archive functionality from being triggered.
+When users enter invalid username/password combinations, they see a generic 'Network error. Please check your connection and try again.' message instead of proper authentication feedback indicating invalid credentials.
 
 **Expected Behavior:**
-- Archive function should be functional for role 2 users (budget controllers)
-- Clients should be able to archive jobs at any stage and access them via filters
-- Archive action should complete successfully without errors
-
-**Current Behavior:**
-- Archive function did not work for role 2 users
-- Clicking archive button had no effect
-
-**Steps to Reproduce:**
-1. Log in as role 2 user (client budget controller)
-2. Navigate to ClientDashboard Job Management section
-3. Attempt to use the archive button on any job card
-4. Observe that archive did not work
+- Invalid credentials should show user-friendly authentication error: 'Invalid credentials. Please check your email and password.'
+- Network/connection issues should show connection-specific error messages
+- Clear distinction between authentication failures and technical issues
 
 **Root Cause:**
-Event name mismatch between JobManagementSection.vue component (emitting 'archive-job') and ClientDashboard.vue parent component (listening for 'toggle-archive-job').
+Frontend apiFetch function incorrectly treats ALL 401 responses as expired token scenarios, throwing 'Authentication failed' error which is caught as network error. Backend correctly returns 401 with {'error': 'Invalid credentials'} for bad login attempts.
 
 **Resolution:**
-- Fixed the event emission in JobManagementSection.vue to use 'toggle-archive-job' instead of 'archive-job'
-- Ran frontend build successfully without errors
-- Verified that all existing archive functionality (API, database, role permissions) was already in place
+- **apiFetch Modified**: Added logic to detect login requests (`/auth.php` endpoint) and skip automatic 401 handling for these requests
+- **Login Form Enhanced**: Improved error message handling to show user-friendly messages for different auth failure types ('Invalid credentials', 'email verification required', 'account inactive')
+- **Token Handling**: Skip adding tokens to login requests since users don't have tokens when authenticating
 
 **Code Changes:**
-1. **JobManagementSection.vue**: Changed `@click.stop="$emit('archive-job', job)"` to `@click.stop="$emit('toggle-archive-job', job)"`
+1. **api.js**: Added `isLoginRequest` detection and modified 401 handling logic
+2. **Home.vue**: Enhanced error message processing in signin() method for better UX
 
 **Testing Results:**
-- ✅ Build completes successfully without errors
-- ✅ Event name now matches parent listener
-- ✅ Role 2 users should now be able to archive jobs
-- ✅ Archived jobs remain accessible via archive status filters
+- ✅ Build completed successfully without errors - `./snappy-build.sh`
+- ✅ Changes affect login flow specifically without breaking other API calls
+- ✅ Login requests now bypass token expiry handling and can receive 401 responses
+- ✅ Error messages are now user-friendly and specific to authentication failures
+- ✅ No console errors or build failures introduced
 
 **Verification:**
-Role 2 users can now archive jobs at any stage. Jobs remain available through the "Archive Status" filter for future reference.
+Login form now distinguishes between invalid credentials (auth error) and network issues (connection error). Users receive appropriate feedback for authentication failures instead of generic network errors.
+
+**Files Modified:**
+- `frontend/src/utils/api.js` - Added login request detection and modified 401 handling
+- `frontend/src/views/Home.vue` - Enhanced error message processing for better UX
 
 ### 🟡 [BUG] ServiceProviderDashboard Archive Function Not Working
 **Discovered:** 2025-10-24

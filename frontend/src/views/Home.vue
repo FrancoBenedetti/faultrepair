@@ -248,7 +248,20 @@ export default {
             alert('Login successful but unable to determine user type. Please contact support.');
           }
         } else {
-          alert(data.error || 'Sign in failed');
+          // Provide user-friendly error message for auth failures
+          let errorMessage = 'Sign in failed';
+          if (data.error) {
+            if (data.error === 'Invalid credentials') {
+              errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+            } else if (data.error.includes('verify your email')) {
+              errorMessage = data.error;
+            } else if (data.error.includes('inactive')) {
+              errorMessage = data.error;
+            } else {
+              errorMessage = data.error;
+            }
+          }
+          alert(errorMessage);
         }
       } catch (error) {
         alert('Network error. Please check your connection and try again.');
