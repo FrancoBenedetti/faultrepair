@@ -124,9 +124,13 @@
                     <span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">{{ clientProfileCompleteness }}% Complete</span>
                   </h3>
                 </div>
+                <button @click.stop="showEditProfileModal = true" class="btn-outlined btn-small flex items-center gap-2">
+                  <span class="material-icon-sm">edit</span>
+                  Edit Profile
+                </button>
               </div>
 
-              <div v-show="sectionsExpanded.profile" class="section-content transition-all duration-300 ease-in-out">
+              <div class="section-content transition-all duration-300 ease-in-out">
                 <BusinessProfileSection
                   :expanded="sectionsExpanded.profile"
                   :client-profile="clientProfile"
@@ -359,6 +363,15 @@
         @provider-added="handleXSProviderAdded"
       />
 
+      <!-- Edit Profile Modal -->
+      <EditProfileModal
+        v-if="showEditProfileModal"
+        :editing-profile="editingProfile"
+        :updating-profile="updatingProfile"
+        @close="showEditProfileModal = false"
+        @submit="handleUpdateClientProfile"
+      />
+
       <!-- Job Confirmation Modal - Temporarily disabled due to auto-trigger bug -->
       <!-- <div v-if="showJobConfirmationModal" class="modal-overlay" @click="closeJobConfirmationModal()">
         <div class="modal-content" @click.stop>
@@ -437,6 +450,7 @@ import JobDetailsModal from '@/components/modals/JobDetailsModal.vue'
 import ProviderDetailsModal from '@/components/modals/ProviderDetailsModal.vue'
 import QuotationDetailsModal from '@/components/modals/QuotationDetailsModal.vue'
 import AddXSProviderModal from '@/components/modals/AddXSProviderModal.vue'
+import EditProfileModal from '@/components/modals/EditProfileModal.vue'
 
 export default {
   name: 'ClientDashboard',
@@ -458,7 +472,8 @@ export default {
     EditLocationModal,
     ProviderDetailsModal,
     QuotationDetailsModal,
-    AddXSProviderModal
+    AddXSProviderModal,
+    EditProfileModal
   },
   data() {
     return {
@@ -1961,6 +1976,14 @@ Are you sure you want to proceed?`;
       } finally {
         this.updatingProfile = false
       }
+    },
+
+    async handleUpdateClientProfile(profileData) {
+      // Set the editing profile data
+      this.editingProfile = { ...profileData }
+
+      // Call the existing update method
+      await this.updateClientProfile()
     },
 
     resetEditProfileForm() {
