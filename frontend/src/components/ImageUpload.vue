@@ -43,8 +43,8 @@
     >
 
     <!-- Camera capture -->
-    <div v-if="showCamera" class="modal-overlay">
-      <div class="modal-content max-w-md">
+    <div v-if="showCamera" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" @click="closeCamera">
+      <div class="w-full max-w-md mx-auto bg-white rounded-lg shadow-xl overflow-hidden" @click.stop>
         <div class="modal-header">
           <h3 class="text-xl font-semibold text-gray-900 mb-0">Take Photo</h3>
           <button type="button" @click="closeCamera" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
@@ -64,7 +64,7 @@
     </div>
 
     <!-- Image preview grid -->
-    <div v-if="images.length > 0" class="image-preview-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
+    <div v-if="images.length > 0" class="image-preview-grid grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
       <div
         v-for="(image, index) in images"
         :key="index"
