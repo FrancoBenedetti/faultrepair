@@ -3,6 +3,7 @@ ini_set('log_errors', true);
 ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/service-provider-jobs.log');
 require_once '../config/database.php';
 require_once '../includes/JWT.php';
+require_once '../includes/performance-monitoring.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, PUT, OPTIONS');
@@ -53,7 +54,12 @@ if ($entity_type !== 'service_provider') {
 error_log("service-provider-jobs.php - Processing request, user_id: $user_id, entity_id: $entity_id");
 
 try {
+    // Initialize performance monitoring
+    PerformanceMonitor::init($pdo);
+
     if ($method === 'GET') {
+        // Start performance timing
+        PerformanceMonitor::startTimer('api_service_provider_jobs_get');
         // Base condition - always filter by provider participant
         $where_conditions = ["j.assigned_provider_participant_id = ?"];
         $params = [$entity_id];
@@ -183,7 +189,12 @@ try {
             'jobs' => $jobs
         ]);
 
+        // End performance timing for GET
+        PerformanceMonitor::endTimer('api_service_provider_jobs_get');
+
     } elseif ($method === 'PUT') {
+        // Start performance timing for PUT
+        PerformanceMonitor::startTimer('api_service_provider_jobs_put');
     // Update job (for service provider technicians and supervisors)
     $input = json_decode(file_get_contents('php://input'), true);
 
@@ -406,6 +417,9 @@ try {
         'success' => true,
         'message' => 'Job updated successfully'
     ]);
+
+    // End performance timing for PUT
+    PerformanceMonitor::endTimer('api_service_provider_jobs_put');
 
     // Send notifications for status changes
     if (isset($input['job_status']) || isset($input['request_state_change'])) {
