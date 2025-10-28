@@ -407,6 +407,16 @@ try {
         'message' => 'Job updated successfully'
     ]);
 
+    // Send notifications for status changes
+    if (isset($input['job_status']) || isset($input['request_state_change'])) {
+        require_once '../includes/job-notifications.php';
+
+        $newStatus = $input['job_status'] ?? $stateMapping[$input['request_state_change']] ?? null;
+        if ($newStatus) {
+            JobNotifications::notifyJobStatusChange($job_id, $job['job_status'], $newStatus, $user_id);
+        }
+    }
+
 }
 
 } catch (Exception $e) {

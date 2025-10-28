@@ -685,6 +685,10 @@ try {
                 VALUES (?, ?, ?, ?)
             ");
             $stmt->execute([$job_id, $input['job_status'], $user_id, $notes]);
+
+            // Send notifications for status change
+            require_once '../includes/job-notifications.php';
+            JobNotifications::notifyJobStatusChange($job_id, $job['job_status'], $input['job_status'], $user_id, $notes);
         } elseif (isset($input['request_state_change'])) {
             // Also insert status history for state change requests
             $stateMapping = [
@@ -704,7 +708,15 @@ try {
                     VALUES (?, ?, ?, ?)
                 ");
                 $stmt->execute([$job_id, $stateMapping[$input['request_state_change']], $user_id, $notes]);
+
+                // Send notifications for status change
+                require_once '../includes/job-notifications.php';
+                JobNotifications::notifyJobStatusChange($job_id, $job['job_status'], $stateMapping[$input['request_state_change']], $user_id, $notes);
             }
+        } elseif (isset($input['action']) && $input['action'] === 'reassign_provider') {
+            // Send notification for provider reassignment
+            require_once '../includes/job-notifications.php';
+            JobNotifications::notifyJobStatusChange($job_id, $job['job_status'], 'Assigned', $user_id, $notes);
         }
 
         echo json_encode([

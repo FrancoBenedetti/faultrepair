@@ -493,6 +493,10 @@ try {
             'message' => 'Quote updated successfully'
         ]);
 
+        // Send notifications for quote response
+        require_once '../includes/job-notifications.php';
+        JobNotifications::notifyQuoteResponse($quote_id, $input['action'], $input['notes'] ?? null);
+
     } else {
         http_response_code(405);
         echo json_encode(['error' => 'Method not allowed']);
