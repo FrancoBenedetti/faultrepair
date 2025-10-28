@@ -1,15 +1,13 @@
 <template>
   <div class="edit-job-modal">
-    <div class="modal-overlay" @click="$emit('close')"></div>
-    <div class="modal-content">
+  <div class="modal-overlay" @click="$emit('close')"></div>
+    <div class="modal-content open">
       <!-- Modal Header -->
       <div class="modal-header">
-        <div class="title-container">
-          <h2 class="modal-title">Edit Job: {{ job.item_identifier }}</h2>
-          <div v-if="job?.assigned_provider_participant_id && userRole === 2 && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="xs-mode-banner">
-            <span class="material-icon xs-indicator-icon">settings</span>
-            External Provider Mode
-          </div>
+        <h2 class="modal-title">{{ job.item_identifier }}</h2>
+        <div v-if="job?.assigned_provider_participant_id && userRole === 2 && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="xs-mode-banner">
+          <span class="material-icon xs-indicator-icon">settings</span>
+          External Provider Mode
         </div>
         <button class="modal-close" @click="$emit('close')">
           <span class="material-icon">close</span>
@@ -1778,11 +1776,8 @@ export default {
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
   z-index: 1000;
-  padding: 1rem; /* Safe area padding on mobile */
+  overflow: hidden; /* Prevent background scroll */
 }
 
 .modal-overlay {
@@ -1794,16 +1789,26 @@ export default {
 }
 
 .modal-content {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  max-width: 600px;
-  width: 90%;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   max-height: 90vh;
+  background: white;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.15);
   overflow-y: auto;
-  position: relative;
   z-index: 1001;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+.modal-content.open {
+  transform: translateY(0);
+}
+
+
 
 .modal-content.xs-provider-mode {
   border: 3px solid #ff6b35;
@@ -2575,70 +2580,86 @@ export default {
 
 /* ============ RESPONSIVE DESIGN ============ */
 
-/* Mobile First - Base styles are mobile optimized */
-
-/* Small phones (320px - 480px) */
-@media (max-width: 480px) {
+/* Mobile: Bottom sheet behavior - phones and small tablets in portrait */
+@media (max-width: 768px) {
   .edit-job-modal {
-    padding: 0.5rem;
+    padding: 0; /* No padding for full screen bottom sheet */
   }
 
   .modal-content {
-    width: 95%;
-    max-width: none;
-    max-height: 95vh;
-    border-radius: 8px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto; /* Override base top:0 */
+    width: 100%;
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
+    transform: translateY(100%);
   }
 
+  .modal-content.open {
+    transform: translateY(0);
+  }
+
+  /* Center the title on mobile */
+  .modal-title {
+    position: absolute;
+    left: 50%;
+    top: 20px;
+    transform: translateX(-50%);
+    font-size: 1.25em;
+    text-align: center;
+    flex: none;
+  }
+
+  /* Swipe handle at top of modal */
+  .modal-header::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: #ddd;
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  /* Adjust header for mobile touch interaction */
   .modal-header {
     padding: 16px;
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
+    padding-top: 24px;
+    position: relative;
   }
 
-  .modal-title {
-    font-size: 1.25em;
-    line-height: 1.3;
-  }
-
-  .title-container {
-    width: 100%;
+  .modal-close {
+    position: absolute;
+    right: 16px;
+    top: 20px;
+    font-size: 24px;
+    color: #666;
+    background: rgba(0,0,0,0.1);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .modal-body {
     padding: 16px;
   }
 
-  .job-origin-area {
-    padding: 12px;
+  /* Swipe-to-dismiss functionality */
+  .modal-content {
+    touch-action: pan-y;
   }
 
-  .origin-header {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .job-section {
-    margin-bottom: 16px;
-  }
-
-  .section-header {
-    padding: 12px 16px;
-  }
-
-  .section-content {
-    padding: 16px;
-  }
-
-  .form-grid {
-    gap: 12px;
-  }
-
-  .form-group {
-    margin-bottom: 12px;
-  }
-
+  /* Mobile layout adjustments */
   .section-actions {
     flex-direction: column;
     gap: 8px;
@@ -2646,24 +2667,7 @@ export default {
 
   .section-actions [class*="btn"] {
     width: 100%;
-    min-height: 44px; /* Touch target size */
-  }
-
-  .radio-options-container {
-    padding: 12px;
-  }
-
-  .radio-option {
-    padding: 12px;
-    gap: 8px;
-  }
-
-  .transition-form {
-    padding: 12px;
-  }
-
-  .assignment-explanation {
-    padding: 12px;
+    min-height: 44px;
   }
 
   .transition-buttons-grid {
@@ -2671,23 +2675,7 @@ export default {
     gap: 8px;
   }
 
-  .transition-action-btn {
-    padding: 16px 12px;
-    min-height: 48px;
-    font-size: 15px;
-  }
-
-  .btn-icon {
-    font-size: 20px;
-  }
-
-  /* XS Provider mode adjustments */
-  .xs-transition-section {
-    padding: 12px;
-  }
-
   .modal-footer {
-    padding: 16px;
     flex-direction: column;
     gap: 12px;
   }
@@ -2696,73 +2684,26 @@ export default {
     width: 100%;
     min-height: 44px;
   }
-
-  /* Image upload adjustments */
-  .image-upload-area {
-    margin-top: 16px;
-    padding-top: 12px;
-  }
 }
 
-/* Tablets (481px - 768px) */
-@media (min-width: 481px) and (max-width: 768px) {
+/* Tablets and small desktops (769px+) - Centered modals */
+@media (min-width: 769px) {
+  .modal-content {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    bottom: auto;
+    right: auto;
+    width: auto; /* Let max-width control width */
+    transform: translate(-50%, -50%);
+  }
+
+  .modal-content.open {
+    transform: translate(-50%, -50%);
+  }
+
   .edit-job-modal {
-    padding: 1rem;
-  }
-
-  .modal-content {
-    width: 92%;
-    max-width: 700px;
-    max-height: 90vh;
-  }
-
-  .modal-header {
-    padding: 18px;
-  }
-
-  .modal-body {
-    padding: 18px;
-  }
-
-  .section-actions {
-    gap: 10px;
-  }
-
-  .section-actions [class*="btn"] {
-    min-height: 42px;
-  }
-
-  .transition-buttons-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-
-  .modal-footer {
-    padding: 20px;
-  }
-}
-
-/* Small desktops (769px - 1024px) */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .modal-content {
-    max-width: 720px;
-  }
-
-  .section-actions {
-    flex-direction: row;
-    justify-content: flex-end;
-  }
-
-  .transition-buttons-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-  }
-}
-
-/* Large screens (1025px+) */
-@media (min-width: 1025px) {
-  .modal-content {
-    max-width: 800px;
+    padding: 2rem;
   }
 
   .modal-header {
@@ -2787,14 +2728,50 @@ export default {
   }
 
   .transition-buttons-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
   }
 
   .modal-footer {
     padding: 24px;
   }
+
+  /* Remove slide-up transition for desktop centered modal */
+  .slide-up-enter-active,
+  .slide-up-leave-active,
+  .slide-up-enter-from,
+  .slide-up-leave-to,
+  .slide-up-enter-to,
+  .slide-up-leave-from {
+    transition: none !important;
+    transform: none !important;
+  }
 }
+
+/* Medium screens (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .modal-content {
+    max-width: 720px;
+    border-radius: 12px;
+  }
+
+  .transition-buttons-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Large screens (1025px+) */
+@media (min-width: 1025px) {
+  .modal-content {
+    max-width: 800px;
+  }
+
+  .transition-buttons-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+
 
 /* High DPI displays */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
