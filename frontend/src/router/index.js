@@ -16,6 +16,7 @@ import Terms from '../views/Terms.vue'
 import Subscription from '../views/Subscription.vue'
 import About from '../views/About.vue'
 import { handleTokenExpiration } from '../utils/api.js'
+import { apiFetch } from '../utils/api.js'
 
 const routes = [
   {
@@ -119,9 +120,93 @@ const routes = [
     component: ClientRegistration
   },
   {
-    path: '/register-service_provider',
+    path: '/service-provider-registration',
     name: 'ServiceProviderRegistrationInvited',
     component: ServiceProviderRegistration
+  },
+  {
+    path: '/jobs/:id/edit',
+    name: 'EditJob',
+    component: () => import('../views/EditJob.vue'),
+    meta: { requiresAuth: true },
+    props: (route) => ({
+      jobId: parseInt(route.params.id),
+      from: route.query.from || 'client',
+      scrollPosition: route.query.scroll || 0
+    }),
+    beforeEnter: async (to, from, next) => {
+      // Check if user is authenticated
+      const token = localStorage.getItem('token')
+      if (!token) {
+        next('/')
+        return
+      }
+
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+        const jobId = to.params.id
+
+        // Fetch basic job information to check provider type
+        const response = await apiFetch(`/backend/api/client-jobs.php?job_id=${jobId}`)
+
+        if (!response.ok) {
+          // Job not found or no access
+          if (payload.entity_type === 'client') {
+            next('/client-dashboard')
+          } else if (payload.entity_type === 'service_provider') {
+            next('/service-provider-dashboard')
+          } else {
+            next('/')
+          }
+          return
+        }
+
+        const data = await response.json()
+        if (!data.job) {
+          // No job data returned
+          if (payload.entity_type === 'client') {
+            next('/client-dashboard')
+          } else if (payload.entity_type === 'service_provider') {
+            next('/service-provider-dashboard')
+          } else {
+            next('/')
+          }
+          return
+        }
+
+        // Additional check for service provider users: ensure this is not an XS job
+        if (payload.entity_type === 'service_provider') {
+          // Try to access the service provider job API with a query parameter
+          // If it fails (which it will for XS jobs due to our filtering), redirect to dashboard
+          const spJobCheck = await apiFetch(`/backend/api/service-provider-jobs.php?archive_status=active&job_id=${jobId}`)
+
+          if (!spJobCheck.ok) {
+            // Service provider cannot access this job - likely XS job
+            // Redirect to service provider dashboard
+            next('/service-provider-dashboard')
+            return
+          }
+        }
+
+        // If all checks pass, allow access
+        next()
+      } catch (error) {
+        console.error('Error in EditJob route guard:', error)
+        // On error, redirect to appropriate dashboard
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+          if (payload.entity_type === 'client') {
+            next('/client-dashboard')
+          } else if (payload.entity_type === 'service_provider') {
+            next('/service-provider-dashboard')
+          } else {
+            next('/')
+          }
+        } catch {
+          next('/')
+        }
+      }
+    }
   }
 ]
 

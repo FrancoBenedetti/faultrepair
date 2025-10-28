@@ -285,6 +285,17 @@ try {
                 exit;
             }
 
+            // Get current job status to validate state transitions
+            $stmt = $pdo->prepare("SELECT job_status FROM jobs WHERE id = ?");
+            $stmt->execute([$quote['job_id']]);
+            $current_job = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$current_job || $current_job['job_status'] !== 'Quote Provided') {
+                http_response_code(400);
+                echo json_encode(['error' => 'Quote operations can only be performed when job is in "Quote Provided" status']);
+                exit;
+            }
+
             $pdo->beginTransaction();
 
             try {
@@ -345,7 +356,21 @@ try {
                     ");
                     $stmt->execute([$quote_id, $history_action, $user_id, $notes]);
 
-                    if ($action === 'request') {
+                    if ($action === 'reject') {
+                        // For quote rejection, change job status to 'Rejected' (terminal state)
+                        $stmt = $pdo->prepare("
+                            UPDATE jobs SET job_status = 'Rejected', quotation_deadline = NULL, updated_at = NOW()
+                            WHERE id = ?
+                        ");
+                        $stmt->execute([$quote['job_id']]);
+
+                        // Insert job status history
+                        $stmt = $pdo->prepare("
+                            INSERT INTO job_status_history (job_id, status, changed_by_user_id, changed_at, notes)
+                            VALUES (?, 'Rejected', ?, NOW(), ?)
+                        ");
+                        $stmt->execute([$quote['job_id'], $user_id, "Quote rejected: " . $notes]);
+                    } elseif ($action === 'request') {
                         // For requote request, change job status back to 'Quote Requested'
                         $stmt = $pdo->prepare("
                             UPDATE jobs SET job_status = 'Quote Requested', updated_at = NOW()
@@ -355,10 +380,10 @@ try {
 
                         // Insert job status history
                         $stmt = $pdo->prepare("
-                            INSERT INTO job_status_history (job_id, status, changed_by_user_id, changed_at)
-                            VALUES (?, 'Quote Requested', ?, NOW())
+                            INSERT INTO job_status_history (job_id, status, changed_by_user_id, changed_at, notes)
+                            VALUES (?, 'Quote Requested', ?, NOW(), ?)
                         ");
-                        $stmt->execute([$quote['job_id'], $user_id]);
+                        $stmt->execute([$quote['job_id'], $user_id, "Re-quote requested: " . $notes]);
                     }
                 }
 

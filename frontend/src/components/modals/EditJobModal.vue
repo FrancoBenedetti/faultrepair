@@ -2580,8 +2580,12 @@ export default {
 
 /* ============ RESPONSIVE DESIGN ============ */
 
-/* Mobile: Bottom sheet behavior - phones and small tablets in portrait */
-@media (max-width: 768px) {
+/* Mobile: Bottom sheet behavior - touch devices and small screens */
+@media (max-width: 768px),
+       (hover: none) and (pointer: coarse),
+       (max-height: 600px) and (orientation: portrait),
+       (max-device-width: 480px),
+       (orientation: portrait) and (max-aspect-ratio: 4/3) {
   .edit-job-modal {
     padding: 0; /* No padding for full screen bottom sheet */
   }

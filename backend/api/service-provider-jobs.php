@@ -124,6 +124,7 @@ try {
     error_log("service-provider-jobs.php - WHERE clause: $where_clause, params: " . json_encode($params));
 
         // Get filtered jobs assigned to this service provider
+        // CRITICAL: Exclude XS (external) providers from SP dashboard access
         $stmt = $pdo->prepare("
             SELECT
                 j.id,
@@ -159,7 +160,9 @@ try {
             LEFT JOIN locations l ON j.client_location_id = l.id
             LEFT JOIN users u ON j.reporting_user_id = u.userId
             LEFT JOIN users tu ON j.assigned_technician_user_id = tu.userId
+            LEFT JOIN participant_type pt ON j.assigned_provider_participant_id = pt.participantId
             WHERE {$where_clause}
+            AND (pt.participantType IS NOT NULL AND pt.participantType != 'XS')
             ORDER BY j.created_at DESC
         ");
 
@@ -194,12 +197,18 @@ try {
 
     $job_id = (int)$input['job_id'];
 
-    // Verify job belongs to this service provider
-    $stmt = $pdo->prepare("SELECT j.id FROM jobs j WHERE j.id = ? AND j.assigned_provider_participant_id = ?");
+    // Verify job belongs to this service provider AND is not an XS (external) provider job
+    $stmt = $pdo->prepare("
+        SELECT j.id FROM jobs j
+        LEFT JOIN participant_type pt ON j.assigned_provider_participant_id = pt.participantId
+        WHERE j.id = ?
+        AND j.assigned_provider_participant_id = ?
+        AND (pt.participantType != 'XS' OR pt.participantType IS NULL)
+    ");
     $stmt->execute([$job_id, $entity_id]);
     if (!$stmt->fetch()) {
         http_response_code(403);
-        echo json_encode(['error' => 'Access denied. Job not found or does not belong to your service provider.']);
+        echo json_encode(['error' => 'Access denied. Job not found, does not belong to your service provider, or is not accessible.']);
         exit;
     }
 

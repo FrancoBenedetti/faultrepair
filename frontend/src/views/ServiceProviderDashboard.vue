@@ -2964,9 +2964,9 @@ getCurrentUserName() {
       return icons[category] || icons['Other'];
     },
 
-    // Edit Job Modal Methods
+    // Edit Job Page Navigation Methods
     handleEditJob(job) {
-      console.log('Opening EditJobModal for job:', job)
+      console.log('Navigating to EditJob page for job:', job)
 
       // For Quote Requested jobs, open the quote editing modal instead
       if (job.job_status === 'Quote Requested') {
@@ -2998,8 +2998,15 @@ getCurrentUserName() {
         return
       }
 
-      // For all other jobs, open the regular edit modal
-      this.editingJobForModal = job
+      // For all other jobs, navigate to the dedicated edit job page with scroll position context
+      const scrollPosition = window.pageYOffset || 0
+      this.$router.push({
+        path: `/jobs/${job.id}/edit`,
+        query: {
+          from: 'service-provider',
+          scroll: scrollPosition.toString()
+        }
+      })
     },
 
     async handleJobUpdated() {
