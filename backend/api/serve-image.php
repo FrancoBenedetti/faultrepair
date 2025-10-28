@@ -58,11 +58,10 @@ if (!$job_id) {
 
 // Verify that the job belongs to this entity (client or service provider)
 if ($entity_type === 'client') {
-    // Client: verify job belongs to their organization
+    // Client: verify job belongs to their organization using client_id field
     $stmt = $pdo->prepare("
         SELECT j.id FROM jobs j
-        JOIN locations l ON j.client_location_id = l.id
-        WHERE j.id = ? AND l.participant_id = ?
+        WHERE j.id = ? AND j.client_id = ?
     ");
     $stmt->execute([$job_id, $entity_id]);
     $job = $stmt->fetch(PDO::FETCH_ASSOC);

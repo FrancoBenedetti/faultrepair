@@ -64,7 +64,7 @@
     </div>
 
     <!-- Image preview grid -->
-    <div v-if="images.length > 0" class="image-preview-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
+    <div v-if="images.length > 0" class="image-preview-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
       <div
         v-for="(image, index) in images"
         :key="index"

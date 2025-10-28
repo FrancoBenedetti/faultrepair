@@ -647,7 +647,7 @@
               <!-- Image Upload Area -->
               <div class="image-upload-area">
                 <ImageUpload
-                  ref="imageUpload"
+                  ref="imageUploadXS"
                   :max-images="10"
                   :max-file-size="10 * 1024 * 1024"
                   :existing-images="existingImages"
@@ -1321,8 +1321,19 @@ export default {
       this.error = null;
 
       try {
+        // Determine which ImageUpload component to use
+        let imageUploadRef = null;
+        if (this.$refs.imageUpload) {
+          imageUploadRef = this.$refs.imageUpload;
+        } else if (this.$refs.imageUploadXS) {
+          imageUploadRef = this.$refs.imageUploadXS;
+        } else {
+          console.warn('EditJobModal: No ImageUpload component found');
+          return;
+        }
+
         console.log('EditJobModal: Calling uploadImages on ImageUpload component');
-        const result = await this.$refs.imageUpload.uploadImages(this.job.id);
+        const result = await imageUploadRef.uploadImages(this.job.id);
 
         console.log('EditJobModal: uploadImages result:', result);
 
@@ -1357,17 +1368,31 @@ export default {
 
         if (this.hasImageChanges) {
           console.log('EditJobModal: Uploading images first before state transition');
-          const imageResult = await this.$refs.imageUpload.uploadImages(this.job.id);
-
-          console.log('EditJobModal: Image upload result:', imageResult);
-
-          if (!imageResult || !imageResult.success) {
-            imageUploadSuccessful = false;
-            imageUploadMessage = imageResult?.error || 'Failed to upload images';
-            console.error('EditJobModal: Image upload failed:', imageUploadMessage);
+          // Determine which ImageUpload component to use
+          let imageUploadRef = null;
+          if (this.$refs.imageUpload) {
+            imageUploadRef = this.$refs.imageUpload;
+          } else if (this.$refs.imageUploadXS) {
+            imageUploadRef = this.$refs.imageUploadXS;
           } else {
-            imageUploadMessage = imageResult.message;
-            console.log('EditJobModal: Images uploaded successfully');
+            console.warn('EditJobModal: No ImageUpload component found');
+            imageUploadSuccessful = false;
+            imageUploadMessage = 'No image upload component available';
+          }
+
+          if (imageUploadRef) {
+            const imageResult = await imageUploadRef.uploadImages(this.job.id);
+
+            console.log('EditJobModal: Image upload result:', imageResult);
+
+            if (!imageResult || !imageResult.success) {
+              imageUploadSuccessful = false;
+              imageUploadMessage = imageResult?.error || 'Failed to upload images';
+              console.error('EditJobModal: Image upload failed:', imageUploadMessage);
+            } else {
+              imageUploadMessage = imageResult.message;
+              console.log('EditJobModal: Images uploaded successfully');
+            }
           }
         } else {
           console.log('EditJobModal: No images to upload, proceeding with state transition only');
@@ -1757,6 +1782,7 @@ export default {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 1rem; /* Safe area padding on mobile */
 }
 
 .modal-overlay {
@@ -2545,5 +2571,242 @@ export default {
   color: #6c757d;
   font-size: 0.95em;
   margin: 0 0 16px 0;
+}
+
+/* ============ RESPONSIVE DESIGN ============ */
+
+/* Mobile First - Base styles are mobile optimized */
+
+/* Small phones (320px - 480px) */
+@media (max-width: 480px) {
+  .edit-job-modal {
+    padding: 0.5rem;
+  }
+
+  .modal-content {
+    width: 95%;
+    max-width: none;
+    max-height: 95vh;
+    border-radius: 8px;
+  }
+
+  .modal-header {
+    padding: 16px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .modal-title {
+    font-size: 1.25em;
+    line-height: 1.3;
+  }
+
+  .title-container {
+    width: 100%;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .job-origin-area {
+    padding: 12px;
+  }
+
+  .origin-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .job-section {
+    margin-bottom: 16px;
+  }
+
+  .section-header {
+    padding: 12px 16px;
+  }
+
+  .section-content {
+    padding: 16px;
+  }
+
+  .form-grid {
+    gap: 12px;
+  }
+
+  .form-group {
+    margin-bottom: 12px;
+  }
+
+  .section-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .section-actions [class*="btn"] {
+    width: 100%;
+    min-height: 44px; /* Touch target size */
+  }
+
+  .radio-options-container {
+    padding: 12px;
+  }
+
+  .radio-option {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .transition-form {
+    padding: 12px;
+  }
+
+  .assignment-explanation {
+    padding: 12px;
+  }
+
+  .transition-buttons-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .transition-action-btn {
+    padding: 16px 12px;
+    min-height: 48px;
+    font-size: 15px;
+  }
+
+  .btn-icon {
+    font-size: 20px;
+  }
+
+  /* XS Provider mode adjustments */
+  .xs-transition-section {
+    padding: 12px;
+  }
+
+  .modal-footer {
+    padding: 16px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .modal-footer .btn-secondary {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  /* Image upload adjustments */
+  .image-upload-area {
+    margin-top: 16px;
+    padding-top: 12px;
+  }
+}
+
+/* Tablets (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .edit-job-modal {
+    padding: 1rem;
+  }
+
+  .modal-content {
+    width: 92%;
+    max-width: 700px;
+    max-height: 90vh;
+  }
+
+  .modal-header {
+    padding: 18px;
+  }
+
+  .modal-body {
+    padding: 18px;
+  }
+
+  .section-actions {
+    gap: 10px;
+  }
+
+  .section-actions [class*="btn"] {
+    min-height: 42px;
+  }
+
+  .transition-buttons-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .modal-footer {
+    padding: 20px;
+  }
+}
+
+/* Small desktops (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .modal-content {
+    max-width: 720px;
+  }
+
+  .section-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .transition-buttons-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+}
+
+/* Large screens (1025px+) */
+@media (min-width: 1025px) {
+  .modal-content {
+    max-width: 800px;
+  }
+
+  .modal-header {
+    padding: 24px;
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .modal-body {
+    padding: 24px;
+  }
+
+  .section-content {
+    padding: 24px;
+  }
+
+  .section-actions {
+    gap: 16px;
+    margin-top: 32px;
+    padding-top: 20px;
+  }
+
+  .transition-buttons-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .modal-footer {
+    padding: 24px;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .modal-content {
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Print styles */
+@media print {
+  .edit-job-modal {
+    display: none;
+  }
 }
 </style>

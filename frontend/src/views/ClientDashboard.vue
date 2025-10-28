@@ -1072,6 +1072,12 @@ export default {
       }
     },
 
+    handleEditJob(job) {
+      // Set the job being edited and open edit modal
+      this.editingJob = job
+      this.showEditJobModal = true
+    },
+
     handleViewProviderJobs(provider) {
       // Open provider details modal
       this.selectedProvider = provider
@@ -1086,6 +1092,7 @@ export default {
       if (!job.images) {
         try {
           const response = await apiFetch(`/backend/api/job-images.php?job_id=${job.id}`)
+
           if (response.ok) {
             const data = await response.json()
             this.selectedJob.images = data.images || []
@@ -1094,69 +1101,6 @@ export default {
           console.error('Failed to load job images:', error)
           this.selectedJob.images = []
         }
-      }
-    },
-
-    async handleEditJob(job) {
-      console.log('ClientDashboard: handleEditJob called with job:', job.id, 'status:', job.job_status, 'userRole:', this.userRole, 'isAdmin:', this.isAdmin)
-
-      // IMPORTANT FIX: Get the latest job data from the jobs array to ensure we have the most recent version
-      // This is critical for cases where jobs were just updated
-      const latestJob = this.jobs.find(j => j.id === job.id) || job
-
-      console.log('ClientDashboard: Latest job data - fault_description:', latestJob.fault_description)
-      console.log('ClientDashboard: Original job data - fault_description:', job.fault_description)
-
-      // Set basic job data immediately using the latest data
-      this.editingJob = { ...latestJob }
-      this.originalJobStatus = latestJob.job_status
-      this.originalProviderId = latestJob.assigned_provider_id
-
-      console.log('ClientDashboard: Basic job data set for editingJob.fault_description:', this.editingJob.fault_description)
-
-      // Show the modal immediately to give user feedback
-      this.showEditJobModal = true
-
-      console.log('ClientDashboard: Modal shown immediately, now loading additional data...')
-
-      // Load job images in background
-      if (!job.images) {
-        try {
-          console.log('ClientDashboard: Loading job images...')
-          const response = await apiFetch(`/backend/api/job-images.php?job_id=${job.id}`)
-          if (response.ok) {
-            const data = await response.json()
-            this.editingJob.images = data.images || []
-            console.log('ClientDashboard: Images loaded successfully:', this.editingJob.images.length)
-          } else {
-            this.editingJob.images = []
-            console.log('ClientDashboard: Failed to load images, using empty array')
-          }
-        } catch (error) {
-          console.error('ClientDashboard: Error loading job images:', error)
-          this.editingJob.images = []
-        }
-      } else {
-        this.editingJob.images = job.images
-        console.log('ClientDashboard: Using existing images:', this.editingJob.images.length)
-      }
-
-      // Refresh approved providers list in background
-      try {
-        console.log('ClientDashboard: Loading approved providers...')
-        await this.loadApprovedProviders()
-        console.log('ClientDashboard: Providers loaded, checking assigned provider...')
-
-        // Ensure the current assigned provider is still approved
-        const isProviderStillApproved = this.approvedProviders.some(provider => provider.id == this.editingJob.assigned_provider_id)
-        if (this.editingJob.assigned_provider_id && !isProviderStillApproved) {
-          console.log('ClientDashboard: Assigned provider no longer approved, clearing...')
-          this.editingJob.assigned_provider_id = null
-        }
-
-        console.log('ClientDashboard: Edit modal setup complete!')
-      } catch (error) {
-        console.error('ClientDashboard: Error loading providers:', error)
       }
     },
 
@@ -1450,6 +1394,55 @@ export default {
           console.log('ClientDashboard: No images selected, skipping upload')
         }
 
+        // Upload images if any were selected - handle directly in ClientDashboard
+        if (this.selectedImages.length > 0) {
+          console.log('ClientDashboard: Starting image upload for job', jobId, 'with', this.selectedImages.length, 'images')
+
+          // Add a small delay to allow the job creation to be fully committed before uploading images
+          await new Promise(resolve => setTimeout(resolve, 500))
+
+          try {
+            let successCount = 0
+            const token = localStorage.getItem('token')
+
+            for (let i = 0; i < this.selectedImages.length; i++) {
+              const image = this.selectedImages[i]
+              const formData = new FormData()
+              formData.append('image', image.file)
+              formData.append('job_id', jobId.toString())
+
+              console.log('ClientDashboard: Uploading image', i + 1, 'of', this.selectedImages.length, 'for job', jobId)
+
+              const response = await fetch(`/backend/api/upload-job-image.php?token=${encodeURIComponent(token)}`, {
+                method: 'POST',
+                body: formData
+              })
+
+              if (response.ok) {
+                successCount++
+                console.log('ClientDashboard: Image upload successful')
+              } else {
+                const errorData = await response.json()
+                console.error('ClientDashboard: Image upload failed:', errorData)
+              }
+            }
+
+            if (successCount === this.selectedImages.length) {
+              console.log('ClientDashboard: All image uploads successful')
+              alert('Service request submitted successfully!')
+            } else {
+              console.log('ClientDashboard: Some uploads failed:', successCount, 'of', this.selectedImages.length, 'successful')
+              alert(`Service request submitted successfully! However, ${this.selectedImages.length - successCount} of ${this.selectedImages.length} images failed to upload. You can try uploading them again by editing the job.`)
+            }
+          } catch (imageError) {
+            console.error('ClientDashboard: Image upload failed:', imageError)
+            // Show a warning but don't fail the job creation
+            alert('Service request submitted successfully, but image upload failed. You can try uploading images again by editing the job.')
+          }
+        } else {
+          console.log('ClientDashboard: No images selected, skipping upload')
+        }
+
           alert('Service request submitted successfully!')
           this.showCreateJobModal = false
           this.resetNewJobForm()
@@ -1464,10 +1457,6 @@ export default {
         this.creatingJob = false
       }
     },
-
-
-
-
 
     handleImagesChanged(images) {
       this.selectedImages = images
