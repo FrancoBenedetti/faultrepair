@@ -2587,24 +2587,48 @@ export default {
        (max-device-width: 480px),
        (orientation: portrait) and (max-aspect-ratio: 4/3) {
   .edit-job-modal {
-    padding: 0; /* No padding for full screen bottom sheet */
+    padding: 0;
   }
 
+  /* Override desktop modal styles - force full screen on mobile */
   .modal-content {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    top: auto; /* Override base top:0 */
-    width: 100%;
-    max-width: 100%;
-    max-height: 90vh;
-    border-radius: 16px 16px 0 0;
-    transform: translateY(100%);
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important; /* Full viewport width */
+    height: 100vh !important; /* Full viewport height */
+    max-width: none !important; /* Remove any max-width constraints */
+    max-height: none !important; /* Remove any max-height constraints */
+    border-radius: 0 !important; /* Remove border radius for full screen */
+    transform: translateY(100%) !important;
+    padding: 0 !important; /* Remove internal padding */
+    margin: 0 !important; /* Remove any margins */
+  }
+
+  .modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
   }
 
   .modal-content.open {
-    transform: translateY(0);
+    transform: translateY(0) !important;
+  }
+
+  /* Ensure modal-body fills available space properly */
+  .modal-body {
+    min-height: calc(100vh - 140px) !important;
+    max-height: calc(100vh - 140px) !important;
+    height: auto !important; /* Let content determine height */
+    overflow-y: auto !important;
+    padding: 16px !important;
+    /* Prevent horizontal overflow */
+    box-sizing: border-box;
+    word-wrap: break-word;
   }
 
   /* Center the title on mobile */

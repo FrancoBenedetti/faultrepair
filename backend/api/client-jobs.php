@@ -306,10 +306,22 @@ try {
             SELECT
                 j.reporting_user_id,
                 j.job_status,
+                j.assigned_provider_participant_id,
                 pt.participantType as provider_type
             FROM jobs j
             LEFT JOIN participants p ON j.assigned_provider_participant_id = p.participantId
-            LEFT JOIN participant_type pt ON pt.participantId = p.participantId AND pt.participantType = 'XS'
+            LEFT JOIN participant_type pt ON pt.participantId = p.participantId
+            WHERE j.id = ? AND pt.participantType = 'XS'
+        ");
+        $stmt->execute([$job_id]);
+        $jobData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $isXSProvider = ($jobData !== false);
+
+        // Get full job details for validation
+        $stmt = $pdo->prepare("
+            SELECT j.reporting_user_id, j.job_status
+            FROM jobs j
             WHERE j.id = ?
         ");
         $stmt->execute([$job_id]);
@@ -321,40 +333,37 @@ try {
             exit;
         }
 
-        // Check if this job is assigned to an XS (External Service Provider)
-        $isXSProvider = ($job['provider_type'] === 'XS');
+        // Initialize job status validator
+        $validator = new JobStatusValidator($pdo);
 
         // Check if this is an archiving operation - allow for role 2 users on any job status
         $isArchivingAction = isset($input['archived_by_client']);
-        // Only count direct status changes, not field updates that might set job_status as a side effect
-        $isDirectStatusChangeAction = isset($input['job_status']) && !isset($input['assigned_provider_id']) && !isset($input['assigned_technician_user_id']);
 
         if ($isArchivingAction) {
-            // Archive/Unarchive permission: only role 2 (budget controllers) allowed, any job status
+            // Archive/Unarchive permission: only role 2 (budget controllers) allowed
             if ($role_id !== 2) {
                 http_response_code(403);
                 echo json_encode(['error' => 'Access denied. Only budget controllers can archive jobs.']);
                 exit;
             }
         } else {
-            // Regular edit permissions for other operations
+            // Check role-based editing permissions according to workflow rules
             $canEdit = false;
 
-            // Reporting employees can edit their own jobs when status is 'Reported'
-            if ($role_id === 1 && $job['reporting_user_id'] === $user_id && $job['job_status'] === 'Reported') {
+            // **For XS Jobs (External Service Providers):**
+            // Role 2 (Client Admin) has complete control over XS jobs in ANY status
+            if ($isXSProvider && $role_id === 2) {
                 $canEdit = true;
             }
-
-            // Budget controllers have expanded permissions:
-            // - Can edit when status is 'Reported', 'Declined', 'Quote Requested', or 'Completed' (existing rule)
-            // - Can also edit ALL fields and change ANY status when provider is XS (external)
-            if ($role_id === 2) {
-                // Role 2 can always edit XS provider jobs in any status
-                if ($isXSProvider) {
-                    $canEdit = true;
-                }
-                // Role 2 has normal editing permissions for non-XS jobs
-                elseif (in_array($job['job_status'], ['Reported', 'Declined', 'Quote Requested', 'Completed'])) {
+            // **For Regular Jobs:**
+            // Role 1 (Reporting Employee) can edit their own jobs only when status is 'Reported'
+            elseif ($role_id === 1 && $job['reporting_user_id'] === $user_id && $job['job_status'] === 'Reported') {
+                $canEdit = true;
+            }
+            // Role 2 (Client Admin) has expanded permissions for regular jobs
+            elseif ($role_id === 2 && !$isXSProvider) {
+                // Can edit in 'Reported', 'Declined', 'Quote Requested', or 'Completed' states
+                if (in_array($job['job_status'], ['Reported', 'Declined', 'Quote Requested', 'Completed'])) {
                     $canEdit = true;
                 }
             }
