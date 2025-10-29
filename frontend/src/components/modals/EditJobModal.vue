@@ -535,6 +535,216 @@
 
           </div>
 
+          <!-- Platform Provider Service Workflow (for roles 3 & 4 on non-XS jobs) -->
+          <div v-if="(userRole === 3 || userRole === 4) && job?.assigned_provider_participant_id && !availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="service-provider-transition-section">
+            <h4 class="transition-section-title">Available Actions</h4>
+            <p class="transition-section-desc">{{ getServiceProviderTransitionDescription() }}</p>
+
+            <div class="transition-buttons-grid">
+              <!-- Role 3 (Admin) - Assigned Jobs -->
+              <button
+                v-if="userRole === 3 && job.job_status === 'Assigned'"
+                @click="initiateSPTransition('Declined')"
+                class="transition-action-btn status-declined-sp"
+                :disabled="saving"
+              >
+                <span class="btn-icon">✋</span>
+                Decline Job
+              </button>
+
+              <button
+                v-if="userRole === 3 && job.job_status === 'Assigned'"
+                @click="showTechnicianAssignment = true"
+                class="transition-action-btn status-in-progress-sp"
+                :disabled="saving"
+              >
+                <span class="btn-icon">▶️</span>
+                Start Work
+              </button>
+
+              <!-- Role 3 & 4 (In Progress Jobs) -->
+              <button
+                v-if="(userRole === 3 || userRole === 4) && job.job_status === 'In Progress'"
+                @click="initiateSPTransition('Completed')"
+                class="transition-action-btn status-completed-sp"
+                :disabled="saving"
+              >
+                <span class="btn-icon">✅</span>
+                Mark Completed
+              </button>
+
+              <button
+                v-if="(userRole === 3 || userRole === 4) && job.job_status === 'In Progress'"
+                @click="initiateSPTransition('Cannot repair')"
+                class="transition-action-btn status-cannot-repair-sp"
+                :disabled="saving"
+              >
+                <span class="btn-icon">❌</span>
+                Cannot Repair
+              </button>
+            </div>
+
+            <!-- Technician Assignment Overlay for "Start Work" action -->
+            <div v-if="showTechnicianAssignment" class="sp-technician-assignment-overlay">
+              <div class="sp-tech-form">
+                <h4 class="form-title">Start Work on Job</h4>
+                <p class="form-description">Select a technician and provide instructions to begin work on this job.</p>
+
+                <div class="form-grid">
+                  <!-- Technician Selection -->
+                  <div class="form-group">
+                    <label for="sp-tech-select" class="form-label">
+                      <span class="material-icon field-icon">person</span>
+                      Assign Technician *
+                    </label>
+                    <select
+                      id="sp-tech-select"
+                      v-model="selectedTechnicianId"
+                      class="form-input"
+                    >
+                      <option value="">-- Select Technician --</option>
+                      <option v-for="tech in technicians" :key="tech.id" :value="tech.id">
+                        {{ tech.full_name || tech.username }}
+                      </option>
+                    </select>
+                    <p class="form-help">A technician must be assigned to start work on this job.</p>
+                  </div>
+
+                  <!-- Technician Instructions -->
+                  <div class="form-group full-width">
+                    <label for="sp-tech-notes" class="form-label">
+                      <span class="material-icon field-icon">assignment</span>
+                      Technician Instructions
+                    </label>
+                    <textarea
+                      id="sp-tech-notes"
+                      v-model="technicianNotes"
+                      class="form-textarea"
+                      rows="4"
+                      placeholder="Provide detailed instructions for the technician working on this job..."
+                    ></textarea>
+                    <p class="form-help">Optionally provide specific instructions for the assigned technician.</p>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="form-actions">
+                  <button
+                    @click="startWorkOnJob"
+                    :disabled="!selectedTechnicianId || saving"
+                    class="btn-primary btn-start-work"
+                  >
+                    <span class="material-icon-sm">play_arrow</span>
+                    {{ saving ? 'Starting Work...' : 'Start Work' }}
+                  </button>
+                  <button
+                    @click="showTechnicianAssignment = false"
+                    :disabled="saving"
+                    class="btn-secondary btn-cancel"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Transition Notes Forms -->
+            <div v-if="pendingSPTransition" class="sp-transition-notes-form">
+              <h4 class="form-title transition-confirmation-title">
+                Confirm "{{ pendingSPTransition }}" Action
+              </h4>
+              <div v-if="pendingSPTransition === 'Declined'" class="transition-confirmation">
+                <div class="transition-message declined-message">
+                  <span class="material-icon status-icon">warning</span>
+                  <div class="message-content">
+                    <strong>Declining this job</strong> will terminate the service request. This action cannot be undone and the job will be returned to the client status.
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="decline-reason" class="form-label">
+                    <span class="material-icon field-icon">comment</span>
+                    Reason for Decline *
+                  </label>
+                  <textarea
+                    id="decline-reason"
+                    v-model="spTransitionNotes"
+                    class="form-textarea"
+                    rows="3"
+                    placeholder="Please explain why this job is being declined..."
+                    required
+                  ></textarea>
+                  <p class="form-help">This reason will be documented and sent to the client.</p>
+                </div>
+              </div>
+
+              <div v-if="pendingSPTransition === 'Completed'" class="transition-confirmation">
+                <div class="transition-message completed-message">
+                  <span class="material-icon status-icon">check_circle</span>
+                  <div class="message-content">
+                    <strong>Marking as completed</strong> will notify the client that work has finished and allow them to confirm receipt.
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="completion-notes" class="form-label">
+                    <span class="material-icon field-icon">note</span>
+                    Completion Notes
+                  </label>
+                  <textarea
+                    id="completion-notes"
+                    v-model="spTransitionNotes"
+                    class="form-textarea"
+                    rows="3"
+                    placeholder="Optional: Add any completion details or notes..."
+                  ></textarea>
+                  <p class="form-help">Optional notes about the completed work.</p>
+                </div>
+              </div>
+
+              <div v-if="pendingSPTransition === 'Cannot repair'" class="transition-confirmation">
+                <div class="transition-message cannot-repair-message">
+                  <span class="material-icon status-icon">build</span>
+                  <div class="message-content">
+                    <strong>Marking as "cannot repair"</strong> will notify the client that this item cannot be repaired and allow them to confirm receipt or reassignment.
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="cannot-repair-reason" class="form-label">
+                    <span class="material-icon field-icon">comment</span>
+                    Explanation *
+                  </label>
+                  <textarea
+                    id="cannot-repair-reason"
+                    v-model="spTransitionNotes"
+                    class="form-textarea"
+                    rows="3"
+                    placeholder="Please explain why this item cannot be repaired..."
+                    required
+                  ></textarea>
+                  <p class="form-help">A detailed explanation is required for transparency with the client.</p>
+                </div>
+              </div>
+
+              <!-- Confirmation Action Buttons -->
+              <div class="form-actions">
+                <button
+                  @click="confirmSPTransition"
+                  :disabled="(pendingSPTransition !== 'Completed' && !spTransitionNotes.trim()) || saving"
+                  class="btn-primary btn-confirm-transition"
+                >
+                  <span class="material-icon-sm">{{ getConfirmationIcon(pendingSPTransition) }}</span>
+                  {{ saving ? 'Updating...' : `Confirm ${pendingSPTransition}` }}
+                </button>
+                <button
+                  @click="cancelSPTransition"
+                  :disabled="saving"
+                  class="btn-secondary btn-cancel"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Editable Job Details (for XS provider jobs in all statuses) -->
           <div v-if="job?.assigned_provider_participant_id && userRole === 2 && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="job-section job-details-section">
             <div class="section-header">
@@ -879,7 +1089,12 @@ export default {
       // Cannot repair reassignment data
       selectedReassignProviderId: '',
       reassignmentNotes: '',
-      showReassignmentForm: false
+      showReassignmentForm: false,
+
+      // Service Provider Workflow Data
+      showTechnicianAssignment: false,
+      pendingSPTransition: null,
+      spTransitionNotes: ''
     }
   },
   watch: {
@@ -1669,6 +1884,136 @@ export default {
         alert(`Failed to reassign provider: ${error.message}`);
       } finally {
         this.saving = false;
+      }
+    },
+
+    // Service Provider Workflow Methods
+    getServiceProviderTransitionDescription() {
+      const status = this.job.job_status;
+      const role = this.userRole;
+
+      if (role === 3 && status === 'Assigned') {
+        return 'You can decline this job assignment or assign a technician to begin work.';
+      } else if ((role === 3 || role === 4) && status === 'In Progress') {
+        return 'Track the progress of this job and move it to completion or mark it as unreparable.';
+      } else {
+        return 'Available actions for this job based on current status and your role.';
+      }
+    },
+
+    initiateSPTransition(status) {
+      if (status === 'Declined' || status === 'Cannot repair') {
+        this.pendingSPTransition = status;
+        this.spTransitionNotes = '';
+      } else {
+        // For Completed, go directly to confirmation
+        this.pendingSPTransition = status;
+        this.spTransitionNotes = '';
+      }
+    },
+
+    cancelSPTransition() {
+      this.pendingSPTransition = null;
+      this.spTransitionNotes = '';
+    },
+
+    getConfirmationIcon(status) {
+      switch (status) {
+        case 'Declined': return 'cancel';
+        case 'Completed': return 'check_circle';
+        case 'Cannot repair': return 'build';
+        default: return 'help';
+      }
+    },
+
+    async startWorkOnJob() {
+      if (!this.selectedTechnicianId) {
+        alert('Please select a technician to begin work on this job.');
+        return;
+      }
+
+      this.saving = true;
+      try {
+        const payload = {
+          job_id: this.job.id,
+          job_status: 'In Progress',
+          assigned_technician_user_id: parseInt(this.selectedTechnicianId),
+          technician_notes: this.technicianNotes || null
+        };
+
+        const response = await apiFetch('/backend/api/service-provider-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to start work on job');
+        }
+
+        const result = await response.json();
+
+        alert(`Work started successfully! Job status changed to "In Progress" and technician ${this.selectedTechnicianId ? 'assigned' : 'not assigned'}.`);
+
+        this.$emit('job-updated', result);
+        this.$emit('close');
+
+      } catch (error) {
+        console.error('Error in startWorkOnJob:', error);
+        alert('Failed to start work: ' + error.message);
+      } finally {
+        this.saving = false;
+        this.showTechnicianAssignment = false;
+      }
+    },
+
+    async confirmSPTransition() {
+      if (!this.pendingSPTransition) return;
+
+      // Validate required fields
+      if ((this.pendingSPTransition === 'Declined' || this.pendingSPTransition === 'Cannot repair') && !this.spTransitionNotes.trim()) {
+        alert(`Please provide ${this.pendingSPTransition === 'Declined' ? 'a reason for declining' : 'an explanation why this cannot be repaired'}.`);
+        return;
+      }
+
+      this.saving = true;
+      try {
+        const payload = {
+          job_id: this.job.id,
+          job_status: this.pendingSPTransition,
+          transition_notes: this.spTransitionNotes.trim() || null
+        };
+
+        const response = await apiFetch('/backend/api/service-provider-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update job status');
+        }
+
+        const result = await response.json();
+
+        const successMessage = this.pendingSPTransition === 'Declined'
+          ? 'Job declined successfully. The client will be notified.'
+          : this.pendingSPTransition === 'Completed'
+          ? 'Job marked as completed successfully. The client can now confirm receipt.'
+          : 'Job marked as "cannot repair" successfully. The client can review and decide next steps.';
+
+        alert(successMessage);
+
+        this.$emit('job-updated', result);
+        this.$emit('close');
+
+      } catch (error) {
+        console.error('Error in confirmSPTransition:', error);
+        alert('Failed to update job: ' + error.message);
+      } finally {
+        this.saving = false;
+        this.pendingSPTransition = null;
+        this.spTransitionNotes = '';
       }
     }
   },
