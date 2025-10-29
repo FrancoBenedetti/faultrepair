@@ -45,6 +45,95 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 try {
     if ($method === 'GET') {
+        // Check if requesting a single job by ID
+        $job_id_filter = isset($_GET['job_id']) ? (int)$_GET['job_id'] : null;
+
+        if ($job_id_filter) {
+            // Single job retrieval
+            $query = "
+                SELECT
+                    j.id,
+                    j.item_identifier,
+                    j.fault_description,
+                    j.technician_notes,
+                    j.job_status,
+                    j.client_location_id,
+                    j.created_at,
+                    j.updated_at,
+                    j.contact_person,
+                    j.reporting_user_id,
+                    j.archived_by_client,
+                    j.current_quotation_id,
+                    j.assigned_provider_participant_id as assigned_provider_participant_id,
+                    CASE
+                        WHEN j.client_location_id IS NULL THEN 'Default'
+                        ELSE l.name
+                    END as location_name,
+                    l.address as location_address,
+                    sp.name as assigned_provider_name,
+                    spt.participantType as assigned_provider_type,
+                    CONCAT(u.first_name, ' ', u.last_name) as reporting_user,
+                    CONCAT(tu.first_name, ' ', tu.last_name) as assigned_technician,
+                    (SELECT COUNT(*) FROM job_images WHERE job_id = j.id) as image_count,
+                    CASE
+                        WHEN j.current_quotation_id IS NOT NULL THEN jq.id
+                        ELSE NULL
+                    END as quotation_id,
+                    CASE
+                        WHEN j.current_quotation_id IS NOT NULL THEN jq.quotation_amount
+                        ELSE NULL
+                    END as quotation_amount,
+                    CASE
+                        WHEN j.current_quotation_id IS NOT NULL THEN jq.status
+                        ELSE NULL
+                    END as quotation_status,
+                    CASE
+                        WHEN j.current_quotation_id IS NOT NULL THEN jq.valid_until
+                        ELSE NULL
+                    END as quotation_valid_until,
+                    CASE
+                        WHEN j.current_quotation_id IS NOT NULL THEN qsp.name
+                        ELSE NULL
+                    END as quotation_provider_name
+                FROM jobs j
+                LEFT JOIN locations l ON j.client_location_id = l.id
+                LEFT JOIN participants sp ON j.assigned_provider_participant_id = sp.participantId
+                LEFT JOIN participant_type spt ON sp.participantId = spt.participantId
+                LEFT JOIN users u ON j.reporting_user_id = u.userId
+                LEFT JOIN users tu ON j.assigned_technician_user_id = tu.userId
+                LEFT JOIN job_quotations jq ON j.current_quotation_id = jq.id
+                LEFT JOIN participants qsp ON jq.provider_participant_id = qsp.participantId
+                WHERE j.id = ? AND j.client_id = ?
+            ";
+
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([$job_id_filter, $entity_id]);
+            $job = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$job) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Job not found or access denied']);
+                exit;
+            }
+
+            // Get job status history for the single job
+            $stmt = $pdo->prepare("
+                SELECT
+                    jsh.status,
+                    jsh.changed_at,
+                    u.username as changed_by
+                FROM job_status_history jsh
+                LEFT JOIN users u ON jsh.changed_by_user_id = u.userId
+                WHERE jsh.job_id = ?
+                ORDER BY jsh.changed_at DESC
+            ");
+            $stmt->execute([$job['id']]);
+            $job['status_history'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['job' => $job]);
+            exit;
+        }
+
         // Get jobs for this client with optional filtering
         $status_filter = isset($_GET['status']) ? $_GET['status'] : null;
         $location_filter = isset($_GET['location_id']) ? (int)$_GET['location_id'] : null;

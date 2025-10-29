@@ -259,11 +259,12 @@ export default {
 
     async loadJob() {
       try {
-        const response = await apiFetch(`/backend/api/${this.from === 'service-provider' ? 'service-provider-jobs.php' : 'client-jobs.php'}?id=${this.jobId}`)
+        const response = await apiFetch(`/backend/api/${this.from === 'service-provider' ? 'service-provider-jobs.php' : 'client-jobs.php'}?job_id=${this.jobId}`)
 
         if (response.ok) {
           const data = await response.json()
-          this.job = data.jobs && data.jobs.length > 0 ? data.jobs[0] : null
+          // Single job retrieval returns 'job' key, not 'jobs' array
+          this.job = data.job || null
           if (!this.job) {
             throw new Error('Job not found')
           }
