@@ -1,105 +1,39 @@
 <template>
-    <div class="client-dashboard max-w-7xl mx-auto px-6 py-8">
-      <!-- Dashboard Header (keeping existing) -->
-      <div class="dashboard-header flex justify-between items-center mb-8 pb-6 border-b border-gray-200">
-        <div class="left">
-          <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ getOrganizationName() }}</h1>
-          <div class="profile-completeness">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="w-20 h-4 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  class="h-full bg-green-500 transition-all duration-300"
-                  :style="{ width: profileCompleteness + '%' }"
-                ></div>
-              </div>
-              <span class="text-xs font-medium text-gray-600">{{ profileCompleteness }}% Complete</span>
-            </div>
-            <p class="text-sm text-gray-600">Complete your profile to unlock all features</p>
-          </div>
-        </div>
-        <div class="right flex items-center gap-4">
-          <button
-            @click="$router.push('/create-invitation')"
-            class="btn-secondary flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            <span class="material-icon-sm">person_add</span>
-            Invite Users
-          </button>
-          <button
-            v-if="isAdmin"
-            @click="handleUpgradeClick"
-            class="btn-primary flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <span class="material-icon-sm">upgrade</span>
-            Upgrade
-          </button>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-600">Role:</span>
-            <span class="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-              {{ roleDisplayNames && roleDisplayNames[userRole] ? roleDisplayNames[userRole] : getFallbackRoleName(userRole) }}
-            </span>
-          </div>
-          <button
-            @click="signOut()"
-            class="btn-secondary flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            <span class="material-icon-sm">logout</span>
-            Sign Out
-          </button>
-        </div>
-      </div>
+    <div class="client-dashboard">
+    <!-- Unified Dashboard Header -->
+    <UnifiedDashboardHeader
+      :org-name="getOrganizationName()"
+      :user-role="userRole"
+      :role-display-names="roleDisplayNames"
+      :profile-completeness="profileCompleteness"
+      dashboard-type="client"
+      :is-admin="isAdmin"
+      :show-upgrade-button="isAdmin"
+      :show-invite-users="isAdmin"
+      :is-primary-disabled="!clientProfile?.is_enabled"
+      @navigate="handleNavigate"
+    />
 
-      <div class="dashboard-content grid gap-8">
-        <!-- User Identity Bar -->
-        <div class="user-identity-bar bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6 shadow-sm">
-          <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-            <div class="user-info flex items-center gap-4">
-              <div class="user-avatar flex-shrink-0">
-                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                  <span class="material-icon text-white">{{ getCurrentUserName().charAt(0).toUpperCase() }}</span>
-                </div>
-              </div>
-              <div class="identity-details">
-                <div class="signed-in-user flex items-center gap-2 mb-1">
-                  <span class="material-icon-sm text-blue-600">person</span>
-                  <span class="text-sm font-medium text-gray-700">Signed in as:</span>
-                  <span class="text-sm font-semibold text-gray-900">{{ getCurrentUserName() }}</span>
-                  <span class="user-role-badge" :class="getRoleBadgeClass(userRole)">
-                    {{ roleDisplayNames && roleDisplayNames[userRole] ? roleDisplayNames[userRole] : getFallbackRoleName(userRole) }}
-                  </span>
-                </div>
-                <div class="organization-info flex items-center gap-2">
-                  <span class="material-icon-sm text-indigo-600">business</span>
-                  <span class="text-sm font-medium text-gray-700">Organization:</span>
-                  <span class="text-sm font-semibold text-gray-900">{{ getOrganizationName() }}</span>
-                </div>
-              </div>
-            </div>
-            <div class="subscription-info flex items-center gap-4">
-              <div class="subscription-badge flex items-center gap-2 px-3 py-1 bg-white border border-gray-300 rounded-full">
-                <span class="material-icon-sm text-green-600">workspace_premium</span>
-                <span class="text-xs font-medium text-gray-700">Free Plan</span>
-              </div>
-              <!-- Upgrade button for admin users only -->
-              <button
-                v-if="isAdmin"
-                @click="handleUpgradeClick"
-                class="upgrade-btn flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm transform hover:scale-105"
-              >
-                <span class="material-icon-sm">upgrade</span>
-                Upgrade to Premium
-              </button>
-            </div>
-          </div>
-        </div>
+    <!-- Collapsible User Identity Section -->
+    <CollapsibleUserIdentity
+      :user-display-name="getCurrentUserName()"
+      :user-role="userRole"
+      :role-display-names="roleDisplayNames"
+      :organization-name="getOrganizationName()"
+      :profile-completeness="profileCompleteness"
+      :can-invite-users="isAdmin"
+      @edit-profile="$emit('edit-profile-modal')"
+      @upgrade="handleUpgradeClick"
+      @navigate="handleNavigate"
+    />
 
-
+      <div class="dashboard-content space-y-6">
         <!-- Administrator Settings Section - Only for budget controllers (role 2) -->
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8" v-if="userRole === 2">
           <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('administrator-settings')" style="cursor: pointer;">
             <div class="section-title flex items-center gap-3">
               <button class="expand-btn" :class="{ expanded: sectionsExpanded['administrator-settings'] }">
-                <span class="material-icon-sm">admin_panel_settings</span>
+                <span class="material-icon-sm">expand_more</span>
               </button>
               <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
                 <span class="material-icon text-purple-600">admin_panel_settings</span>
@@ -435,6 +369,8 @@ import QrScanner from '@/components/QrScanner.vue'
 import { apiFetch, handleTokenExpiration, loadRoleSettings } from '@/utils/api.js'
 
 // New component imports
+import UnifiedDashboardHeader from '@/components/dashboard/UnifiedDashboardHeader.vue'
+import CollapsibleUserIdentity from '@/components/dashboard/CollapsibleUserIdentity.vue'
 import BusinessProfileSection from '@/components/dashboard/BusinessProfileSection.vue'
 import UserManagementSection from '@/components/dashboard/UserManagementSection.vue'
 import ProviderManagementSection from '@/components/dashboard/ProviderManagementSection.vue'
@@ -458,6 +394,8 @@ export default {
     ImageUpload,
     QrScanner,
     // New components
+    UnifiedDashboardHeader,
+    CollapsibleUserIdentity,
     BusinessProfileSection,
     UserManagementSection,
     ProviderManagementSection,
@@ -606,17 +544,6 @@ export default {
     }
 
     // CRITICAL FIX: Explicitly reset all modals on component mount to prevent modal state bleeding
-    console.log('ClientDashboard: Forcing modal reset before mount, previous states:', {
-      showJobDetailsModal: this.showJobDetailsModal,
-      showEditJobModal: this.showEditJobModal,
-      showAddUserModal: this.showAddUserModal,
-      showCreateJobModal: this.showCreateJobModal,
-      showJobConfirmationModal: this.showJobConfirmationModal,
-      showJobRejectionModal: this.showJobRejectionModal,
-      showQuoteResponseModal: this.showQuoteResponseModal,
-      showQuoteRejectionModal: this.showQuoteRejectionModal
-    })
-
     // Force reset all modals to false on every component mount
     this.showJobDetailsModal = false
     this.showEditJobModal = false
@@ -633,19 +560,6 @@ export default {
 
     this.checkUserPermissions()
 
-    // DEBUG: Log modal state after force reset
-    console.log('ClientDashboard: Modal state AFTER force reset:', {
-      showJobDetailsModal: this.showJobDetailsModal,
-      showEditJobModal: this.showEditJobModal,
-      showAddUserModal: this.showAddUserModal,
-      showCreateJobModal: this.showCreateJobModal,
-      showJobConfirmationModal: this.showJobConfirmationModal,
-      showJobRejectionModal: this.showJobRejectionModal,
-      showQuoteResponseModal: this.showQuoteResponseModal,
-      showQuoteRejectionModal: this.showQuoteRejectionModal,
-      confirmationJob: this.confirmationJob ? 'SET' : 'NULL'
-    })
-
     // Load role settings first so they're available for role display
     try {
       const settings = await loadRoleSettings()
@@ -654,12 +568,6 @@ export default {
       console.warn('Failed to load role settings, using defaults:', error)
       this.roleDisplayNames = {}
     }
-
-    // DEBUG: Check immediately after loading that modal state hasn't changed
-    console.log('ClientDashboard: Post-role-settings modal state:', {
-      showJobConfirmationModal: this.showJobConfirmationModal,
-      confirmationJob: this.confirmationJob
-    })
 
     this.loadClientProfile()
     this.loadUsers()
@@ -2044,6 +1952,10 @@ Are you sure you want to proceed?`;
     handleUpgradeClick() {
       // For now, show a simple alert. In a real implementation, this would navigate to a premium upgrade page or modal
       alert('Upgrade to Premium feature coming soon! Contact sales for more information.')
+    },
+
+    handleNavigate(route) {
+      this.$router.push(route)
     },
 
     // Handle XS provider added event
