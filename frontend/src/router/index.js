@@ -125,6 +125,87 @@ const routes = [
     component: ServiceProviderRegistration
   },
   {
+    path: '/jobs/:jobId/quotation/:quoteId',
+    name: 'QuotationDetails',
+    component: () => import('../views/QuotationDetails.vue'),
+    meta: { requiresAuth: true },
+    props: (route) => ({
+      jobId: parseInt(route.params.jobId),
+      quoteId: parseInt(route.params.quoteId),
+      from: route.query.from || 'client',
+      scrollPosition: route.query.scroll || 0
+    }),
+    beforeEnter: async (to, from, next) => {
+      // Check if user is authenticated
+      const token = localStorage.getItem('token')
+      if (!token) {
+        next('/')
+        return
+      }
+
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+        const jobId = to.params.jobId
+        const quoteId = to.params.quoteId
+
+        // Fetch quote to verify access
+        const apiFetch = (await import('../utils/api.js')).apiFetch
+
+        const response = await apiFetch(`/backend/api/job-quotations.php?quote_id=${quoteId}`)
+
+        if (!response.ok) {
+          // Quote not found or no access
+          if (payload.entity_type === 'client') {
+            next('/client-dashboard')
+          } else if (payload.entity_type === 'service_provider') {
+            next('/service-provider-dashboard')
+          } else {
+            next('/')
+          }
+          return
+        }
+
+        // If all checks pass, allow access
+        next()
+      } catch (error) {
+        console.error('Error in QuotationDetails route guard:', error)
+        // On error, redirect to appropriate dashboard
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+          if (payload.entity_type === 'client') {
+            next('/client-dashboard')
+          } else if (payload.entity_type === 'service_provider') {
+            next('/service-provider-dashboard')
+          } else {
+            next('/')
+          }
+        } catch {
+          next('/')
+        }
+      }
+    }
+  },
+  {
+    path: '/client/create-job',
+    name: 'CreateJob',
+    component: () => import('../views/CreateJob.vue'),
+    meta: { requiresAuth: true, userType: 'client' },
+    props: (route) => ({
+      from: 'client',
+      scrollPosition: route.query.scroll || 0
+    })
+  },
+  {
+    path: '/service-provider/create-job',
+    name: 'CreateJobSP',
+    component: () => import('../views/CreateJob.vue'),
+    meta: { requiresAuth: true, userType: 'service_provider' },
+    props: (route) => ({
+      from: 'service-provider',
+      scrollPosition: route.query.scroll || 0
+    })
+  },
+  {
     path: '/jobs/:id/edit',
     name: 'EditJob',
     component: () => import('../views/EditJob.vue'),

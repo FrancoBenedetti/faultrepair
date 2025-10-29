@@ -154,7 +154,7 @@
                class="quote-action-panel mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
             <div class="flex justify-center">
               <button
-                @click.stop="$emit('view-quotation', job)"
+                @click.stop="viewQuotation(job)"
                 class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
               >
                 <span class="material-icon-sm">visibility</span>
@@ -302,6 +302,21 @@ export default {
         minimumFractionDigits: 0,
         maximumFractionDigits: 2
       }).format(amount);
+    },
+
+    viewQuotation(job) {
+      // Navigate to the quotation details page
+      this.$router.push({
+        name: 'QuotationDetails',
+        params: {
+          jobId: job.id,
+          quoteId: job.current_quotation_id
+        },
+        query: {
+          from: 'client',
+          scroll: '0'
+        }
+      })
     }
   }
 }

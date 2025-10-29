@@ -241,7 +241,7 @@
               </h2>
             </div>
             <div class="section-header-actions flex items-center gap-4" @click.stop>
-              <button @click.stop="showCreateJobModal = true" class="btn-filled flex items-center gap-2" :disabled="!clientProfile?.is_enabled">
+              <button @click.stop="$router.push('/client/create-job')" class="btn-filled flex items-center gap-2" :disabled="!clientProfile?.is_enabled">
                 <span class="material-icon-sm">add</span>
                 Service Request
               </button>

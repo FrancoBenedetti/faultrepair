@@ -84,6 +84,54 @@ try {
                 echo json_encode(['error' => 'Access denied. Admin access required.']);
             }
         } elseif ($entity_type === 'client') {
+            // Check if requesting a single quote by ID
+            $quote_id = isset($_GET['quote_id']) ? (int)$_GET['quote_id'] : null;
+
+            if ($quote_id) {
+                // Single quote retrieval
+                $query = "
+                    SELECT
+                        jq.id,
+                        jq.job_id,
+                        jq.quotation_amount,
+                        jq.quotation_description,
+                        jq.quotation_document_url,
+                        jq.valid_until,
+                        jq.status,
+                        jq.submitted_at,
+                        jq.responded_at,
+                        jq.response_notes,
+                        jq.created_at,
+                        j.item_identifier,
+                        j.fault_description,
+                        j.job_status,
+                        j.reporting_user_id,
+                        j.client_location_id,
+                        j.updated_at,
+                        j.contact_person,
+                        COALESCE(l.name, 'Default Location (Client Premises)') as location_name,
+                        sp.name as provider_name
+                    FROM job_quotations jq
+                    JOIN jobs j ON jq.job_id = j.id
+                    JOIN participants sp ON jq.provider_participant_id = sp.participantId
+                    LEFT JOIN locations l ON j.client_location_id = l.id
+                    WHERE jq.id = ? AND j.client_id = ?
+                ";
+
+                $stmt = $pdo->prepare($query);
+                $stmt->execute([$quote_id, $entity_id]);
+                $quote = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$quote) {
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Quote not found or access denied']);
+                    exit;
+                }
+
+                echo json_encode(['quote' => $quote]);
+                exit;
+            }
+
             // Clients can see quotes for their jobs using direct client_id
             $query = "
                 SELECT
