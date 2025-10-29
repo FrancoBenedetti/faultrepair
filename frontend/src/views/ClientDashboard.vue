@@ -124,7 +124,7 @@
                     <span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">{{ clientProfileCompleteness }}% Complete</span>
                   </h3>
                 </div>
-                <button @click.stop="showEditProfileModal = true" class="btn-outlined btn-small flex items-center gap-2">
+                <button @click.stop="$router.push('/client/edit-profile')" class="btn-outlined btn-small flex items-center gap-2">
                   <span class="material-icon-sm">edit</span>
                   Edit Profile
                 </button>

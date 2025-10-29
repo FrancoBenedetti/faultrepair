@@ -206,6 +206,26 @@ const routes = [
     })
   },
   {
+    path: '/client/edit-profile',
+    name: 'EditProfile',
+    component: () => import('../views/EditProfile.vue'),
+    meta: { requiresAuth: true, userType: 'client' },
+    props: (route) => ({
+      userType: 'client',
+      scrollPosition: route.query.scroll || 0
+    })
+  },
+  {
+    path: '/service-provider/edit-profile',
+    name: 'EditProfileSP',
+    component: () => import('../views/EditProfile.vue'),
+    meta: { requiresAuth: true, userType: 'service_provider' },
+    props: (route) => ({
+      userType: 'service_provider',
+      scrollPosition: route.query.scroll || 0
+    })
+  },
+  {
     path: '/jobs/:id/edit',
     name: 'EditJob',
     component: () => import('../views/EditJob.vue'),

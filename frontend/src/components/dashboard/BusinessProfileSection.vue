@@ -131,7 +131,7 @@
     message="Complete your business profile to help service providers understand your organization better."
     icon="business"
   >
-    <button @click="$emit('edit-profile')" class="btn-filled">
+    <button @click="$router.push('/client/edit-profile')" class="btn-filled">
       <span class="material-icon-sm mr-2">edit</span>
       Set Up Profile
     </button>
