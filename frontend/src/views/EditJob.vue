@@ -450,21 +450,19 @@ export default {
       })
     },
 
-    computed: {
-      canEditJobDetails() {
-        if (!this.job) return false
+    canEditJobDetails() {
+      if (!this.job) return false
 
-        if (this.job.job_status === 'Reported') {
-          return true
-        }
-
-        // Role 2 can edit all reported jobs, Role 1 can only edit their own jobs
-        if (this.userRole === 2) {
-          return true
-        }
-
-        return false
+      if (this.job.job_status === 'Reported') {
+        return true
       }
+
+      // Role 2 can edit all reported jobs, Role 1 can only edit their own jobs
+      if (this.userRole === 2) {
+        return true
+      }
+
+      return false
     }
   }
 }

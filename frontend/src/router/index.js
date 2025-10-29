@@ -247,8 +247,17 @@ const routes = [
         const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
         const jobId = to.params.id
 
-        // Fetch basic job information to check provider type
-        const response = await apiFetch(`/backend/api/client-jobs.php?job_id=${jobId}`)
+        // Fetch basic job information to check provider type - use appropriate API based on user type
+        let response;
+        if (payload.entity_type === 'client') {
+          response = await apiFetch(`/backend/api/client-jobs.php?job_id=${jobId}`)
+        } else if (payload.entity_type === 'service_provider') {
+          response = await apiFetch(`/backend/api/service-provider-jobs.php?archive_status=active&job_id=${jobId}`)
+        } else {
+          // For other types, redirect to home
+          next('/')
+          return
+        }
 
         if (!response.ok) {
           // Job not found or no access
@@ -263,8 +272,8 @@ const routes = [
         }
 
         const data = await response.json()
-        if (!data.job) {
-          // No job data returned
+        if (!data.job && !data.jobs) {
+          // No job data returned (different response format for different APIs)
           if (payload.entity_type === 'client') {
             next('/client-dashboard')
           } else if (payload.entity_type === 'service_provider') {
@@ -275,18 +284,20 @@ const routes = [
           return
         }
 
-        // Additional check for service provider users: ensure this is not an XS job
+        // Additional check for service provider users: differentiate between admin (role 3) and technician (role 4)
         if (payload.entity_type === 'service_provider') {
-          // Try to access the service provider job API with a query parameter
-          // If it fails (which it will for XS jobs due to our filtering), redirect to dashboard
-          const spJobCheck = await apiFetch(`/backend/api/service-provider-jobs.php?archive_status=active&job_id=${jobId}`)
+          // Role 3 (service provider admin) should have access to all jobs assigned to their organization
+          if (payload.role_id !== 3) {
+            // Role 4 (technician) can only access jobs assigned specifically to them
+            const spJobCheck = await apiFetch(`/backend/api/service-provider-jobs.php?archive_status=active&job_id=${jobId}`)
 
-          if (!spJobCheck.ok) {
-            // Service provider cannot access this job - likely XS job
-            // Redirect to service provider dashboard
-            next('/service-provider-dashboard')
-            return
+            if (!spJobCheck.ok) {
+              // Service provider cannot access this job - redirect to dashboard
+              next('/service-provider-dashboard')
+              return
+            }
           }
+          // Role 3 bypasses the job access check and can edit any job visible to their organization
         }
 
         // If all checks pass, allow access
