@@ -1,65 +1,23 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <div class="max-w-7xl mx-auto px-6 py-8">
-      <!-- Dashboard Header (matching ClientDashboard) -->
-      <div class="dashboard-header flex justify-between items-center mb-8 pb-6 border-b border-gray-200">
-        <div class="left">
-          <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ getOrganizationName() }} - Service Provider Dashboard</h1>
-          <div class="profile-completeness">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="w-20 h-4 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  class="h-full bg-green-500 transition-all duration-300"
-                  :style="{ width: profileCompleteness + '%' }"
-                ></div>
-              </div>
-              <span class="text-xs font-medium text-gray-600">{{ profileCompleteness }}% Complete</span>
-            </div>
-            <p class="text-sm text-gray-600">Complete your profile to unlock all features</p>
-          </div>
-        </div>
-        <div class="right flex items-center gap-4">
-          <button @click="$router.push('/create-invitation')" class="btn-secondary flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-            <span class="material-icon-sm">person_add</span>
-            Create Invitation
-          </button>
-          <button @click="signOut" class="btn-secondary flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-            <span class="material-icon-sm">logout</span>
-            Sign Out
-          </button>
-        </div>
-      </div>
+      <!-- Unified Dashboard Header -->
+      <UnifiedDashboardHeader
+        :organization-name="getOrganizationName()"
+        :profile-completeness="profileCompleteness"
+        :user-role="userRole"
+        :dashboard-title="'Service Provider Dashboard'"
+        @create-invitation="$router.push('/create-invitation')"
+        @sign-out="signOut"
+      />
 
-      <!-- User Identity Bar (matching ClientDashboard) -->
-      <div class="user-identity-bar bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6 shadow-sm">
-        <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div class="user-info flex items-center gap-4">
-            <div class="user-avatar flex-shrink-0">
-              <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                <span class="material-icon text-white">{{ getCurrentUserName().charAt(0).toUpperCase() }}</span>
-              </div>
-            </div>
-            <div class="identity-details">
-              <div class="signed-in-user flex items-center gap-2 mb-1">
-                <span class="material-icon-sm text-blue-600">person</span>
-                <span class="text-sm font-medium text-gray-700">Signed in as:</span>
-                <span class="text-sm font-semibold text-gray-900">{{ getCurrentUserName() }}</span>
-              </div>
-              <div class="organization-info flex items-center gap-2">
-                <span class="material-icon-sm text-indigo-600">business</span>
-                <span class="text-sm font-medium text-gray-700">Organization:</span>
-                <span class="text-sm font-semibold text-gray-900">{{ getOrganizationName() }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="subscription-info flex items-center gap-4">
-            <div class="subscription-badge flex items-center gap-2 px-3 py-1 bg-white border border-gray-300 rounded-full">
-              <span class="material-icon-sm text-green-600">workspace_premium</span>
-              <span class="text-xs font-medium text-gray-700">Free Plan</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Collapsible User Identity -->
+      <CollapsibleUserIdentity
+        :user-name="getCurrentUserName()"
+        :organization-name="getOrganizationName()"
+        :user-role="userRole"
+        :is-collapsed-default="false"
+      />
 
       <!-- Administrator Settings Section - Role 3 Only -->
       <div v-if="userRole === 3" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
@@ -1745,6 +1703,8 @@ import CollapsibleSection from '@/components/shared/CollapsibleSection.vue'
 import LoadingState from '@/components/shared/LoadingState.vue'
 import StatusBadge from '@/components/shared/StatusBadge.vue'
 import EditJobModal from '@/components/modals/EditJobModal.vue'
+import UnifiedDashboardHeader from '@/components/dashboard/UnifiedDashboardHeader.vue'
+import CollapsibleUserIdentity from '@/components/dashboard/CollapsibleUserIdentity.vue'
 
 export default {
   name: 'ServiceProviderDashboard',
