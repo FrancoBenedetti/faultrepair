@@ -18,11 +18,11 @@ By changing its state, a user moves the job away from themselves and to the next
 
 ## Job Types
 
-### Jobs for subscribed service providers (type A)
+### Jobs for subscribed service providers (type S)
 
 These service providers receive the jobs and interact with the Snappy system using the frontend service provider dashboard. The role changes are as defined by the Status System defined below
 
-### Jobs for non-subscribed service providers (type B)
+### Jobs for non-subscribed service providers (type XS)
 
 These service providers have independent job management using their own system or have a manual system. For these jobs, the state is changed by the Client Role 2 user.
 
@@ -32,6 +32,7 @@ These service providers have independent job management using their own system o
 
 1. Reporter/reporting employee/client user
 2. Client admin/Controller/budget controller
+   * For platform (type S) providers, view only stages are: Assigned, In Progress, Incomplete, Confirmed, Rejected, Quote Requested,  Unable to Quote,  Job Cancelled 
 
 ### Service Provider
 
