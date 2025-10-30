@@ -390,22 +390,33 @@ try {
             exit;
         }
 
-        // Get job details including provider type to check ownership and status
-        $stmt = $pdo->prepare("
-            SELECT
-                j.reporting_user_id,
-                j.job_status,
-                j.assigned_provider_participant_id,
-                pt.participantType as provider_type
-            FROM jobs j
-            LEFT JOIN participants p ON j.assigned_provider_participant_id = p.participantId
-            LEFT JOIN participant_type pt ON pt.participantId = p.participantId
-            WHERE j.id = ? AND pt.participantType = 'XS'
-        ");
-        $stmt->execute([$job_id]);
-        $jobData = $stmt->fetch(PDO::FETCH_ASSOC);
+        // Check if job has an XS (External Service Provider) assigned
+        $isXSProvider = false;
 
-        $isXSProvider = ($jobData !== false);
+        if (isset($input['assigned_provider_id']) && $input['assigned_provider_id']) {
+            // Check if the newly assigned provider is an XS provider
+            $stmt = $pdo->prepare("
+                SELECT pt.participantType as provider_type
+                FROM participants p
+                LEFT JOIN participant_type pt ON pt.participantId = p.participantId
+                WHERE p.participantId = ? AND pt.participantType = 'XS'
+            ");
+            $stmt->execute([$input['assigned_provider_id']]);
+            $providerCheck = $stmt->fetch(PDO::FETCH_ASSOC);
+            $isXSProvider = ($providerCheck !== false);
+        } else {
+            // Check if the currently assigned provider (if any) is XS
+            $stmt = $pdo->prepare("
+                SELECT pt.participantType as provider_type
+                FROM jobs j
+                LEFT JOIN participants p ON j.assigned_provider_participant_id = p.participantId
+                LEFT JOIN participant_type pt ON pt.participantId = p.participantId
+                WHERE j.id = ? AND pt.participantType = 'XS'
+            ");
+            $stmt->execute([$job_id]);
+            $currentProviderCheck = $stmt->fetch(PDO::FETCH_ASSOC);
+            $isXSProvider = ($currentProviderCheck !== false);
+        }
 
         // Get full job details for validation
         $stmt = $pdo->prepare("

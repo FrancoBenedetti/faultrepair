@@ -233,19 +233,88 @@
             </div>
           </div>
 
-          <!-- Assignment Workflow - Only for Reported Jobs That Need Provider Assignment -->
-          <div v-if="job.job_status === 'Reported'" class="job-section assignment-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <!-- Assignment Workflow - Role 2 Users Can Assign Provider & Transition Reported Jobs -->
+          <div v-if="job.job_status === 'Reported' && userRole === 2" class="job-section assignment-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="section-header mb-6">
               <h3 class="section-title text-xl font-semibold text-gray-900 flex items-center gap-3">
                 <span class="material-icon section-icon text-blue-600">assignment_ind</span>
-                Job Assignment
+                Provider Assignment & Job Transition
               </h3>
+              <p class="text-sm text-gray-600 mt-2">Select a service provider and choose how to proceed with this job.</p>
             </div>
 
-            <!-- Assignment Status & Provider Selection Placeholder -->
-            <div class="assignment-placeholder text-center text-gray-500 py-8">
-              <span class="material-icon text-4xl mb-4 block">assignment</span>
-              <p>Provider assignment functionality will be available here when transitioning from the dashboard.</p>
+            <div v-if="!availableProviders || availableProviders.length === 0" class="no-providers-alert mb-6">
+              <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div class="flex items-center">
+                  <span class="material-icon text-yellow-600 mr-2">warning</span>
+                  <div>
+                    <strong class="text-yellow-900">No Approved Providers Available</strong>
+                    <p class="text-yellow-700 text-sm">You need to approve at least one service provider in the "Approved Providers" section before you can transition jobs. No transitions are possible until providers are approved.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="provider-assignment-workflow">
+              <!-- Step 1: Provider Selection (Required for Service/Quote requests) -->
+              <div class="provider-selection-step mb-6">
+                <h4 class="text-lg font-semibold text-gray-900 mb-4">Step 1: Select Service Provider</h4>
+                <div class="form-group">
+                  <select
+                    v-model="selectedProviderForAssignment"
+                    class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    :disabled="saving"
+                  >
+                    <option value="">-- Choose a service provider --</option>
+                    <option v-for="provider in availableProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
+                      {{ provider.name }}
+                      <span v-if="provider.provider_type === 'XS'" class="text-orange-600 ml-2">(External)</span>
+                      <span v-if="provider.address" class="text-gray-500 ml-2">- {{ provider.address }}</span>
+                    </option>
+                  </select>
+                  <p class="text-sm text-gray-600 mt-1">Required for requesting service or quote. Optional for job rejection.</p>
+                </div>
+              </div>
+
+              <!-- Step 2: Transition Options -->
+              <div class="transition-options-step">
+                <h4 class="text-lg font-semibold text-gray-900 mb-4">Step 2: Choose Action</h4>
+
+                <div class="transition-buttons-grid">
+                  <!-- Request Service (Direct Assignment) -->
+                  <button
+                    type="button"
+                    @click="requestService()"
+                    class="transition-action-btn status-service-requested"
+                    :disabled="saving || !selectedProviderForAssignment"
+                  >
+                    <span class="btn-icon">🔧</span>
+                    Request Service<br><small class="text-xs opacity-75">(Direct Assignment)</small>
+                  </button>
+
+                  <!-- Request Quote -->
+                  <button
+                    type="button"
+                    @click="requestQuote()"
+                    class="transition-action-btn status-quote-requested"
+                    :disabled="saving || !selectedProviderForAssignment"
+                  >
+                    <span class="btn-icon">📝</span>
+                    Request Quote<br><small class="text-xs opacity-75">(Quotation Required)</small>
+                  </button>
+
+                  <!-- Reject Job (No provider needed) -->
+                  <button
+                    type="button"
+                    @click="rejectJob()"
+                    class="transition-action-btn status-rejected"
+                    :disabled="saving"
+                  >
+                    <span class="btn-icon">❌</span>
+                    Reject Job<br><small class="text-xs opacity-75">(Terminate Request)</small>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -677,6 +746,7 @@ export default {
 
       // Service Provider Workflow Data
       availableProviders: [],
+      selectedProviderForAssignment: '',
       showTechnicianAssignment: false,
       pendingSPTransition: null,
       selectedTechnicianId: '',
@@ -918,17 +988,24 @@ export default {
     },
 
     async loadAvailableProviders() {
-      // Only load providers for role 2 (clients) - they can reassign providers for "Cannot repair" jobs
+      // Only load providers for role 2 (clients)
       if (this.userRole !== 2) {
         this.availableProviders = []
         return
       }
 
       try {
-        // This endpoint doesn't exist yet, so for now just initialize empty to prevent errors
-        // TODO: Implement provider listing endpoint for reassignment functionality
-        console.log('Provider reassignment feature requires backend endpoint implementation')
-        this.availableProviders = []
+        const response = await apiFetch('/backend/api/client-approved-providers.php')
+
+        if (response.ok) {
+          const data = await response.json()
+          // The endpoint returns 'approved_providers' array
+          this.availableProviders = data.approved_providers || []
+          console.log(`Loaded ${this.availableProviders.length} approved providers`)
+        } else {
+          console.error('Failed to load approved providers:', response.status)
+          this.availableProviders = []
+        }
       } catch (error) {
         console.error('Error loading available providers:', error)
         this.availableProviders = []
@@ -1126,15 +1203,27 @@ export default {
     },
 
     async initiateTransition(targetStatus) {
-      // Validate inputs based on transition type
-      if (targetStatus === 'Rejected' && (!this.transitionNotes || !this.transitionNotes.trim())) {
-        alert('Please provide a reason for rejecting this job.')
+      // Enhanced validation and transition note capture for all state changes
+      const requiresNotes = [
+        'Declined',
+        'Cannot repair',
+        'Rejected'
+      ]
+
+      // Always require transition notes for XS provider jobs
+      if (this.isXSProviderMode && (!this.transitionNotes || !this.transitionNotes.trim())) {
+        alert('Please provide transition notes for external provider system documentation.')
         return
       }
 
-      // For XS provider state transitions, require transition notes
-      if (this.isXSProviderMode && (!this.transitionNotes || !this.transitionNotes.trim())) {
-        alert('Please provide transition notes for external provider system documentation.')
+      // Require notes for certain status changes
+      if (requiresNotes.includes(targetStatus) && (!this.transitionNotes || !this.transitionNotes.trim())) {
+        const noteTypeMap = {
+          'Declined': 'a reason for declining',
+          'Cannot repair': 'an explanation why this cannot be repaired',
+          'Rejected': 'a reason for rejecting'
+        }
+        alert(`Please provide ${noteTypeMap[targetStatus] || 'notes about this'} status change.`)
         return
       }
 
@@ -1142,16 +1231,29 @@ export default {
       this.error = null
 
       try {
+        // Comprehensive payload with transition logging
         const payload = {
           action: targetStatus,
-          note: this.transitionNotes,
-          assigned_provider_id: targetStatus !== 'Rejected' ? parseInt(this.job.assigned_provider_participant_id) : null,
-          transition_notes: this.isXSProviderMode ? this.transitionNotes || '' : undefined
+          transition_notes: this.transitionNotes?.trim() || '',
+          assigned_provider_id: targetStatus !== 'Rejected' ? parseInt(this.job.assigned_provider_participant_id) : null
         }
 
         // Set job status for non-quote transitions
         if (targetStatus !== 'Quote Requested') {
           payload.job_status = targetStatus
+        }
+
+        // Add additional context based on transition type
+        if (targetStatus === 'Declined') {
+          payload.note = 'Job declined by client: ' + (this.transitionNotes?.trim() || 'No reason provided')
+        } else if (targetStatus === 'Cannot repair') {
+          payload.note = 'Marked as irreparable: ' + (this.transitionNotes?.trim() || 'No explanation provided')
+        } else if (targetStatus === 'Completed') {
+          payload.note = 'Job completed: ' + (this.transitionNotes?.trim() || 'Completion details not provided')
+        } else if (targetStatus === 'In Progress') {
+          payload.note = 'Work started on job: ' + (this.transitionNotes?.trim() || 'Started without additional notes')
+        } else {
+          payload.note = this.transitionNotes?.trim() || `Status changed to ${targetStatus}`
         }
 
         const response = await apiFetch('/backend/api/client-jobs.php', {
@@ -1169,10 +1271,162 @@ export default {
 
         const result = await response.json()
         this.$emit('job-updated', result)
+
+        // Success notification with transition details
+        const successMessages = {
+          'Declined': 'Job declined successfully. The service provider will be notified.',
+          'Cannot repair': 'Job marked as irreparable. The service provider can review and decide next steps.',
+          'Completed': 'Job marked as completed. The service provider will be notified.',
+          'In Progress': 'Work started on job. Progress updates will be tracked.',
+          'Confirmed': 'Job confirmed. The service provider can proceed with completion.',
+          'Assigned': 'Job assigned successfully.',
+          'Rejected': 'Job rejected. The service provider will be notified.',
+          'Quote Requested': 'Quote requested. The service provider will provide a quotation.',
+          'Incomplete': 'Job marked as incomplete. Consultation with service provider may be needed.'
+        }
+
+        const successMessage = successMessages[targetStatus] || `Job status updated to ${targetStatus}`
+        alert(successMessage)
+
         this.returnToDashboard()
       } catch (error) {
         this.error = error.message
         alert('Failed to update job: ' + error.message)
+      } finally {
+        this.saving = false
+      }
+    },
+
+    // Provider assignment workflow methods for "Reported" jobs (role 2)
+    async requestService() {
+      // Validate provider selection (required for service request)
+      if (!this.selectedProviderForAssignment) {
+        alert('Please select a service provider before requesting service.')
+        return
+      }
+
+      this.saving = true
+      try {
+        // Prepare payload for service request - this assigns provider and sets status to "Assigned"
+        const payload = {
+          job_id: this.job.id,
+          assigned_provider_id: parseInt(this.selectedProviderForAssignment),
+          job_status: 'Assigned'
+        }
+
+        const response = await apiFetch('/backend/api/client-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to assign provider and request service')
+        }
+
+        const result = await response.json()
+
+        // Find the selected provider's name for success message
+        const selectedProvider = this.availableProviders.find(p => p.service_provider_id == this.selectedProviderForAssignment)
+        const providerName = selectedProvider ? selectedProvider.name : 'Selected Provider'
+
+        alert(`Service successfully requested from ${providerName}! The job is now assigned and ready for the provider to begin work.`)
+
+        this.$emit('job-updated', result)
+        this.returnToDashboard()
+
+      } catch (error) {
+        console.error('Error in requestService:', error)
+        alert('Failed to request service: ' + error.message)
+      } finally {
+        this.saving = false
+      }
+    },
+
+    async requestQuote() {
+      // Validate provider selection (required for quote request)
+      if (!this.selectedProviderForAssignment) {
+        alert('Please select a service provider before requesting a quote.')
+        return
+      }
+
+      this.saving = true
+      try {
+        // Prepare payload for quote request - this assigns provider and sets status to "Quote Requested"
+        const payload = {
+          job_id: this.job.id,
+          assigned_provider_id: parseInt(this.selectedProviderForAssignment),
+          job_status: 'Quote Requested'
+        }
+
+        const response = await apiFetch('/backend/api/client-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to request quote from provider')
+        }
+
+        const result = await response.json()
+
+        // Find the selected provider's name for success message
+        const selectedProvider = this.availableProviders.find(p => p.service_provider_id == this.selectedProviderForAssignment)
+        const providerName = selectedProvider ? selectedProvider.name : 'Selected Provider'
+
+        alert(`Quote requested successfully from ${providerName}! The provider will submit a quotation through the platform for your approval.`)
+
+        this.$emit('job-updated', result)
+        this.returnToDashboard()
+
+      } catch (error) {
+        console.error('Error in requestQuote:', error)
+        alert('Failed to request quote: ' + error.message)
+      } finally {
+        this.saving = false
+      }
+    },
+
+    async rejectJob() {
+      // Provider selection is optional for rejection - can reject without provider
+      this.saving = true
+      try {
+        // Ask for rejection reason before proceeding
+        const rejectionReason = prompt('Please provide a reason for rejecting this job (optional):')
+
+        // Prepare payload for job rejection
+        const payload = {
+          job_id: this.job.id,
+          job_status: 'Rejected'
+        }
+
+        // Add rejection notes if provided
+        if (rejectionReason && rejectionReason.trim()) {
+          payload.transition_notes = rejectionReason.trim()
+          payload.note = 'Job rejected: ' + rejectionReason.trim()
+        }
+
+        const response = await apiFetch('/backend/api/client-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to reject job')
+        }
+
+        const result = await response.json()
+
+        alert('Job has been rejected and is now closed. No further action will be taken.')
+
+        this.$emit('job-updated', result)
+        this.returnToDashboard()
+
+      } catch (error) {
+        console.error('Error in rejectJob:', error)
+        alert('Failed to reject job: ' + error.message)
       } finally {
         this.saving = false
       }
@@ -1406,6 +1660,30 @@ export default {
 
 .status-reassign .btn-icon {
   @apply text-indigo-600;
+}
+
+.status-service-requested {
+  @apply bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 focus:ring-blue-500;
+}
+
+.status-service-requested .btn-icon {
+  @apply text-blue-600;
+}
+
+.status-quote-requested {
+  @apply bg-green-50 text-green-700 border-green-200 hover:bg-green-100 focus:ring-green-500;
+}
+
+.status-quote-requested .btn-icon {
+  @apply text-green-600;
+}
+
+.status-rejected {
+  @apply bg-red-50 text-red-700 border-red-200 hover:bg-red-100 focus:ring-red-500;
+}
+
+.status-rejected .btn-icon {
+  @apply text-red-600;
 }
 
 /* Job Origin Styles */
