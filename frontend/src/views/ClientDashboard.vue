@@ -250,7 +250,7 @@
     />
 
     <JobDetailsModal
-      v-if="showJobDetailsModal"
+      :show="showJobDetailsModal"
       :job="selectedJob"
       @close="showJobDetailsModal = false"
       @image-click="selectedImage = $event"
@@ -1085,8 +1085,23 @@ export default {
         return true
       }
 
-      // Budget controllers can edit when status is 'Reported', 'Declined', or 'Quote Requested'
-      if (this.userRole === 2 && ['Reported', 'Declined', 'Quote Requested'].includes(job.job_status)) {
+      // Budget controllers (Role 2) can edit these specific states:
+      // Content editing + state transitions happen in EditJob.vue
+      const role2EditableStates = [
+        'Reported',         // Early job editing + provider selection
+        'Unable to Quote',  // Can reassign provider
+        'Completed',        // Can confirm/reject completion
+        'Cannot repair',    // Can edit + reassign provider
+        'Declined',         // Can reassign + cancel job
+        'Quote Provided',   // Can respond to quotes
+        'Quote Rejected',   // Can restart quote process + cancel
+        'Quote Expired'     // Can extend deadline + cancel
+      ];
+
+      // XS provider jobs: Role 2 can edit ANY state (for tracking)
+      const isXSProviderJob = job && job.assigned_provider_type === 'XS';
+
+      if (this.userRole === 2 && (role2EditableStates.includes(job.job_status) || isXSProviderJob)) {
         return true
       }
 

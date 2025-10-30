@@ -64,9 +64,12 @@
             </div>
           </div>
           <div class="job-actions flex gap-2">
-            <!-- For admin users (budget controllers), always show edit button -->
-            <button v-if="isAdmin" @click.stop="$emit('edit-job', job)" class="btn-outlined btn-small">
-              <span class="material-icon-sm">{{ canEditJob(job) ? 'edit' : 'visibility' }}</span>
+            <!-- For admin users (budget controllers) - emit correct action based on permissions -->
+            <button v-if="isAdmin && canEditJob(job)" @click.stop="$emit('edit-job', job)" class="btn-outlined btn-small">
+              <span class="material-icon-sm">edit</span>
+            </button>
+            <button v-else-if="isAdmin && !canEditJob(job)" @click.stop="$emit('view-job-details', job)" class="btn-outlined btn-small">
+              <span class="material-icon-sm">visibility</span>
             </button>
             <!-- For regular users, show edit if they can edit, otherwise view -->
             <template v-else>
@@ -124,44 +127,6 @@
             </div>
           </div>
 
-          <!-- Floating Action Panel for Completed Jobs - Client Admin View -->
-          <div v-if="job?.job_status === 'Completed' && isAdmin"
-               class="completion-action-panel mt-4 p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
-            <p class="text-sm font-medium text-green-800 mb-3 flex items-center gap-2">
-              <span class="material-icon text-green-600">check_circle</span>
-              Service provider has marked this job as complete
-            </p>
-            <div class="flex gap-3">
-              <button
-                @click.stop="$emit('confirm-job', job)"
-                class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                <span class="material-icon-sm">check_circle</span>
-                Confirm completion
-              </button>
-              <button
-                @click.stop="$emit('reject-job', job)"
-                class="flex-1 bg-white hover:bg-gray-50 text-red-600 font-medium py-2 px-4 rounded-lg border border-red-200 transition-colors flex items-center justify-center gap-2"
-              >
-                <span class="material-icon-sm">cancel</span>
-                Reject / Return
-              </button>
-            </div>
-          </div>
-
-          <!-- Floating Action Panel for Quote Provided Jobs - Client Admin View -->
-          <div v-if="job?.job_status === 'Quote Provided' && isAdmin"
-               class="quote-action-panel mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-            <div class="flex justify-center">
-              <button
-                @click.stop="viewQuotation(job)"
-                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
-              >
-                <span class="material-icon-sm">visibility</span>
-                View Quotation
-              </button>
-            </div>
-          </div>
 
         </template>
 
@@ -260,9 +225,23 @@ export default {
         return true
       }
 
-      // Budget controllers can edit when status is 'Reported', 'Declined', or 'Quote Requested'
-      // Also XS provider jobs in ANY status
-      if (this.isAdmin && (['Reported', 'Declined', 'Quote Requested'].includes(job.job_status) || this.isXSProviderJob(job))) {
+      // Budget controllers (Role 2) can edit these specific states:
+      // Content editing + state transitions happen in EditJob.vue
+      const role2EditableStates = [
+        'Reported',         // Early job editing + provider selection
+        'Unable to Quote',  // Can reassign provider
+        'Completed',        // Can confirm/reject completion
+        'Cannot repair',    // Can edit + reassign provider
+        'Declined',         // Can reassign + cancel job
+        'Quote Provided',   // Can respond to quotes
+        'Quote Rejected',   // Can restart quote process + cancel
+        'Quote Expired'     // Can extend deadline + cancel
+      ];
+
+      // XS provider jobs: Role 2 can edit ANY state (for tracking)
+      const isXSProviderJob = job && job.assigned_provider_type === 'XS';
+
+      if (this.userRole === 2 && (role2EditableStates.includes(job.job_status) || isXSProviderJob)) {
         return true
       }
 
