@@ -1,6 +1,6 @@
 ## In Progress 🚧
 
-###  [BUG] Quote Management Filters Must Be Fixed
+### [BUG] Quote Management Filters Must Be Fixed
 
 **Discovered:** 2025-10-23
 **Area:** Frontend - Quote Management
@@ -151,8 +151,6 @@ Quotation cards in the Service Provider Dashboard need proper styling applied. C
 - May involve layout, colors, typography, spacing improvements
 - Requires detailed analysis of current styling issues
 
-
-
 ### 🟡 [BUG] Authentication Error Messages Show 'Network Error' Instead of 'Invalid Credentials' - FIXED
 
 **Discovered:** 2025-10-27
@@ -164,6 +162,7 @@ Quotation cards in the Service Provider Dashboard need proper styling applied. C
 When users enter invalid username/password combinations, they see a generic 'Network error. Please check your connection and try again.' message instead of proper authentication feedback indicating invalid credentials.
 
 **Expected Behavior:**
+
 - Invalid credentials should show user-friendly authentication error: 'Invalid credentials. Please check your email and password.'
 - Network/connection issues should show connection-specific error messages
 - Clear distinction between authentication failures and technical issues
@@ -172,15 +171,18 @@ When users enter invalid username/password combinations, they see a generic 'Net
 Frontend apiFetch function incorrectly treats ALL 401 responses as expired token scenarios, throwing 'Authentication failed' error which is caught as network error. Backend correctly returns 401 with {'error': 'Invalid credentials'} for bad login attempts.
 
 **Resolution:**
+
 - **apiFetch Modified**: Added logic to detect login requests (`/auth.php` endpoint) and skip automatic 401 handling for these requests
 - **Login Form Enhanced**: Improved error message handling to show user-friendly messages for different auth failure types ('Invalid credentials', 'email verification required', 'account inactive')
 - **Token Handling**: Skip adding tokens to login requests since users don't have tokens when authenticating
 
 **Code Changes:**
+
 1. **api.js**: Added `isLoginRequest` detection and modified 401 handling logic
 2. **Home.vue**: Enhanced error message processing in signin() method for better UX
 
 **Testing Results:**
+
 - ✅ Build completed successfully without errors - `./snappy-build.sh`
 - ✅ Changes affect login flow specifically without breaking other API calls
 - ✅ Login requests now bypass token expiry handling and can receive 401 responses
@@ -191,10 +193,12 @@ Frontend apiFetch function incorrectly treats ALL 401 responses as expired token
 Login form now distinguishes between invalid credentials (auth error) and network issues (connection error). Users receive appropriate feedback for authentication failures instead of generic network errors.
 
 **Files Modified:**
+
 - `frontend/src/utils/api.js` - Added login request detection and modified 401 handling
 - `frontend/src/views/Home.vue` - Enhanced error message processing for better UX
 
 ### 🟡 [BUG] ServiceProviderDashboard Archive Function Not Working
+
 **Discovered:** 2025-10-24
 **Area:** Frontend - Service Provider Dashboard Archive Functionality
 **Impact:** Service providers (role 3) unable to archive items which affects data management and workflow
@@ -203,27 +207,29 @@ Login form now distinguishes between invalid credentials (auth error) and networ
 The archive function in ServiceProviderDashboard is not working. This functionality should be available to users with role 3 (service provider users).
 
 **Expected Behavior:**
+
 - Archive function should be functional for role 3 users
 - Service providers should be able to archive completed jobs/quotes or other items
 - Archive action should complete successfully without errors
 
 **Current Behavior:**
+
 - Archive function does not work for role 3 users
 - Clicking archive has no effect or fails silently
 
 **Steps to Reproduce:**
+
 1. Log in as role 3 user (service provider)
 2. Navigate to ServiceProviderDashboard
 3. Attempt to use the archive function on an item
 4. Observe that archive does not work
 
 **Notes:**
+
 - Role-based functionality issue - affects service provider users specifically
 - May be missing backend API, frontend handler, or permissions check
 - Archive functionality is important for job completion workflow
 - Similar issue to client dashboard archive problem
-
-
 
 ### 🟡 [BUG] EditJobModal Reactivity Issue - Shows Old Data When Reopened
 
@@ -235,16 +241,19 @@ The archive function in ServiceProviderDashboard is not working. This functional
 When users edit a job description in EditJobModal, save it, and reopen the modal, it displays the old data instead of the updated data. This causes users to think their changes were lost and need to recapture information.
 
 **Expected Behavior:**
+
 - When reopening an EditJobModal, it should display the most recent saved data
 - Save & Continue followed by reopening should show updated information
 - User changes should persist across modal open/close cycles
 
 **Current Behavior:**
+
 - Saves work correctly (data is updated in database)
 - But reopening the modal shows old/stale data
 - Users think their changes were lost and recapture information unnecessarily
 
 **Steps to Reproduce:**
+
 1. Open a job in EditJobModal
 2. Edit the fault description
 3. Click "Save & Continue"
@@ -253,6 +262,7 @@ When users edit a job description in EditJobModal, save it, and reopen the modal
 6. Observe modal shows old description instead of updated text
 
 **Notes:**
+
 - Saves work (API receives correct new data)
 - Database is updated correctly
 - Issue is client-side reactivity/data synchronization
@@ -260,7 +270,6 @@ When users edit a job description in EditJobModal, save it, and reopen the modal
 - Requires deeper debugging of Vue component lifecycle and prop changes
 - Temporary debug code added to modal for diagnostics
 - Affects user experience and workflow efficiency
-
 
 ## Fixed ✅
 
@@ -295,6 +304,7 @@ Database queries were using incorrect column names - 'due_date' instead of 'quot
 3. **snappy-dev.sql**: Added quotation_deadline column to jobs table definition
 
 **Testing Results:**
+
 - ✅ Query test passed - no more "Unknown column" errors
 - ✅ Service provider jobs API now loads without SQL errors
 - ✅ Database column `quotation_deadline` exists and is accessible
@@ -313,6 +323,7 @@ Service provider dashboard now loads successfully without 500 errors. Jobs displ
 When attempting to add an external service provider, the API returns error 500 with "SQLSTATE[01000]: Warning: 1265 Data truncated for column 'participantType' at row 1". This prevents role 2 client users from creating XS providers.
 
 **Error Details:**
+
 ```
 POST http://snappy.local/backend/api/client-xs-providers.php?token=... 500 (Internal Server Error)
 Error: Failed to create XS provider: SQLSTATE[01000]: Warning: 1265 Data truncated for column 'participantType' at row 1
@@ -322,16 +333,19 @@ Error: Failed to create XS provider: SQLSTATE[01000]: Warning: 1265 Data truncat
 The database participant_type enum column did not include 'XS' value. Code attempted to insert 'XS' but the enum was still ('C','S'), causing data truncation error.
 
 **Resolution:**
+
 - [x] Applied database migration script update-participant-type-enum.sql to update enum to ('C','S','XS')
 - [x] Verified enum now includes 'XS' option
 - [x] Confirmed code correctly inserts 'XS' for external providers
 - [x] Frontend build completed successfully without errors
 
 **Code Changes:**
+
 1. **Database Schema**: Updated participant_type.participantType enum to include 'XS' value
 2. **Migration Script**: Applied `ALTER TABLE participant_type MODIFY COLUMN participantType ENUM('C','S','XS') NOT NULL DEFAULT 'S';`
 
 **Testing Results:**
+
 - ✅ Database enum verified to include 'XS': `enum('C','S','XS')`
 - ✅ Frontend build succeeded (no console errors)
 - ✅ Backend code correctly inserts 'XS' participant type for external providers
@@ -350,14 +364,17 @@ XS provider creation should now work without data truncation errors. Role 2 user
 Service provider details modal was missing a statistics section displaying performance metrics like jobs completed, completion rate, response time, and customer rating.
 
 **Expected Behavior:**
+
 - Statistics section shows in provider details modal
 - Displays: jobs completed, completion rate %, avg response time, customer rating
 
 **Current Behavior:**
+
 - Modal showed only basic info (name, address, services, regions)
 - No performance or statistical data visible
 
 **Resolution:**
+
 - [x] Added statistics section to ClientServiceProviderBrowser.vue modal
 - [x] Created getProviderStatistics() function in service-providers.php API
 - [x] Statistics calculated from jobs and job_status_history tables
@@ -365,11 +382,13 @@ Service provider details modal was missing a statistics section displaying perfo
 - [x] Frontend build completed successfully
 
 **Code Changes:**
+
 1. **ClientServiceProviderBrowser.vue**: Added statistics HTML section and CSS styling
 2. **service-providers.php**: Added getProviderStatistics() function calculating jobs completed, completion rate, response time
 3. **Database Integration**: Statistics pulled from jobs and job_status_history tables
 
 **Testing Results:**
+
 - ✅ Modal now displays statistics section with 4 metrics
 - ✅ API returns statistics data for each provider
 - ✅ Frontend build succeeds without errors

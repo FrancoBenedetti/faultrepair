@@ -275,6 +275,14 @@
       @close="showEditProfileModal = false"
       @submit="handleUpdateClientProfile"
     />
+
+    <!-- Now using the restored ProviderDetailsModal -->
+    <ProviderDetailsModal
+      v-if="showProviderDetailsModal"
+      :provider="selectedProvider"
+      @close="showProviderDetailsModal = false"
+      @view-jobs="handleViewProviderJobs($event)"
+    />
   </div>
 </template>
 

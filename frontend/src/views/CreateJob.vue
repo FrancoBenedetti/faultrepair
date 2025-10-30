@@ -48,7 +48,7 @@
             <span class="material-icon text-blue-600">add_box</span>
             <div>
               <h1 class="text-2xl font-bold text-gray-900">New Service Request</h1>
-              <p class="text-gray-600">Describe the issue and we'll match you with qualified service providers</p>
+              <p class="text-gray-600">Snap a QR code, take a picture and detail the issue to keep track of your service requests.</p>
             </div>
           </div>
         </div>

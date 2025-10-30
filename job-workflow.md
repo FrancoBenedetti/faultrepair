@@ -60,7 +60,7 @@ These service providers have independent job management using their own system o
        - Reject (backend saves state to `Rejected`)
 
 2. **Assigned** - Job is available for editing by the service provider (role 3):
-
+   
    - Permissions
      - Client Role 1 and Role 2 can view
      - Role 3 can change state and edit certain fields, such as instructions to technicians
@@ -102,7 +102,7 @@ These service providers have independent job management using their own system o
      - `Incomplete` A note is required, the user could upload images
 
 5. **Incomplete** - Client representative (role 1 or role 2) rejects completion
-
+   
    - Permissions
      - Client Role 1 and 2 can view only
      - Service provider role 3 can select a technician, include or modify instructions, and transition state
@@ -117,7 +117,7 @@ These service providers have independent job management using their own system o
      - XS providers manage technician assignment internally, so Role 2 can transition without assignment
 
 6. **Cannot repair** - Service Provider Role 4 and Role 3 (Technician) marks work as unrepairable.
-
+   
    - Permissions
      - Service provider (role 3 and 4) view only
      - Client role 1 (view only)
