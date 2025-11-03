@@ -3,6 +3,7 @@ ini_set('log_errors', true);
 ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/service-provider-jobs.log');
 require_once '../config/database.php';
 require_once '../includes/JWT.php';
+require_once '../includes/performance-monitoring.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, PUT, OPTIONS');
@@ -53,7 +54,117 @@ if ($entity_type !== 'service_provider') {
 error_log("service-provider-jobs.php - Processing request, user_id: $user_id, entity_id: $entity_id");
 
 try {
+    // Initialize performance monitoring
+    PerformanceMonitor::init($pdo);
+
     if ($method === 'GET') {
+        // Check if requesting a single job by ID
+        $job_id_filter = isset($_GET['job_id']) ? (int)$_GET['job_id'] : null;
+
+        if ($job_id_filter) {
+            // Single job retrieval
+            $query = "
+                SELECT
+                    j.id,
+                    j.client_id,
+                    j.item_identifier,
+                    j.fault_description,
+                    j.technician_notes,
+                    j.job_status,
+                    j.client_location_id,
+                    j.quotation_deadline,
+                    j.quotation_deadline as due_date,
+                    j.archived_by_service_provider,
+                    j.created_at,
+                    j.updated_at,
+                    j.contact_person,
+                    j.reporting_user_id,
+                    j.current_quotation_id,
+                    j.assigned_provider_participant_id,
+                    j.assigned_technician_user_id,
+                    CASE
+                        WHEN j.client_location_id IS NULL THEN 'Default'
+                        ELSE l.name
+                    END as location_name,
+                    l.address as location_address,
+                    l.coordinates as location_coordinates,
+                    l.access_rules as location_access_rules,
+                    l.access_instructions as location_access_instructions,
+                    p.name as client_name,
+                    p.participantId as client_participant_id,
+                    sp.name as assigned_provider_name,
+                    spt.participantType as assigned_provider_type,
+                    CONCAT(u.first_name, ' ', u.last_name) as reporting_user,
+                    CONCAT(tu.first_name, ' ', tu.last_name) as assigned_technician,
+                    tu.userId as assigned_technician_user_id,
+                    (SELECT COUNT(*) FROM job_images ji WHERE ji.job_id = j.id) as image_count,
+                    CASE
+                        WHEN j.current_quotation_id IS NOT NULL THEN jq.id
+                        ELSE NULL
+                    END as quotation_id,
+                    CASE
+                        WHEN j.current_quotation_id IS NOT NULL THEN jq.quotation_amount
+                        ELSE NULL
+                    END as quotation_amount,
+                    CASE
+                        WHEN j.current_quotation_id IS NOT NULL THEN jq.status
+                        ELSE NULL
+                    END as quotation_status
+                FROM jobs j
+                LEFT JOIN participants p ON j.client_id = p.participantId
+                LEFT JOIN participants sp ON j.assigned_provider_participant_id = sp.participantId
+                LEFT JOIN participant_type spt ON j.assigned_provider_participant_id = spt.participantId
+                LEFT JOIN locations l ON j.client_location_id = l.id
+                LEFT JOIN users u ON j.reporting_user_id = u.userId
+                LEFT JOIN users tu ON j.assigned_technician_user_id = tu.userId
+                LEFT JOIN job_quotations jq ON j.current_quotation_id = jq.id
+                WHERE j.id = ? AND j.assigned_provider_participant_id = ?
+            ";
+
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([$job_id_filter, $entity_id]);
+            $job = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Verify job is not an XS job if user is not the assigned provider
+            $stmt = $pdo->prepare("
+                SELECT participantType FROM participant_type
+                WHERE participantId = ? AND participantType = 'XS'
+            ");
+            $stmt->execute([$entity_id]);
+            $isXS = $stmt->fetch();
+
+            if ($isXS) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Access denied. External service provider jobs cannot be accessed directly.']);
+                exit;
+            }
+
+            if (!$job) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Job not found or access denied']);
+                exit;
+            }
+
+            // Get job status history for the single job
+            $stmt = $pdo->prepare("
+                SELECT
+                    jsh.status,
+                    jsh.changed_at,
+                    u.username as changed_by
+                FROM job_status_history jsh
+                LEFT JOIN users u ON jsh.changed_by_user_id = u.userId
+                WHERE jsh.job_id = ?
+                ORDER BY jsh.changed_at DESC
+            ");
+            $stmt->execute([$job['id']]);
+            $job['status_history'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['job' => $job]);
+            exit;
+        }
+
+        // Start performance timing
+        PerformanceMonitor::startTimer('api_service_provider_jobs_get');
         // Base condition - always filter by provider participant
         $where_conditions = ["j.assigned_provider_participant_id = ?"];
         $params = [$entity_id];
@@ -124,6 +235,7 @@ try {
     error_log("service-provider-jobs.php - WHERE clause: $where_clause, params: " . json_encode($params));
 
         // Get filtered jobs assigned to this service provider
+        // CRITICAL: Exclude XS (external) providers from SP dashboard access
         $stmt = $pdo->prepare("
             SELECT
                 j.id,
@@ -159,7 +271,9 @@ try {
             LEFT JOIN locations l ON j.client_location_id = l.id
             LEFT JOIN users u ON j.reporting_user_id = u.userId
             LEFT JOIN users tu ON j.assigned_technician_user_id = tu.userId
+            LEFT JOIN participant_type pt ON j.assigned_provider_participant_id = pt.participantId
             WHERE {$where_clause}
+            AND (pt.participantType IS NOT NULL AND pt.participantType != 'XS')
             ORDER BY j.created_at DESC
         ");
 
@@ -180,7 +294,12 @@ try {
             'jobs' => $jobs
         ]);
 
+        // End performance timing for GET
+        PerformanceMonitor::endTimer('api_service_provider_jobs_get');
+
     } elseif ($method === 'PUT') {
+        // Start performance timing for PUT
+        PerformanceMonitor::startTimer('api_service_provider_jobs_put');
     // Update job (for service provider technicians and supervisors)
     $input = json_decode(file_get_contents('php://input'), true);
 
@@ -194,12 +313,18 @@ try {
 
     $job_id = (int)$input['job_id'];
 
-    // Verify job belongs to this service provider
-    $stmt = $pdo->prepare("SELECT j.id FROM jobs j WHERE j.id = ? AND j.assigned_provider_participant_id = ?");
+    // Verify job belongs to this service provider AND is not an XS (external) provider job
+    $stmt = $pdo->prepare("
+        SELECT j.id FROM jobs j
+        LEFT JOIN participant_type pt ON j.assigned_provider_participant_id = pt.participantId
+        WHERE j.id = ?
+        AND j.assigned_provider_participant_id = ?
+        AND (pt.participantType != 'XS' OR pt.participantType IS NULL)
+    ");
     $stmt->execute([$job_id, $entity_id]);
     if (!$stmt->fetch()) {
         http_response_code(403);
-        echo json_encode(['error' => 'Access denied. Job not found or does not belong to your service provider.']);
+        echo json_encode(['error' => 'Access denied. Job not found, does not belong to your service provider, or is not accessible.']);
         exit;
     }
 
@@ -397,6 +522,19 @@ try {
         'success' => true,
         'message' => 'Job updated successfully'
     ]);
+
+    // End performance timing for PUT
+    PerformanceMonitor::endTimer('api_service_provider_jobs_put');
+
+    // Send notifications for status changes
+    if (isset($input['job_status']) || isset($input['request_state_change'])) {
+        require_once '../includes/job-notifications.php';
+
+        $newStatus = $input['job_status'] ?? $stateMapping[$input['request_state_change']] ?? null;
+        if ($newStatus) {
+            JobNotifications::notifyJobStatusChange($job_id, $job['job_status'], $newStatus, $user_id);
+        }
+    }
 
 }
 

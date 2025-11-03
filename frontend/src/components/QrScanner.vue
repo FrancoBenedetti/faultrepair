@@ -1,8 +1,8 @@
 <template>
   <div class="qr-scanner">
     <!-- QR Scanner Modal -->
-    <div v-if="showScanner" class="modal-overlay" @click="closeScanner">
-      <div class="modal-content" @click.stop>
+    <div v-if="showScanner" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" @click="closeScanner">
+      <div class="w-full max-w-md mx-auto bg-white rounded-lg shadow-xl overflow-hidden" @click.stop>
         <div class="modal-header">
           <h3 class="text-xl font-semibold text-gray-900 mb-0">Scan QR Code</h3>
           <button type="button" @click="closeScanner" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>

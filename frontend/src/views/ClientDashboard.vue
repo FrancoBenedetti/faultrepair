@@ -1,105 +1,40 @@
 <template>
-    <div class="client-dashboard max-w-7xl mx-auto px-6 py-8">
-      <!-- Dashboard Header (keeping existing) -->
-      <div class="dashboard-header flex justify-between items-center mb-8 pb-6 border-b border-gray-200">
-        <div class="left">
-          <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ getOrganizationName() }}</h1>
-          <div class="profile-completeness">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="w-20 h-4 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  class="h-full bg-green-500 transition-all duration-300"
-                  :style="{ width: profileCompleteness + '%' }"
-                ></div>
-              </div>
-              <span class="text-xs font-medium text-gray-600">{{ profileCompleteness }}% Complete</span>
-            </div>
-            <p class="text-sm text-gray-600">Complete your profile to unlock all features</p>
-          </div>
-        </div>
-        <div class="right flex items-center gap-4">
-          <button
-            @click="$router.push('/create-invitation')"
-            class="btn-secondary flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            <span class="material-icon-sm">person_add</span>
-            Invite Users
-          </button>
-          <button
-            v-if="isAdmin"
-            @click="handleUpgradeClick"
-            class="btn-primary flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <span class="material-icon-sm">upgrade</span>
-            Upgrade
-          </button>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-600">Role:</span>
-            <span class="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-              {{ roleDisplayNames && roleDisplayNames[userRole] ? roleDisplayNames[userRole] : getFallbackRoleName(userRole) }}
-            </span>
-          </div>
-          <button
-            @click="signOut()"
-            class="btn-secondary flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            <span class="material-icon-sm">logout</span>
-            Sign Out
-          </button>
-        </div>
-      </div>
+  <div class="client-dashboard">
+    <!-- Unified Dashboard Header -->
+    <UnifiedDashboardHeader
+      :org-name="getOrganizationName()"
+      :user-role="userRole"
+      :role-display-names="roleDisplayNames"
+      :profile-completeness="profileCompleteness"
+      dashboard-type="client"
+      :is-admin="isAdmin"
+      :show-upgrade-button="isAdmin"
+      :show-invite-users="isAdmin"
+      :is-primary-disabled="!clientProfile?.is_enabled"
+      @navigate="handleNavigate"
+    />
 
-      <div class="dashboard-content grid gap-8">
-        <!-- User Identity Bar -->
-        <div class="user-identity-bar bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6 shadow-sm">
-          <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-            <div class="user-info flex items-center gap-4">
-              <div class="user-avatar flex-shrink-0">
-                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                  <span class="material-icon text-white">{{ getCurrentUserName().charAt(0).toUpperCase() }}</span>
-                </div>
-              </div>
-              <div class="identity-details">
-                <div class="signed-in-user flex items-center gap-2 mb-1">
-                  <span class="material-icon-sm text-blue-600">person</span>
-                  <span class="text-sm font-medium text-gray-700">Signed in as:</span>
-                  <span class="text-sm font-semibold text-gray-900">{{ getCurrentUserName() }}</span>
-                  <span class="user-role-badge" :class="getRoleBadgeClass(userRole)">
-                    {{ roleDisplayNames && roleDisplayNames[userRole] ? roleDisplayNames[userRole] : getFallbackRoleName(userRole) }}
-                  </span>
-                </div>
-                <div class="organization-info flex items-center gap-2">
-                  <span class="material-icon-sm text-indigo-600">business</span>
-                  <span class="text-sm font-medium text-gray-700">Organization:</span>
-                  <span class="text-sm font-semibold text-gray-900">{{ getOrganizationName() }}</span>
-                </div>
-              </div>
-            </div>
-            <div class="subscription-info flex items-center gap-4">
-              <div class="subscription-badge flex items-center gap-2 px-3 py-1 bg-white border border-gray-300 rounded-full">
-                <span class="material-icon-sm text-green-600">workspace_premium</span>
-                <span class="text-xs font-medium text-gray-700">Free Plan</span>
-              </div>
-              <!-- Upgrade button for admin users only -->
-              <button
-                v-if="isAdmin"
-                @click="handleUpgradeClick"
-                class="upgrade-btn flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm transform hover:scale-105"
-              >
-                <span class="material-icon-sm">upgrade</span>
-                Upgrade to Premium
-              </button>
-            </div>
-          </div>
-        </div>
+    <!-- Collapsible User Identity Section -->
+    <CollapsibleUserIdentity
+      :user-display-name="getCurrentUserName()"
+      :user-role="userRole"
+      :role-display-names="roleDisplayNames"
+      :organization-name="getOrganizationName()"
+      :profile-completeness="profileCompleteness"
+      :can-invite-users="isAdmin"
+      @edit-profile="$emit('edit-profile-modal')"
+      @upgrade="handleUpgradeClick"
+      @navigate="handleNavigate"
+    />
 
-
-        <!-- Administrator Settings Section - Only for budget controllers (role 2) -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8" v-if="userRole === 2">
-          <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('administrator-settings')" style="cursor: pointer;">
+    <div class="dashboard-content space-y-6">
+      <!-- Administrator Settings Section - Only for budget controllers (role 2) -->
+      <div class="admin-settings-container bg-white rounded-xl shadow-lg border border-gray-200 p-0 mb-8" v-if="userRole === 2">
+        <div class="admin-section-header rounded-t-xl bg-white rounded-b-none p-6 pb-4">
+          <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-0 pb-0 border-b border-neutral-200" @click="toggleSection('administrator-settings')" style="cursor: pointer;">
             <div class="section-title flex items-center gap-3">
               <button class="expand-btn" :class="{ expanded: sectionsExpanded['administrator-settings'] }">
-                <span class="material-icon-sm">admin_panel_settings</span>
+                <span class="material-icon-sm">expand_more</span>
               </button>
               <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
                 <span class="material-icon text-purple-600">admin_panel_settings</span>
@@ -107,26 +42,31 @@
               </h2>
             </div>
           </div>
+        </div>
 
-          <!-- All administrator sub-sections -->
-          <div v-show="sectionsExpanded['administrator-settings']" class="section-content">
+        <div v-show="sectionsExpanded['administrator-settings']" class="admin-subsections bg-gray-50 rounded-b-xl border-t border-gray-200">
+          <div class="p-6 space-y-6">
 
             <!-- Business Profile Sub-Section -->
-            <div class="mb-6" v-if="userRole === 2">
-              <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-200" @click="toggleSection('profile')" style="cursor: pointer;">
-                <div class="section-title flex items-center gap-3">
+            <div class="subsection-card" v-if="userRole === 2">
+              <div class="subsection-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-300" @click="toggleSection('profile')" style="cursor: pointer;">
+                <div class="subsection-title flex items-center gap-3">
                   <button class="expand-btn small" :class="{ expanded: sectionsExpanded.profile }">
                     <span class="material-icon-sm">expand_more</span>
                   </button>
-                  <h3 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                  <h4 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
                     <span class="material-icon text-blue-600">business</span>
                     Business Profile
                     <span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">{{ clientProfileCompleteness }}% Complete</span>
-                  </h3>
+                  </h4>
                 </div>
+                <button @click.stop="$router.push('/client/edit-profile')" class="btn-outlined btn-small flex items-center gap-2">
+                  <span class="material-icon-sm">edit</span>
+                  Edit Profile
+                </button>
               </div>
 
-              <div v-show="sectionsExpanded.profile" class="section-content transition-all duration-300 ease-in-out">
+              <div v-show="sectionsExpanded.profile" class="subsection-content transition-all duration-300 ease-in-out">
                 <BusinessProfileSection
                   :expanded="sectionsExpanded.profile"
                   :client-profile="clientProfile"
@@ -139,21 +79,21 @@
             </div>
 
             <!-- User Management Sub-Section -->
-            <div class="mb-6" v-if="userRole === 2">
-              <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-200" @click="toggleSection('users')" style="cursor: pointer;">
-                <div class="section-title flex items-center gap-3">
+            <div class="subsection-card" v-if="userRole === 2">
+              <div class="subsection-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-300" @click="toggleSection('users')" style="cursor: pointer;">
+                <div class="subsection-title flex items-center gap-3">
                   <button class="expand-btn small" :class="{ expanded: sectionsExpanded.users }">
                     <span class="material-icon-sm">expand_more</span>
                   </button>
-                  <h3 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                  <h4 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
                     <span class="material-icon text-blue-600">group</span>
                     User Management
                     <span v-if="users?.length" class="text-sm font-normal text-blue-600">({{ users.length }})</span>
-                  </h3>
+                  </h4>
                 </div>
               </div>
 
-              <div v-show="sectionsExpanded.users" class="section-content transition-all duration-300 ease-in-out">
+              <div v-show="sectionsExpanded.users" class="subsection-content transition-all duration-300 ease-in-out">
                 <UserManagementSection
                   :expanded="false"
                   :users="users"
@@ -168,21 +108,21 @@
             </div>
 
             <!-- Locations Sub-Section -->
-            <div class="mb-6" v-if="userRole === 2">
-              <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-200" @click="toggleSection('locations')" style="cursor: pointer;">
-                <div class="section-title flex items-center gap-3">
+            <div class="subsection-card" v-if="userRole === 2">
+              <div class="subsection-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-300" @click="toggleSection('locations')" style="cursor: pointer;">
+                <div class="subsection-title flex items-center gap-3">
                   <button class="expand-btn small" :class="{ expanded: sectionsExpanded.locations }">
                     <span class="material-icon-sm">expand_more</span>
                   </button>
-                  <h3 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                  <h4 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
                     <span class="material-icon text-blue-600">location_on</span>
                     Locations
                     <span v-if="locations?.length" class="text-sm font-normal text-blue-600">({{ locations.length }})</span>
-                  </h3>
+                  </h4>
                 </div>
               </div>
 
-              <div v-show="sectionsExpanded.locations" class="section-content transition-all duration-300 ease-in-out">
+              <div v-show="sectionsExpanded.locations" class="subsection-content transition-all duration-300 ease-in-out">
                 <LocationManagementSection
                   :expanded="false"
                   :locations="locations"
@@ -195,21 +135,21 @@
             </div>
 
             <!-- Approved Providers Sub-Section -->
-            <div class="mb-6" v-if="userRole === 2">
-              <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-200" @click="toggleSection('providers')" style="cursor: pointer;">
-                <div class="section-title flex items-center gap-3">
+            <div class="subsection-card" v-if="userRole === 2">
+              <div class="subsection-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-300" @click="toggleSection('providers')" style="cursor: pointer;">
+                <div class="subsection-title flex items-center gap-3">
                   <button class="expand-btn small" :class="{ expanded: sectionsExpanded.providers }">
                     <span class="material-icon-sm">expand_more</span>
                   </button>
-                  <h3 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                  <h4 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
                     <span class="material-icon text-blue-600">business</span>
                     Approved Providers
                     <span v-if="approvedProviders?.length" class="text-sm font-normal text-blue-600">({{ approvedProviders.length }})</span>
-                  </h3>
+                  </h4>
                 </div>
               </div>
 
-              <div v-show="sectionsExpanded.providers" class="section-content transition-all duration-300 ease-in-out">
+              <div v-show="sectionsExpanded.providers" class="subsection-content transition-all duration-300 ease-in-out">
                 <ProviderManagementSection
                   :expanded="false"
                   :approved-providers="approvedProviders"
@@ -222,197 +162,127 @@
             </div>
           </div>
         </div>
-
-        <!-- Jobs Section - For all user roles -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-          <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('jobs')" style="cursor: pointer;">
-            <div class="section-title flex items-center gap-3">
-              <button class="expand-btn" :class="{ expanded: sectionsExpanded.jobs }">
-                <span class="material-icon-sm">expand_more</span>
-              </button>
-              <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-                <span class="material-icon text-blue-600">work</span>
-                Job Management
-                <span v-if="jobs && jobs.length" class="text-sm font-normal text-blue-600">({{ jobs.length }})</span>
-              </h2>
-            </div>
-            <div class="section-header-actions flex items-center gap-4" @click.stop>
-              <button @click.stop="showCreateJobModal = true" class="btn-filled flex items-center gap-2" :disabled="!clientProfile?.is_enabled">
-                <span class="material-icon-sm">add</span>
-                Service Request
-              </button>
-            </div>
-          </div>
-
-          <div v-show="sectionsExpanded.jobs" class="section-content transition-all duration-300 ease-in-out">
-            <JobManagementSection
-              :jobs="jobs"
-              :job-filters="jobFilters"
-              :locations="locations"
-              :approved-providers="approvedProviders"
-              :user-role="userRole"
-              :client-profile="clientProfile"
-              :is-admin="isAdmin"
-              :expanded="sectionsExpanded.jobs"
-              @update-job-filters="updateJobFilters"
-              @load-jobs="loadJobs"
-              @create-job="showCreateJobModal = true"
-              @view-job-details="handleViewJobDetails($event)"
-              @edit-job="handleEditJob($event)"
-              @toggle-archive-job="toggleArchiveJob($event)"
-              @confirm-job="handleConfirmJob($event)"
-              @reject-job="handleRejectJob($event)"
-              @accept-quote="handleAcceptQuote($event)"
-              @reject-quote="handleRejectQuote($event)"
-              @view-quotation="handleViewQuotation($event)"
-            />
-          </div>
-        </div>
       </div>
 
-      <!-- Modals -->
-      <AddUserModal
-        v-if="showAddUserModal"
-        :newUser="newUser"
-        :available-roles="availableRoles"
-        :adding-user="addingUser"
-        @close="showAddUserModal = false"
-        @submit="handleAddUser"
-      />
+      <!-- Jobs Section - For all user roles -->
+      <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('jobs')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.jobs }">
+              <span class="material-icon-sm">expand_more</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+              <span class="material-icon text-blue-600">work</span>
+              Job Management
+              <span v-if="jobs && jobs.length" class="text-sm font-normal text-blue-600">({{ jobs.length }})</span>
+            </h2>
+          </div>
+          <div class="section-header-actions flex items-center gap-4" @click.stop>
+            <button @click.stop="$router.push('/client/create-job')" class="btn-filled flex items-center gap-2" :disabled="!clientProfile?.is_enabled">
+              <span class="material-icon-sm">add</span>
+              Service Request
+            </button>
+          </div>
+        </div>
 
-      <EditUserModal
-        v-if="showEditUserModal"
-        :editingUser="editingUser"
-        :available-roles="availableRoles"
-        :updating-user="updatingUser"
-        @close="showEditUserModal = false"
-        @submit="handleUpdateUser"
-      />
+        <div v-show="sectionsExpanded.jobs" class="section-content transition-all duration-300 ease-in-out">
+          <JobManagementSection
+            :jobs="jobs"
+            :job-filters="jobFilters"
+            :locations="locations"
+            :approved-providers="approvedProviders"
+            :user-role="userRole"
+            :client-profile="clientProfile"
+            :is-admin="isAdmin"
+            :expanded="sectionsExpanded.jobs"
+            @update-job-filters="updateJobFilters"
+            @load-jobs="loadJobs"
+            @create-job="showCreateJobModal = true"
+            @view-job-details="handleViewJobDetails($event)"
+            @edit-job="handleEditJob($event)"
+            @toggle-archive-job="toggleArchiveJob($event)"
+            @confirm-job="handleConfirmJob($event)"
+            @reject-job="handleRejectJob($event)"
+            @accept-quote="handleAcceptQuote($event)"
+            @reject-quote="handleRejectQuote($event)"
+            @view-quotation="handleViewQuotation($event)"
+          />
+        </div>
+      </div>
+    </div>
 
-      <AddLocationModal
-        v-if="showAddLocationModal"
-        :newLocation="newLocation"
-        :adding-location="addingLocation"
-        @close="showAddLocationModal = false"
-        @submit="handleAddLocation"
-      />
+    <!-- Modals -->
+    <AddUserModal
+      v-if="showAddUserModal"
+      :newUser="newUser"
+      :available-roles="availableRoles"
+      :adding-user="addingUser"
+      @close="showAddUserModal = false"
+      @submit="handleAddUser"
+    />
 
-      <EditLocationModal
-        v-if="showEditLocationModal"
-        :editingLocation="editingLocation"
-        :updating="false"
-        @close="showEditLocationModal = false"
-        @submit="handleUpdateLocation"
-      />
+    <EditUserModal
+      v-if="showEditUserModal"
+      :editingUser="editingUser"
+      :available-roles="availableRoles"
+      :updating-user="updatingUser"
+      @close="showEditUserModal = false"
+      @submit="handleUpdateUser"
+    />
 
-      <CreateJobModal
-        :show="showCreateJobModal"
-        :locations="locations"
-        :creating-job="creatingJob"
-        :new-job="newJob"
-        @close="closeCreateJobModal"
-        @submit="handleCreateJob"
-        @qr-detected="handleQrDetected"
-        @images-changed="handleImagesChanged"
-      />
+    <AddLocationModal
+      v-if="showAddLocationModal"
+      :newLocation="newLocation"
+      :adding-location="addingLocation"
+      @close="showAddLocationModal = false"
+      @submit="handleAddLocation"
+    />
+
+    <CreateJobModal
+      v-if="showCreateJobModal"
+      :locations="locations"
+      :creating-job="creatingJob"
+      :new-job="newJob"
+      @close="closeCreateJobModal"
+      @submit="handleCreateJob"
+      @qr-detected="handleQrDetected"
+      @images-changed="handleImagesChanged"
+    />
 
     <JobDetailsModal
-      v-if="showJobDetailsModal"
+      :show="showJobDetailsModal"
       :job="selectedJob"
       @close="showJobDetailsModal = false"
       @image-click="selectedImage = $event"
     />
 
+    <EditJobModal
+      v-if="showEditJobModal"
+      :job="editingJob"
+      :userRole="userRole"
+      :userId="userId"
+      :entityId="entityId"
+      :entityType="'client'"
+      :availableProviders="approvedProviders"
+      @close="showEditJobModal = false"
+      @job-updated="handleEditJobUpdated"
+    />
+
+    <EditProfileModal
+      v-if="showEditProfileModal"
+      :editing-profile="editingProfile"
+      :updating-profile="updatingProfile"
+      @close="showEditProfileModal = false"
+      @submit="handleUpdateClientProfile"
+    />
+
+    <!-- Now using the restored ProviderDetailsModal -->
     <ProviderDetailsModal
       v-if="showProviderDetailsModal"
       :provider="selectedProvider"
       @close="showProviderDetailsModal = false"
+      @view-jobs="handleViewProviderJobs($event)"
     />
-
-      <EditJobModal
-        v-if="showEditJobModal"
-        :job="editingJob"
-        :userRole="userRole"
-        :userId="userId"
-        :entityId="entityId"
-        :entityType="'client'"
-        :availableProviders="approvedProviders"
-        @close="showEditJobModal = false"
-        @job-updated="handleEditJobUpdated"
-      />
-
-      <!-- Quotation Details Modal -->
-      <QuotationDetailsModal
-        v-if="showQuotationDetailsModal"
-        :show="showQuotationDetailsModal"
-        :quotation="selectedQuotation"
-        @close="showQuotationDetailsModal = false"
-        @accept-quote="handleAcceptQuoteFromModal"
-        @reject-quote="handleRejectQuoteFromModal"
-        @request-quote="handleRequestQuoteFromModal"
-      />
-
-      <!-- Add XS Provider Modal -->
-      <AddXSProviderModal
-        v-if="showAddXSProviderModal"
-        @close="showAddXSProviderModal = false"
-        @provider-added="handleXSProviderAdded"
-      />
-
-      <!-- Job Confirmation Modal - Temporarily disabled due to auto-trigger bug -->
-      <!-- <div v-if="showJobConfirmationModal" class="modal-overlay" @click="closeJobConfirmationModal()">
-        <div class="modal-content" @click.stop>
-          <div class="modal-header">
-            <h3>Confirm Job Completion</h3>
-            <button @click="console.log('ClientDashboard: Close button clicked'); closeJobConfirmationModal()" class="close-btn">&times;</button>
-          </div>
-          <div v-if="confirmationJob" class="confirmation-form">
-            <div class="job-summary">
-              <h4>{{ confirmationJob.item_identifier || 'No Item ID' }}</h4>
-              <p class="job-description">{{ confirmationJob.fault_description }}</p>
-              <div class="job-meta">
-                <span><strong>Client:</strong> {{ confirmationJob.client_name }}</span>
-                <span><strong>Location:</strong> {{ confirmationJob.location_name }}</span>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="confirmation-notes">Confirmation Notes (Optional)</label>
-              <textarea id="confirmation-notes" v-model="confirmationNotes" rows="3"
-                        placeholder="Add any notes about confirming this work..."></textarea>
-            </div>
-            <div class="confirmation-info">
-              <div class="info-banner">
-                <div class="info-icon">ℹ️</div>
-                <div class="info-content">
-                  <p><strong>What happens when you confirm?</strong></p>
-                  <p>This job will be marked as "Confirmed" and archived for both parties. This action cannot be undone.</p>
-                </div>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button @click="closeJobConfirmationModal" class="btn-secondary">Cancel</button>
-              <button @click="confirmJob" class="btn-primary" :disabled="confirmingJob">
-                {{ confirmingJob ? 'Confirming...' : 'Confirm Job' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Image Modal for Full Size View -->
-      <div v-if="selectedImage" class="modal-overlay" @click="selectedImage = null">
-        <div class="image-modal-content" @click.stop>
-          <div class="image-modal-header">
-            <h3>{{ selectedImage.original_filename }}</h3>
-            <button @click="selectedImage = null" class="close-btn">&times;</button>
-          </div>
-          <div class="image-modal-body">
-            <img :src="generateImageUrl(selectedImage)"
-                 :alt="selectedImage.original_filename"
-                 class="full-size-image">
-          </div>
-        </div>
-      </div>
   </div>
 </template>
 
@@ -422,6 +292,8 @@ import QrScanner from '@/components/QrScanner.vue'
 import { apiFetch, handleTokenExpiration, loadRoleSettings } from '@/utils/api.js'
 
 // New component imports
+import UnifiedDashboardHeader from '@/components/dashboard/UnifiedDashboardHeader.vue'
+import CollapsibleUserIdentity from '@/components/dashboard/CollapsibleUserIdentity.vue'
 import BusinessProfileSection from '@/components/dashboard/BusinessProfileSection.vue'
 import UserManagementSection from '@/components/dashboard/UserManagementSection.vue'
 import ProviderManagementSection from '@/components/dashboard/ProviderManagementSection.vue'
@@ -437,6 +309,7 @@ import JobDetailsModal from '@/components/modals/JobDetailsModal.vue'
 import ProviderDetailsModal from '@/components/modals/ProviderDetailsModal.vue'
 import QuotationDetailsModal from '@/components/modals/QuotationDetailsModal.vue'
 import AddXSProviderModal from '@/components/modals/AddXSProviderModal.vue'
+import EditProfileModal from '@/components/modals/EditProfileModal.vue'
 
 export default {
   name: 'ClientDashboard',
@@ -444,6 +317,8 @@ export default {
     ImageUpload,
     QrScanner,
     // New components
+    UnifiedDashboardHeader,
+    CollapsibleUserIdentity,
     BusinessProfileSection,
     UserManagementSection,
     ProviderManagementSection,
@@ -458,7 +333,8 @@ export default {
     EditLocationModal,
     ProviderDetailsModal,
     QuotationDetailsModal,
-    AddXSProviderModal
+    AddXSProviderModal,
+    EditProfileModal
   },
   data() {
     return {
@@ -591,17 +467,6 @@ export default {
     }
 
     // CRITICAL FIX: Explicitly reset all modals on component mount to prevent modal state bleeding
-    console.log('ClientDashboard: Forcing modal reset before mount, previous states:', {
-      showJobDetailsModal: this.showJobDetailsModal,
-      showEditJobModal: this.showEditJobModal,
-      showAddUserModal: this.showAddUserModal,
-      showCreateJobModal: this.showCreateJobModal,
-      showJobConfirmationModal: this.showJobConfirmationModal,
-      showJobRejectionModal: this.showJobRejectionModal,
-      showQuoteResponseModal: this.showQuoteResponseModal,
-      showQuoteRejectionModal: this.showQuoteRejectionModal
-    })
-
     // Force reset all modals to false on every component mount
     this.showJobDetailsModal = false
     this.showEditJobModal = false
@@ -618,19 +483,6 @@ export default {
 
     this.checkUserPermissions()
 
-    // DEBUG: Log modal state after force reset
-    console.log('ClientDashboard: Modal state AFTER force reset:', {
-      showJobDetailsModal: this.showJobDetailsModal,
-      showEditJobModal: this.showEditJobModal,
-      showAddUserModal: this.showAddUserModal,
-      showCreateJobModal: this.showCreateJobModal,
-      showJobConfirmationModal: this.showJobConfirmationModal,
-      showJobRejectionModal: this.showJobRejectionModal,
-      showQuoteResponseModal: this.showQuoteResponseModal,
-      showQuoteRejectionModal: this.showQuoteRejectionModal,
-      confirmationJob: this.confirmationJob ? 'SET' : 'NULL'
-    })
-
     // Load role settings first so they're available for role display
     try {
       const settings = await loadRoleSettings()
@@ -639,12 +491,6 @@ export default {
       console.warn('Failed to load role settings, using defaults:', error)
       this.roleDisplayNames = {}
     }
-
-    // DEBUG: Check immediately after loading that modal state hasn't changed
-    console.log('ClientDashboard: Post-role-settings modal state:', {
-      showJobConfirmationModal: this.showJobConfirmationModal,
-      confirmationJob: this.confirmationJob
-    })
 
     this.loadClientProfile()
     this.loadUsers()
@@ -1057,6 +903,19 @@ export default {
       }
     },
 
+    handleEditJob(job) {
+      // Navigate to the dedicated edit job page with scroll position context
+      const scrollPosition = window.pageYOffset || 0
+
+      this.$router.push({
+        path: `/jobs/${job.id}/edit`,
+        query: {
+          from: 'client',
+          scroll: scrollPosition.toString()
+        }
+      })
+    },
+
     handleViewProviderJobs(provider) {
       // Open provider details modal
       this.selectedProvider = provider
@@ -1071,6 +930,7 @@ export default {
       if (!job.images) {
         try {
           const response = await apiFetch(`/backend/api/job-images.php?job_id=${job.id}`)
+
           if (response.ok) {
             const data = await response.json()
             this.selectedJob.images = data.images || []
@@ -1079,69 +939,6 @@ export default {
           console.error('Failed to load job images:', error)
           this.selectedJob.images = []
         }
-      }
-    },
-
-    async handleEditJob(job) {
-      console.log('ClientDashboard: handleEditJob called with job:', job.id, 'status:', job.job_status, 'userRole:', this.userRole, 'isAdmin:', this.isAdmin)
-
-      // IMPORTANT FIX: Get the latest job data from the jobs array to ensure we have the most recent version
-      // This is critical for cases where jobs were just updated
-      const latestJob = this.jobs.find(j => j.id === job.id) || job
-
-      console.log('ClientDashboard: Latest job data - fault_description:', latestJob.fault_description)
-      console.log('ClientDashboard: Original job data - fault_description:', job.fault_description)
-
-      // Set basic job data immediately using the latest data
-      this.editingJob = { ...latestJob }
-      this.originalJobStatus = latestJob.job_status
-      this.originalProviderId = latestJob.assigned_provider_id
-
-      console.log('ClientDashboard: Basic job data set for editingJob.fault_description:', this.editingJob.fault_description)
-
-      // Show the modal immediately to give user feedback
-      this.showEditJobModal = true
-
-      console.log('ClientDashboard: Modal shown immediately, now loading additional data...')
-
-      // Load job images in background
-      if (!job.images) {
-        try {
-          console.log('ClientDashboard: Loading job images...')
-          const response = await apiFetch(`/backend/api/job-images.php?job_id=${job.id}`)
-          if (response.ok) {
-            const data = await response.json()
-            this.editingJob.images = data.images || []
-            console.log('ClientDashboard: Images loaded successfully:', this.editingJob.images.length)
-          } else {
-            this.editingJob.images = []
-            console.log('ClientDashboard: Failed to load images, using empty array')
-          }
-        } catch (error) {
-          console.error('ClientDashboard: Error loading job images:', error)
-          this.editingJob.images = []
-        }
-      } else {
-        this.editingJob.images = job.images
-        console.log('ClientDashboard: Using existing images:', this.editingJob.images.length)
-      }
-
-      // Refresh approved providers list in background
-      try {
-        console.log('ClientDashboard: Loading approved providers...')
-        await this.loadApprovedProviders()
-        console.log('ClientDashboard: Providers loaded, checking assigned provider...')
-
-        // Ensure the current assigned provider is still approved
-        const isProviderStillApproved = this.approvedProviders.some(provider => provider.id == this.editingJob.assigned_provider_id)
-        if (this.editingJob.assigned_provider_id && !isProviderStillApproved) {
-          console.log('ClientDashboard: Assigned provider no longer approved, clearing...')
-          this.editingJob.assigned_provider_id = null
-        }
-
-        console.log('ClientDashboard: Edit modal setup complete!')
-      } catch (error) {
-        console.error('ClientDashboard: Error loading providers:', error)
       }
     },
 
@@ -1288,8 +1085,23 @@ export default {
         return true
       }
 
-      // Budget controllers can edit when status is 'Reported', 'Declined', or 'Quote Requested'
-      if (this.userRole === 2 && ['Reported', 'Declined', 'Quote Requested'].includes(job.job_status)) {
+      // Budget controllers (Role 2) can edit these specific states:
+      // Content editing + state transitions happen in EditJob.vue
+      const role2EditableStates = [
+        'Reported',         // Early job editing + provider selection
+        'Unable to Quote',  // Can reassign provider
+        'Completed',        // Can confirm/reject completion
+        'Cannot repair',    // Can edit + reassign provider
+        'Declined',         // Can reassign + cancel job
+        'Quote Provided',   // Can respond to quotes
+        'Quote Rejected',   // Can restart quote process + cancel
+        'Quote Expired'     // Can extend deadline + cancel
+      ];
+
+      // XS provider jobs: Role 2 can edit ANY state (for tracking)
+      const isXSProviderJob = job && job.assigned_provider_type === 'XS';
+
+      if (this.userRole === 2 && (role2EditableStates.includes(job.job_status) || isXSProviderJob)) {
         return true
       }
 
@@ -1390,50 +1202,50 @@ export default {
           const data = await response.json()
           const jobId = data.job_id
 
-        // Upload images if any were selected - handle directly in ClientDashboard
-        if (this.selectedImages.length > 0) {
-          console.log('ClientDashboard: Starting image upload for job', jobId, 'with', this.selectedImages.length, 'images')
-          try {
-            let successCount = 0
-            const token = localStorage.getItem('token')
+          // Upload images if any were selected - handle directly in ClientDashboard
+          if (this.selectedImages.length > 0) {
+            console.log('ClientDashboard: Starting image upload for job', jobId, 'with', this.selectedImages.length, 'images')
+            try {
+              let successCount = 0
+              const token = localStorage.getItem('token')
 
-            for (let i = 0; i < this.selectedImages.length; i++) {
-              const image = this.selectedImages[i]
-              const formData = new FormData()
-              formData.append('image', image.file)
-              formData.append('job_id', jobId.toString())
+              for (let i = 0; i < this.selectedImages.length; i++) {
+                const image = this.selectedImages[i]
+                const formData = new FormData()
+                formData.append('image', image.file)
+                formData.append('job_id', jobId.toString())
 
-              console.log('ClientDashboard: Uploading image', i + 1, 'of', this.selectedImages.length, 'for job', jobId)
+                console.log('ClientDashboard: Uploading image', i + 1, 'of', this.selectedImages.length, 'for job', jobId)
 
-              const response = await fetch(`/backend/api/upload-job-image.php?token=${encodeURIComponent(token)}`, {
-                method: 'POST',
-                body: formData
-              })
+                const response = await fetch(`/backend/api/upload-job-image.php?token=${encodeURIComponent(token)}`, {
+                  method: 'POST',
+                  body: formData
+                })
 
-              if (response.ok) {
-                successCount++
-                console.log('ClientDashboard: Image upload successful')
-              } else {
-                const errorData = await response.json()
-                console.error('ClientDashboard: Image upload failed:', errorData)
+                if (response.ok) {
+                  successCount++
+                  console.log('ClientDashboard: Image upload successful')
+                } else {
+                  const errorData = await response.json()
+                  console.error('ClientDashboard: Image upload failed:', errorData)
+                }
               }
-            }
 
-            if (successCount === this.selectedImages.length) {
-              console.log('ClientDashboard: All image uploads successful')
-            } else {
-              console.log('ClientDashboard: Some uploads failed:', successCount, 'of', this.selectedImages.length, 'successful')
+              if (successCount === this.selectedImages.length) {
+                console.log('ClientDashboard: All image uploads successful')
+              } else {
+                console.log('ClientDashboard: Some uploads failed:', successCount, 'of', this.selectedImages.length, 'successful')
+              }
+            } catch (imageError) {
+              console.error('ClientDashboard: Image upload failed:', imageError)
+              // Show a warning but don't fail the job creation
+              setTimeout(() => {
+                alert('Job created successfully, but image upload failed. You can try uploading images again by editing the job.')
+              }, 100)
             }
-          } catch (imageError) {
-            console.error('ClientDashboard: Image upload failed:', imageError)
-            // Show a warning but don't fail the job creation
-            setTimeout(() => {
-              alert('Job created successfully, but image upload failed. You can try uploading images again by editing the job.')
-            }, 100)
+          } else {
+            console.log('ClientDashboard: No images selected, skipping upload')
           }
-        } else {
-          console.log('ClientDashboard: No images selected, skipping upload')
-        }
 
           alert('Service request submitted successfully!')
           this.showCreateJobModal = false
@@ -1449,10 +1261,6 @@ export default {
         this.creatingJob = false
       }
     },
-
-
-
-
 
     handleImagesChanged(images) {
       this.selectedImages = images
@@ -1609,8 +1417,8 @@ export default {
       const confirmMessage = `Accept this quotation for "${job.item_identifier}"?
 
 Quote Details:
-• New job will be created with status "Assigned"
-• Original quote job will remain in history
+• Job status will change to "Assigned"
+• Quote will be marked as accepted
 • Service provider can begin work immediately
 
 Are you sure you want to proceed?`;
@@ -1626,18 +1434,20 @@ Are you sure you want to proceed?`;
           return;
         }
 
-        const response = await apiFetch('/backend/api/accept-quote-and-duplicate.php', {
+        const response = await apiFetch('/backend/api/job-quotations.php', {
           method: 'PUT',
           body: JSON.stringify({
-            quote_id: job.current_quotation_id
+            quote_id: job.current_quotation_id,
+            action: 'accept',
+            notes: 'Quote accepted by client'
           })
         });
 
         if (response.ok) {
           const data = await response.json();
-          alert(`Quote accepted successfully! New job created with ID: ${data.new_job_id}`);
+          alert(data.message || 'Quote accepted and job assigned to provider!');
 
-          // Refresh jobs list to show both the original job and the new assigned job
+          // Refresh jobs list to show updated status
           this.loadJobs();
         } else {
           const errorData = await response.json();
@@ -1684,35 +1494,6 @@ Are you sure you want to proceed?`;
       }
     },
 
-    async rejectJobCompletion(job, reason) {
-      try {
-        const response = await apiFetch('/backend/api/job-completion-confirmation.php', {
-          method: 'PUT',
-          body: JSON.stringify({
-            job_id: job.id,
-            action: 'reject',
-            notes: reason
-          })
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          // Update the job in the local array
-          const jobIndex = this.jobs.findIndex(j => j.id === job.id)
-          if (jobIndex !== -1) {
-            this.jobs[jobIndex].job_status = 'Incomplete'
-            this.jobs[jobIndex].updated_at = new Date().toISOString()
-          }
-          alert('Job rejected successfully!')
-        } else {
-          const errorData = await response.json()
-          this.handleError(errorData)
-        }
-      } catch (error) {
-        alert('Failed to reject job')
-      }
-    },
-
     openImageModal(image) {
       this.selectedImage = image
     },
@@ -1756,105 +1537,6 @@ Are you sure you want to proceed?`;
         }
         this.showEditJobModal = true
       })
-    },
-
-    async updateJob() {
-      // Validate that provider is selected for status changes that require it
-      if ((this.editingJob.job_status === 'Assigned' || this.editingJob.job_status === 'Quote Requested') && !this.editingJob.assigned_provider_id) {
-        alert('A service provider must be selected to set this status.')
-        return
-      }
-
-      try {
-        const updateData = {
-          job_id: this.editingJob.id
-        }
-
-        // Only include fields that can be edited based on status and role
-        if (this.canEditJobDetails(this.editingJob)) {
-          // Full edit when status is 'Reported' - only add changed fields
-          if (this.editingJob.item_identifier !== this.originalItemIdentifier) {
-            updateData.item_identifier = this.editingJob.item_identifier || null
-          }
-          if (this.editingJob.fault_description !== this.originalFaultDescription) {
-            updateData.fault_description = this.editingJob.fault_description
-          }
-          if (this.editingJob.contact_person !== this.originalContactPerson) {
-            updateData.contact_person = this.editingJob.contact_person || null
-          }
-        }
-
-        // Status and provider can always be edited (when allowed)
-        if (this.editingJob.job_status !== this.originalJobStatus) {
-          updateData.job_status = this.editingJob.job_status
-        }
-
-        if (this.editingJob.assigned_provider_id !== this.originalProviderId) {
-          updateData.assigned_provider_id = this.editingJob.assigned_provider_id || null
-        }
-
-        // Only proceed if there are changes or new images to upload
-        const hasChanges = Object.keys(updateData).length > 1
-        const hasNewImages = this.editingImages && this.editingImages.length > 0
-
-        if (!hasChanges && !hasNewImages) {
-          alert('No changes to save')
-          return
-        }
-
-        // Update job details if there are changes
-        if (hasChanges) {
-          const response = await apiFetch('/backend/api/client-jobs.php', {
-            method: 'PUT',
-            body: JSON.stringify(updateData)
-          })
-
-          if (!response.ok) {
-            const errorData = await response.json()
-            this.handleError(errorData)
-            return
-          }
-        }
-
-        // Upload additional images if any were selected
-        if (hasNewImages) {
-          await this.$refs.editImageUpload.uploadImages(this.editingJob.id)
-        }
-
-        alert('Job updated successfully!')
-        this.showEditJobModal = false
-        this.loadJobs()
-      } catch (error) {
-        alert('Failed to update job')
-      }
-    },
-
-    getCurrentUserName() {
-      // Get current user name from localStorage or users array
-      try {
-        const userData = localStorage.getItem('user')
-        if (userData) {
-          const user = JSON.parse(userData)
-          // Return first_name + last_name if available, fallback to username
-          if (user.first_name && user.last_name) {
-            return `${user.first_name} ${user.last_name}`.trim()
-          }
-          return user.username || 'User'
-        }
-
-        // Fallback: find current user in users array
-        if (this.users && this.users.length > 0 && this.userId) {
-          const currentUser = this.users.find(u => u.id == this.userId)
-          if (currentUser && currentUser.first_name && currentUser.last_name) {
-            return `${currentUser.first_name} ${currentUser.last_name}`.trim()
-          }
-          return currentUser ? currentUser.username : 'User'
-        }
-
-        return 'User'
-      } catch (error) {
-        return 'User'
-      }
     },
 
     calculateProfileCompleteness() {
@@ -1963,6 +1645,14 @@ Are you sure you want to proceed?`;
       }
     },
 
+    async handleUpdateClientProfile(profileData) {
+      // Set the editing profile data
+      this.editingProfile = { ...profileData }
+
+      // Call the existing update method
+      await this.updateClientProfile()
+    },
+
     resetEditProfileForm() {
       if (this.clientProfile) {
         this.editingProfile = {
@@ -1995,6 +1685,34 @@ Are you sure you want to proceed?`;
       }
     },
 
+    getCurrentUserName() {
+      // Get current user name from localStorage or users array
+      try {
+        const userData = localStorage.getItem('user')
+        if (userData) {
+          const user = JSON.parse(userData)
+          // Return first_name + last_name if available, fallback to username
+          if (user.first_name && user.last_name) {
+            return `${user.first_name} ${user.last_name}`.trim()
+          }
+          return user.username || 'User'
+        }
+
+        // Fallback: find current user in users array
+        if (this.users && this.users.length > 0 && this.userId) {
+          const currentUser = this.users.find(u => u.id == this.userId)
+          if (currentUser && currentUser.first_name && currentUser.last_name) {
+            return `${currentUser.first_name} ${currentUser.last_name}`.trim()
+          }
+          return currentUser ? currentUser.username : 'User'
+        }
+
+        return 'User'
+      } catch (error) {
+        return 'User'
+      }
+    },
+
     getOrganizationName() {
       return this.clientProfile?.name || 'Organization'
     },
@@ -2023,6 +1741,10 @@ Are you sure you want to proceed?`;
     handleUpgradeClick() {
       // For now, show a simple alert. In a real implementation, this would navigate to a premium upgrade page or modal
       alert('Upgrade to Premium feature coming soon! Contact sales for more information.')
+    },
+
+    handleNavigate(route) {
+      this.$router.push(route)
     },
 
     // Handle XS provider added event
@@ -2123,31 +1845,6 @@ Are you sure you want to proceed?`;
       }
     },
 
-    // Test method for QR handling logic (can be removed after testing)
-    testQrHandling() {
-      console.log('Testing QR handling logic...')
-
-      // Test cases for different QR scenarios
-      const testCases = [
-        // Full structured data
-        { clientId: 1, itemIdentifier: 'TEST-001', locationName: 'Main Office' },
-        // Item only
-        { clientId: 1, itemIdentifier: 'TEST-002' },
-        // Location only (will use location as item)
-        { clientId: 1, locationName: 'Warehouse' },
-        // No structured data (fallback to raw string)
-        'RAW-QR-DATA-123',
-        // Invalid client ID
-        { clientId: 999, itemIdentifier: 'INVALID-CLIENT' }
-      ]
-
-      testCases.forEach((testData, index) => {
-        console.log(`Test case ${index + 1}:`, testData)
-        // This would normally be called by the QR scanner
-        // For testing, we could modify the method to accept test data
-      })
-    },
-
     getClientId() {
       try {
         const token = localStorage.getItem('token')
@@ -2213,345 +1910,60 @@ Are you sure you want to proceed?`;
     // Open image in modal for full-size view
     openImageModal(image) {
       this.selectedImage = image
-    },
-
-    // Handle provider selection change - automatically set status to 'Assigned'
-    onProviderSelected() {
-      if (this.editingJob.assigned_provider_id && this.editingJob.job_status !== 'Assigned' && this.editingJob.job_status !== 'Quote Requested') {
-        this.editingJob.job_status = 'Assigned'
-      }
-    },
-
-    // Job Confirmation/Rejection Methods
-    showJobConfirmationModal(job) {
-      this.confirmationJob = job
-      this.confirmationNotes = ''
-      this.showJobConfirmationModal = true
-    },
-
-    closeJobConfirmationModal() {
-      this.showJobConfirmationModal = false
-      this.confirmationJob = null
-      this.confirmationNotes = ''
-    },
-
-    showJobRejectionModal(job) {
-      this.rejectionJob = job
-      this.rejectionNotes = ''
-      this.showJobRejectionModal = true
-    },
-
-    closeJobRejectionModal() {
-      this.showJobRejectionModal = false
-      this.rejectionJob = null
-      this.rejectionNotes = ''
-    },
-
-    async confirmJob() {
-      if (!this.confirmationJob) return
-
-      this.confirmingJob = true
-      try {
-        const response = await apiFetch('/backend/api/job-completion-confirmation.php', {
-          method: 'PUT',
-          body: JSON.stringify({
-            job_id: this.confirmationJob.id,
-            action: 'confirm',
-            notes: this.confirmationNotes
-          })
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          // Update the job in the local array
-          const jobIndex = this.jobs.findIndex(j => j.id === this.confirmationJob.id)
-          if (jobIndex !== -1) {
-            this.jobs[jobIndex].job_status = 'Confirmed'
-            this.jobs[jobIndex].updated_at = new Date().toISOString()
-          }
-
-          this.closeJobConfirmationModal()
-          alert('Job confirmed successfully!')
-        } else {
-          const errorData = await response.json()
-          this.handleError(errorData)
-        }
-      } catch (error) {
-        alert('Failed to confirm job')
-      } finally {
-        this.confirmingJob = false
-      }
-    },
-
-    async rejectJob() {
-      if (!this.rejectionJob) return
-
-      if (!this.rejectionNotes.trim()) {
-        alert('Please provide a reason for rejecting this job.')
-        return
-      }
-
-      this.rejectingJob = true
-      try {
-        const response = await apiFetch('/backend/api/job-completion-confirmation.php', {
-          method: 'PUT',
-          body: JSON.stringify({
-            job_id: this.rejectionJob.id,
-            action: 'reject',
-            notes: this.rejectionNotes
-          })
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          // Update the job in the local array
-          const jobIndex = this.jobs.findIndex(j => j.id === this.rejectionJob.id)
-          if (jobIndex !== -1) {
-            this.jobs[jobIndex].job_status = 'Incomplete'
-            this.jobs[jobIndex].updated_at = new Date().toISOString()
-          }
-
-          this.closeJobRejectionModal()
-          alert('Job rejected and returned for rework!')
-        } else {
-          const errorData = await response.json()
-          this.handleError(errorData)
-        }
-      } catch (error) {
-        alert('Failed to reject job')
-      } finally {
-        this.rejectingJob = false
-      }
-    },
-
-    // Quote Response Methods
-    showQuoteResponseModal(job) {
-      this.quoteResponseJob = job
-      this.quoteResponseNotes = ''
-      this.showQuoteResponseModal = true
-    },
-
-    closeQuoteResponseModal() {
-      this.showQuoteResponseModal = false
-      this.quoteResponseJob = null
-      this.quoteResponseNotes = ''
-    },
-
-    showQuoteRejectionModal(job) {
-      this.quoteRejectionJob = job
-      this.quoteRejectionNotes = ''
-      this.showQuoteRejectionModal = true
-    },
-
-    closeQuoteRejectionModal() {
-      this.showQuoteRejectionModal = false
-      this.quoteRejectionJob = null
-      this.quoteRejectionNotes = ''
-    },
-
-    async acceptQuote() {
-      if (!this.quoteResponseJob) return
-
-      this.acceptingQuote = true
-      try {
-        const response = await apiFetch('/backend/api/job-quotation-responses.php', {
-          method: 'PUT',
-          body: JSON.stringify({
-            job_id: this.quoteResponseJob.id,
-            action: 'accept',
-            notes: this.quoteResponseNotes
-          })
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          // Update the job in the local array
-          const jobIndex = this.jobs.findIndex(j => j.id === this.quoteResponseJob.id)
-          if (jobIndex !== -1) {
-            this.jobs[jobIndex].job_status = 'Quote Accepted'
-            this.jobs[jobIndex].updated_at = new Date().toISOString()
-          }
-
-          this.closeQuoteResponseModal()
-          alert('Quote accepted successfully! The service provider will be notified to proceed with the work.')
-        } else {
-          const errorData = await response.json()
-          this.handleError(errorData)
-        }
-      } catch (error) {
-        alert('Failed to accept quote')
-      } finally {
-        this.acceptingQuote = false
-      }
-    },
-
-    async rejectQuote() {
-      if (!this.quoteRejectionJob) return
-
-      if (!this.quoteRejectionNotes.trim()) {
-        alert('Please provide a reason for rejecting this quote.')
-        return
-      }
-
-      this.rejectingQuote = true
-      try {
-        const response = await apiFetch('/backend/api/job-quotation-responses.php', {
-          method: 'PUT',
-          body: JSON.stringify({
-            job_id: this.quoteRejectionJob.id,
-            action: 'reject',
-            notes: this.quoteRejectionNotes
-          })
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          // Update the job in the local array
-          const jobIndex = this.jobs.findIndex(j => j.id === this.quoteRejectionJob.id)
-          if (jobIndex !== -1) {
-            this.jobs[jobIndex].job_status = 'Quote Rejected'
-            this.jobs[jobIndex].updated_at = new Date().toISOString()
-          }
-
-          this.closeQuoteRejectionModal()
-          alert('Quote rejected successfully! The service provider will be notified.')
-        } else {
-          const errorData = await response.json()
-          this.handleError(errorData)
-        }
-      } catch (error) {
-        alert('Failed to reject quote')
-      } finally {
-        this.rejectingQuote = false
-      }
-    },
-
-    formatCurrency(amount) {
-      return parseFloat(amount || 0).toLocaleString('en-ZA', {
-        style: 'currency',
-        currency: 'ZAR'
-      })
-    },
-
-    async handleViewQuotation(job) {
-      // Fetch quotation details from API
-      try {
-        const response = await apiFetch(`/backend/api/job-quotations.php?job_id=${job.id}`)
-        if (response.ok) {
-          const data = await response.json()
-          if (data.quotes && data.quotes.length > 0) {
-            this.selectedQuotation = data.quotes[0] // Get the first (most recent) quotation for the job
-            this.showQuotationDetailsModal = true
-          } else {
-            alert('No quotation found for this job.')
-          }
-        } else {
-          const errorData = await response.json()
-          this.handleError(errorData)
-        }
-      } catch (error) {
-        alert('Failed to load quotation details')
-      }
-    },
-
-    async handleAcceptQuoteFromModal(actionData) {
-      const { quotation, notes } = actionData;
-
-      const confirmMessage = `Accept this quotation for "${quotation.item_identifier}"?
-
-Quote Details:
-• Job status will change to "Assigned"
-• Quote will be marked as accepted
-• Service provider can begin work immediately
-
-Are you sure you want to proceed?`
-
-      if (!confirm(confirmMessage)) {
-        return;
-      }
-
-      try {
-        const response = await apiFetch('/backend/api/job-quotations.php', {
-          method: 'PUT',
-          body: JSON.stringify({
-            quote_id: quotation.id,
-            action: 'accept',
-            notes: notes
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          alert('Quote accepted and job assigned to provider!');
-          this.showQuotationDetailsModal = false;
-          this.loadJobs(); // Refresh jobs list to show updated status
-        } else {
-          const errorData = await response.json();
-          this.handleError(errorData);
-        }
-      } catch (error) {
-        alert('Failed to accept quote');
-      }
-    },
-
-    async handleRejectQuoteFromModal(actionData) {
-      const { quotation, notes } = actionData;
-
-      try {
-        const response = await apiFetch('/backend/api/job-quotations.php', {
-          method: 'PUT',
-          body: JSON.stringify({
-            quote_id: quotation.id,
-            action: 'reject',
-            notes: notes
-          })
-        });
-
-        if (response.ok) {
-          alert('Quote rejected successfully! The service provider will be notified.');
-          this.showQuotationDetailsModal = false;
-          this.loadJobs(); // Refresh jobs list to show updated status
-        } else {
-          const errorData = await response.json();
-          this.handleError(errorData);
-        }
-      } catch (error) {
-        alert('Failed to reject quote');
-      }
-    },
-
-    async handleRequestQuoteFromModal(actionData) {
-      const { quotation, notes } = actionData;
-
-      try {
-        const response = await apiFetch('/backend/api/job-quotations.php', {
-          method: 'PUT',
-          body: JSON.stringify({
-            quote_id: quotation.id,
-            action: 'request',
-            notes: notes
-          })
-        });
-
-        if (response.ok) {
-          alert('New quote requested! The provider has been notified and can submit a revised quotation.');
-          this.showQuotationDetailsModal = false;
-          this.loadJobs(); // Refresh jobs list to show updated status
-        } else {
-          const errorData = await response.json();
-          this.handleError(errorData);
-        }
-      } catch (error) {
-        alert('Failed to request new quote');
-      }
     }
-
-
   }
 }
 </script>
 
 <style scoped>
+/* Admin sections nested visual hierarchy */
+.admin-settings-container {
+  margin-bottom: 2rem;
+}
+
+.admin-subsections {
+  background-color: #f9fafb;
+  padding: 1.5rem;
+  border-radius: 0 0 0.5rem 0.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.admin-subsections .subsection-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.subsection-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.subsection-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.subsection-title h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.subsection-content {
+  padding: 1.5rem;
+}
+
+/* Existing styles remain unchanged */
 .client-dashboard {
   max-width: 1400px;
   margin: 0 auto;
@@ -2566,43 +1978,6 @@ Are you sure you want to proceed?`
   padding-bottom: 20px;
   border-bottom: 1px solid #e0e0e0;
 }
-
-/*.dashboard-header h1 {
-  color: #333;
-  margin-bottom: 10px;
-}*/
-
-.profile-completeness {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  position: relative;
-  left: 32px;
-}
-
-.completeness-bar {
-  width: 200px;
-  height: 8px;
-  background-color: #e0e0e0;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.completeness-fill {
-  height: 100%;
-  background-color: #28a745;
-  transition: width 0.3s ease;
-}
-
-.completeness-text {
-  font-weight: 500;
-  color: #666;
-}
-/*
-.dashboard-header p {
-  color: #666;
-  font-size: 1.1em;
-}*/
 
 .dashboard-content {
   display: grid;
@@ -2659,1271 +2034,7 @@ Are you sure you want to proceed?`
   transition: all 0.3s ease-in-out;
 }
 
-/* Users Section */
-.users-section, .providers-section, .jobs-section {
-  background: white;
-  border-radius: 8px;
-  padding: 25px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.users-grid, .providers-grid, .jobs-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  margin-top: 15px;
-}
-
-/* Job Filters */
-.job-filters {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  min-width: 150px;
-}
-
-.filter-group label {
-  font-size: 12px;
-  font-weight: 500;
-  color: #666;
-  margin-bottom: 5px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.filter-group select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  background: white;
-}
-
-/* Job Cards */
-.job-card {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  overflow: hidden;
-  transition: box-shadow 0.2s, transform 0.2s;
-  background: white;
-}
-
-.job-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  transform: translateY(-2px);
-}
-
-.job-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.job-status {
-  display: flex;
-  align-items: center;
-}
-
-.status-badge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.8em;
-  font-weight: 500;
-  text-transform: uppercase;
-}
-
-.status-badge.reported {
-  background: #ffc107;
-  color: #212529;
-}
-
-.status-badge.assigned {
-  background: #17a2b8;
-  color: white;
-}
-
-.status-badge.in-progress {
-  background: #007bff;
-  color: white;
-}
-
-.status-badge.completed {
-  background: #28a745;
-  color: white;
-}
-
-.job-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.job-content {
-  padding: 15px;
-}
-
-.job-title {
-  margin: 0 0 8px 0;
-  color: #333;
-  font-size: 1.1em;
-}
-
-.job-description {
-  color: #666;
-  margin-bottom: 8px;
-  line-height: 1.4;
-}
-
-.job-location {
-  color: #666;
-  margin-bottom: 12px;
-  font-size: 0.9em;
-}
-
-.job-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.meta-item {
-  display: flex;
-  flex-direction: column;
-  min-width: 120px;
-}
-
-.meta-label {
-  font-size: 0.8em;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 2px;
-}
-
-.meta-value {
-  font-size: 0.9em;
-  color: #333;
-  font-weight: 500;
-}
-
-.job-footer {
-  padding: 15px;
-  background: #f8f9fa;
-  border-top: 1px solid #e0e0e0;
-}
-
-.job-date {
-  font-size: 0.85em;
-  color: #666;
-  margin: 0;
-}
-
-/* No Jobs State */
-.no-jobs {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 60px 20px;
-  color: #666;
-}
-
-.no-jobs-icon {
-  font-size: 3em;
-  margin-bottom: 15px;
-}
-
-.no-jobs h3 {
-  margin-bottom: 10px;
-}
-
-/* User Cards */
-.user-card, .provider-card {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  overflow: hidden;
-  transition: box-shadow 0.2s, transform 0.2s;
-}
-
-.user-card:hover, .provider-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  transform: translateY(-2px);
-}
-
-.user-header, .provider-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.user-avatar, .provider-logo {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: #007bff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 1.2em;
-}
-
-.avatar-placeholder, .logo-placeholder {
-  font-size: 1.5em;
-}
-
-.user-actions, .provider-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.user-content, .provider-content {
-  padding: 15px;
-}
-
-.user-name, .provider-name {
-  margin: 0 0 8px 0;
-  color: #333;
-  font-size: 1.1em;
-}
-
-.user-email, .provider-address {
-  color: #666;
-  margin-bottom: 8px;
-  font-size: 0.9em;
-}
-
-.user-role {
-  margin-bottom: 12px;
-}
-
-.role-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.8em;
-  font-weight: 500;
-  text-transform: uppercase;
-}
-
-.role-badge.admin {
-  background: #28a745;
-  color: white;
-}
-
-.role-badge.controller {
-  background: #17a2b8;
-  color: white;
-}
-
-.provider-stats {
-  display: flex;
-  gap: 15px;
-  margin-top: 12px;
-}
-
-.stat-item {
-  text-align: center;
-}
-
-.stat-number {
-  display: block;
-  font-size: 1.5em;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 2px;
-}
-
-.stat-label {
-  font-size: 0.8em;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.user-footer, .provider-footer {
-  padding: 15px;
-  background: #f8f9fa;
-  border-top: 1px solid #e0e0e0;
-}
-
-.user-date, .approval-date {
-  font-size: 0.85em;
-  color: #666;
-  margin: 0;
-}
-
-/* No Items States */
-.no-users, .no-providers {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 60px 20px;
-  color: #666;
-}
-
-.no-users-icon, .no-providers-icon {
-  font-size: 3em;
-  margin-bottom: 15px;
-}
-
-.no-users h3, .no-providers h3 {
-  margin-bottom: 10px;
-}
-
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10000; /* Increased for better modal layering */
-  user-select: none; /* Prevent text selection on overlay */
-}
-
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 90vh;
-  overflow-y: auto;
-  padding: 5px 10px;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #333;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #666;
-}
-
-/* Form Styles */
-.user-form {
-  padding: 20px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin-bottom: 15px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-  color: #333;
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.form-group input:disabled {
-  background: #f8f9fa;
-  color: #666;
-}
-
-.form-group textarea {
-  width: 100%;
-  min-height: 80px;
-  resize: vertical;
-  box-sizing: border-box;
-}
-
-.input-with-button {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.input-with-button input {
-  flex: 1;
-}
-
-.qr-scanner-inline {
-  flex-shrink: 0;
-}
-
-.form-help {
-  display: block;
-  margin-top: 3px;
-  font-size: 0.8em;
-  color: #666;
-}
-
-.readonly-field {
-  padding: 10px;
-  background: #f8f9fa;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  color: #666;
-  font-style: italic;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #e0e0e0;
-}
-
-.btn-primary, .btn-secondary, .btn-danger {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.btn-primary {
-  background: #007bff;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #0056b3;
-}
-
-.btn-primary:disabled {
-  background: #6c757d;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: #6c757d;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background: #545b62;
-}
-
-.btn-danger {
-  background: #dc3545;
-  color: white;
-}
-
-.btn-danger:hover {
-  background: #c82333;
-}
-
-.btn-small {
-  padding: 6px 12px;
-  font-size: 0.9em;
-}
-
-/* Loading and Error States */
-.loading-state, .error-state {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 60px 20px;
-  color: #666;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #007bff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 15px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.error-icon {
-  font-size: 3em;
-  margin-bottom: 15px;
-}
-
-.loading-state h3, .error-state h3 {
-  margin-bottom: 10px;
-}
-
-/* View Mode Toggle */
-.header-left {
-  align-items: left;
-  gap: 20px;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.view-mode-toggle {
-  display: flex;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.view-mode-btn {
-  padding: 8px 16px;
-  border: none;
-  background: white;
-  color: #666;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
-}
-
-.view-mode-btn:hover {
-  background: #f8f9fa;
-}
-
-.view-mode-btn.active {
-  background: #007bff;
-  color: white;
-}
-
-.view-icon {
-  font-size: 16px;
-}
-
-/* Locations Table View */
-.locations-table-container {
-  overflow-x: auto;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.locations-table-wrapper {
-  min-width: 600px;
-}
-
-.locations-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.locations-table th {
-  background: #f8f9fa;
-  padding: 15px;
-  text-align: left;
-  font-weight: 600;
-  color: #333;
-  border-bottom: 2px solid #e0e0e0;
-  text-transform: uppercase;
-  font-size: 12px;
-  letter-spacing: 0.5px;
-}
-
-.locations-table td {
-  padding: 15px;
-  border-bottom: 1px solid #e0e0e0;
-  vertical-align: middle;
-}
-
-.location-row {
-  transition: background-color 0.2s;
-  cursor: pointer;
-}
-
-.location-row:hover {
-  background: #f8f9fa;
-}
-
-.location-name-cell {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.location-name-cell .location-icon {
-  color: #007bff;
-  font-size: 16px;
-}
-
-.location-name-text {
-  font-weight: 500;
-  color: #333;
-}
-
-.col-name {
-  width: 30%;
-}
-
-.col-address {
-  width: 40%;
-}
-
-.col-jobs {
-  width: 15%;
-  text-align: center;
-}
-
-.col-actions {
-  width: 15%;
-  text-align: center;
-}
-
-.job-count-badge {
-  display: inline-block;
-  background: #007bff;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  min-width: 20px;
-  text-align: center;
-}
-
-.table-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-
-/* Large Modal for Job Details */
-.large-modal .modal-content {
-  max-width: 900px;
-  padding: 5px 10px;
-}
-
-.job-details-content {
-  padding: 20px;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-.job-info-section {
-  margin-bottom: 30px;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.info-item label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.info-item span {
-  font-size: 14px;
-  color: #333;
-  font-weight: 500;
-}
-
-.description-section {
-  margin-bottom: 20px;
-}
-
-.description-section label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.fault-description {
-  background: #f8f9fa;
-  padding: 15px;
-  border-radius: 6px;
-  line-height: 1.5;
-  color: #333;
-}
-
-.contact-section {
-  margin-bottom: 20px;
-}
-
-.contact-section label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-  display: block;
-}
-
-/* Images Gallery */
-.images-section h4 {
-  margin-bottom: 15px;
-  color: #333;
-  font-size: 16px;
-}
-
-.no-images {
-  text-align: center;
-  padding: 40px 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  color: #666;
-}
-
-.no-images-icon {
-  font-size: 3em;
-  margin-bottom: 10px;
-}
-
-.images-gallery {
-  margin-top: 15px;
-}
-
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 15px;
-}
-
-.gallery-item {
-  position: relative;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #f8f9fa;
-  border: 1px solid #e0e0e0;
-  transition: transform 0.2s, box-shadow 0.2s;
-  cursor: pointer;
-}
-
-.gallery-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.gallery-image {
-  width: 100%;
-  height: 120px;
-  object-fit: cover;
-  display: block;
-}
-
-.image-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0,0,0,0.7);
-  color: white;
-  padding: 8px;
-  font-size: 11px;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.image-filename {
-  font-weight: 500;
-}
-
-/* Image Modal */
-.image-modal-content {
-  background: white;
-  border-radius: 8px;
-  max-width: 90vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.image-modal-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid #e0e0e0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.image-modal-body {
-  padding: 20px;
-  text-align: center;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.full-size-image {
-  max-width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  border-radius: 4px;
-}
-
-/* Edit Job Modal Styles */
-.edit-details-section {
-  margin-bottom: 20px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-}
-
-.edit-details-section h4 {
-  margin: 0 0 15px 0;
-  color: #333;
-  font-size: 16px;
-}
-
-.readonly-details-section {
-  margin-bottom: 20px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-}
-
-.readonly-details-section h4 {
-  margin: 0 0 15px 0;
-  color: #333;
-  font-size: 16px;
-}
-
-.readonly-info {
-  display: grid;
-  gap: 10px;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.info-row label {
-  font-weight: 600;
-  color: #666;
-  font-size: 14px;
-}
-
-.info-row span {
-  color: #333;
-  font-size: 14px;
-}
-
-/* Profile Section Styles */
-.profile-section {
-  background: white;
-  border-radius: 8px;
-  padding: 25px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.profile-content {
-  margin-top: 15px;
-}
-
-.profile-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-}
-
-.profile-card {
-  background: #f8f9fa;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 20px;
-  transition: box-shadow 0.2s;
-}
-
-.profile-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.profile-card-title {
-  color: #333;
-  font-size: 1.1em;
-  font-weight: 600;
-  margin: 0 0 15px 0;
-  border-bottom: 2px solid #007bff;
-  padding-bottom: 8px;
-}
-
-.profile-field {
-  margin-bottom: 12px;
-}
-
-.profile-field label {
-  display: block;
-  font-size: 0.85em;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-}
-
-.profile-field span {
-  color: #333;
-  font-size: 0.95em;
-  line-height: 1.4;
-}
-
-.profile-completeness-badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: #e3f2fd;
-  border: 1px solid #2196f3;
-  border-radius: 12px;
-  padding: 8px 12px;
-  min-width: 60px;
-}
-
-.completeness-percentage {
-  font-size: 1.2em;
-  font-weight: bold;
-  color: #1976d2;
-  line-height: 1;
-}
-
-.completeness-label {
-  font-size: 0.7em;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.status-badge.active {
-  background: #28a745;
-  color: white;
-}
-
-.status-badge.inactive {
-  background: #dc3545;
-  color: white;
-}
-
-/* Admin Disabled Notice */
-.admin-disabled-notice {
-  background: #fff3cd;
-  border: 1px solid #ffeeba;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 20px;
-}
-
-.disabled-banner {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.disabled-icon {
-  font-size: 24px;
-  color: #856404;
-  flex-shrink: 0;
-}
-
-.disabled-content h4 {
-  margin: 0 0 8px 0;
-  color: #856404;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.disabled-content p {
-  margin: 0;
-  color: #856404;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-/* Profile Form Styles */
-.profile-form {
-  padding: 20px;
-}
-
-.form-section {
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.form-section:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-}
-
-.section-title {
-  color: #333;
-  font-size: 1.1em;
-  font-weight: 600;
-  margin: 0 0 20px 0;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #007bff;
-}
-
-.form-section .form-row {
-  margin-bottom: 15px;
-}
-
-.form-section .form-group {
-  margin-bottom: 15px;
-}
-
-/* No Profile State */
-.no-profile {
-  text-align: center;
-  padding: 60px 20px;
-  color: #666;
-}
-
-.no-profile-icon {
-  font-size: 4em;
-  margin-bottom: 20px;
-  opacity: 0.5;
-}
-
-.no-profile h3 {
-  margin-bottom: 10px;
-  color: #333;
-}
-
-/* Quote Modal Styles */
-.quote-response-form,
-.quote-rejection-form {
-  padding: 20px;
-}
-
-.quote-details-section {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
-  border: 1px solid #e0e0e0;
-}
-
-.quote-details-section h4 {
-  margin: 0 0 15px 0;
-  color: #333;
-  font-size: 16px;
-  border-bottom: 2px solid #28a745;
-  padding-bottom: 8px;
-}
-
-.quote-info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  margin-bottom: 15px;
-}
-
-.quote-info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.quote-info-item label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.quote-info-item span {
-  font-size: 14px;
-  color: #333;
-  font-weight: 500;
-}
-
-.quote-amount {
-  font-size: 18px;
-  font-weight: bold;
-  color: #28a745;
-}
-
-.quote-description-section {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid #e0e0e0;
-}
-
-.quote-description-section label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.quote-description-content {
-  background: white;
-  padding: 12px;
-  border-radius: 6px;
-  line-height: 1.5;
-  color: #333;
-  border: 1px solid #ddd;
-}
-
-.quote-document-section {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid #e0e0e0;
-}
-
-.quote-document-section label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.quote-document-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: #007bff;
-  color: white;
-  text-decoration: none;
-  border-radius: 6px;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.quote-document-link:hover {
-  background: #0056b3;
-  color: white;
-  text-decoration: none;
-}
-
-.quote-response-info,
-.quote-rejection-info {
-  margin-top: 20px;
-}
-
-.info-banner,
-.warning-banner {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 15px;
-  border-radius: 8px;
-  background: #e3f2fd;
-  border: 1px solid #2196f3;
-}
-
-.warning-banner {
-  background: #fff3cd;
-  border: 1px solid #ffc107;
-}
-
-.info-icon,
-.warning-icon {
-  font-size: 20px;
-  color: #1976d2;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.warning-icon {
-  color: #856404;
-}
-
-.info-content,
-.warning-content {
-  flex: 1;
-}
-
-.info-content p,
-.warning-content p {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.info-content p:last-child,
-.warning-content p:last-child {
-  margin-bottom: 0;
-}
-
-.info-content strong,
-.warning-content strong {
-  font-weight: 600;
-}
-
-/* Responsive Design */
+/* Basic responsive styles */
 @media (max-width: 768px) {
   .client-dashboard {
     padding: 10px;
@@ -3974,63 +2085,5 @@ Are you sure you want to proceed?`
   .large-modal .modal-content {
     max-width: 95vw;
   }
-
-  .info-grid {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-
-  .gallery-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
-  }
-
-  .locations-table {
-    font-size: 12px;
-  }
-
-  .locations-table th,
-  .locations-table td {
-    padding: 10px;
-  }
-
-  .edit-details-section,
-  .readonly-details-section,
-  .quote-details-section {
-    padding: 15px;
-  }
-
-  .quote-info-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .info-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
-  }
-
-  .profile-completeness-badge {
-    min-width: 50px;
-    padding: 6px 10px;
-  }
-
-  .completeness-percentage {
-    font-size: 1em;
-  }
-
-  .info-banner,
-  .warning-banner {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .info-icon,
-  .warning-icon {
-    align-self: flex-start;
-  }
 }
-
-
 </style>

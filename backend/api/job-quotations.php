@@ -84,6 +84,54 @@ try {
                 echo json_encode(['error' => 'Access denied. Admin access required.']);
             }
         } elseif ($entity_type === 'client') {
+            // Check if requesting a single quote by ID
+            $quote_id = isset($_GET['quote_id']) ? (int)$_GET['quote_id'] : null;
+
+            if ($quote_id) {
+                // Single quote retrieval
+                $query = "
+                    SELECT
+                        jq.id,
+                        jq.job_id,
+                        jq.quotation_amount,
+                        jq.quotation_description,
+                        jq.quotation_document_url,
+                        jq.valid_until,
+                        jq.status,
+                        jq.submitted_at,
+                        jq.responded_at,
+                        jq.response_notes,
+                        jq.created_at,
+                        j.item_identifier,
+                        j.fault_description,
+                        j.job_status,
+                        j.reporting_user_id,
+                        j.client_location_id,
+                        j.updated_at,
+                        j.contact_person,
+                        COALESCE(l.name, 'Default Location (Client Premises)') as location_name,
+                        sp.name as provider_name
+                    FROM job_quotations jq
+                    JOIN jobs j ON jq.job_id = j.id
+                    JOIN participants sp ON jq.provider_participant_id = sp.participantId
+                    LEFT JOIN locations l ON j.client_location_id = l.id
+                    WHERE jq.id = ? AND j.client_id = ?
+                ";
+
+                $stmt = $pdo->prepare($query);
+                $stmt->execute([$quote_id, $entity_id]);
+                $quote = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$quote) {
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Quote not found or access denied']);
+                    exit;
+                }
+
+                echo json_encode(['quote' => $quote]);
+                exit;
+            }
+
             // Clients can see quotes for their jobs using direct client_id
             $query = "
                 SELECT
@@ -285,6 +333,17 @@ try {
                 exit;
             }
 
+            // Get current job status to validate state transitions
+            $stmt = $pdo->prepare("SELECT job_status FROM jobs WHERE id = ?");
+            $stmt->execute([$quote['job_id']]);
+            $current_job = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$current_job || $current_job['job_status'] !== 'Quote Provided') {
+                http_response_code(400);
+                echo json_encode(['error' => 'Quote operations can only be performed when job is in "Quote Provided" status']);
+                exit;
+            }
+
             $pdo->beginTransaction();
 
             try {
@@ -345,7 +404,21 @@ try {
                     ");
                     $stmt->execute([$quote_id, $history_action, $user_id, $notes]);
 
-                    if ($action === 'request') {
+                    if ($action === 'reject') {
+                        // For quote rejection, change job status to 'Rejected' (terminal state)
+                        $stmt = $pdo->prepare("
+                            UPDATE jobs SET job_status = 'Rejected', quotation_deadline = NULL, updated_at = NOW()
+                            WHERE id = ?
+                        ");
+                        $stmt->execute([$quote['job_id']]);
+
+                        // Insert job status history
+                        $stmt = $pdo->prepare("
+                            INSERT INTO job_status_history (job_id, status, changed_by_user_id, changed_at, notes)
+                            VALUES (?, 'Rejected', ?, NOW(), ?)
+                        ");
+                        $stmt->execute([$quote['job_id'], $user_id, "Quote rejected: " . $notes]);
+                    } elseif ($action === 'request') {
                         // For requote request, change job status back to 'Quote Requested'
                         $stmt = $pdo->prepare("
                             UPDATE jobs SET job_status = 'Quote Requested', updated_at = NOW()
@@ -355,10 +428,10 @@ try {
 
                         // Insert job status history
                         $stmt = $pdo->prepare("
-                            INSERT INTO job_status_history (job_id, status, changed_by_user_id, changed_at)
-                            VALUES (?, 'Quote Requested', ?, NOW())
+                            INSERT INTO job_status_history (job_id, status, changed_by_user_id, changed_at, notes)
+                            VALUES (?, 'Quote Requested', ?, NOW(), ?)
                         ");
-                        $stmt->execute([$quote['job_id'], $user_id]);
+                        $stmt->execute([$quote['job_id'], $user_id, "Re-quote requested: " . $notes]);
                     }
                 }
 
@@ -467,6 +540,10 @@ try {
             'success' => true,
             'message' => 'Quote updated successfully'
         ]);
+
+        // Send notifications for quote response
+        require_once '../includes/job-notifications.php';
+        JobNotifications::notifyQuoteResponse($quote_id, $input['action'], $input['notes'] ?? null);
 
     } else {
         http_response_code(405);

@@ -73,12 +73,17 @@ function getApprovedProviders($participant_id) {
                 pt.participantType as provider_type,
                 pa.created_at as approved_at,
                 COUNT(DISTINCT sps.service_id) as services_count,
-                COUNT(DISTINCT spr.region_id) as regions_count
+                COUNT(DISTINCT spr.region_id) as regions_count,
+                COUNT(DISTINCT j.id) as total_jobs,
+                COUNT(DISTINCT CASE WHEN j.job_status IN ('Reported', 'Assigned', 'In Progress') THEN j.id END) as active_jobs,
+                COUNT(DISTINCT CASE WHEN j.job_status IN ('Completed', 'Confirmed') THEN j.id END) as completed_jobs
             FROM participant_approvals pa
             JOIN participants p ON pa.provider_participant_id = p.participantId
             JOIN participant_type pt ON p.participantId = pt.participantId
             LEFT JOIN service_provider_services sps ON p.participantId = sps.service_provider_id AND pt.participantType = 'S'
             LEFT JOIN service_provider_regions spr ON p.participantId = spr.service_provider_id AND pt.participantType = 'S'
+            LEFT JOIN jobs j ON pa.client_participant_id = j.client_id
+                AND pa.provider_participant_id = j.assigned_provider_participant_id
             WHERE pa.client_participant_id = ? AND p.is_active = TRUE
             GROUP BY pa.id, p.participantId, pt.participantType
             ORDER BY pa.created_at DESC

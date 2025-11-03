@@ -1,15 +1,13 @@
 <template>
   <div class="edit-job-modal">
-    <div class="modal-overlay" @click="$emit('close')"></div>
-    <div class="modal-content">
+  <div class="modal-overlay" @click="$emit('close')"></div>
+    <div class="modal-content open">
       <!-- Modal Header -->
       <div class="modal-header">
-        <div class="title-container">
-          <h2 class="modal-title">Edit Job: {{ job.item_identifier }}</h2>
-          <div v-if="job?.assigned_provider_participant_id && userRole === 2 && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="xs-mode-banner">
-            <span class="material-icon xs-indicator-icon">settings</span>
-            External Provider Mode
-          </div>
+        <h2 class="modal-title">{{ job.item_identifier }}</h2>
+        <div v-if="job?.assigned_provider_participant_id && userRole === 2 && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="xs-mode-banner">
+          <span class="material-icon xs-indicator-icon">settings</span>
+          External Provider Mode
         </div>
         <button class="modal-close" @click="$emit('close')">
           <span class="material-icon">close</span>
@@ -537,6 +535,216 @@
 
           </div>
 
+          <!-- Platform Provider Service Workflow (for roles 3 & 4 on non-XS jobs) -->
+          <div v-if="(userRole === 3 || userRole === 4) && job?.assigned_provider_participant_id && !availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="service-provider-transition-section">
+            <h4 class="transition-section-title">Available Actions</h4>
+            <p class="transition-section-desc">{{ getServiceProviderTransitionDescription() }}</p>
+
+            <div class="transition-buttons-grid">
+              <!-- Role 3 (Admin) - Assigned Jobs -->
+              <button
+                v-if="userRole === 3 && job.job_status === 'Assigned'"
+                @click="initiateSPTransition('Declined')"
+                class="transition-action-btn status-declined-sp"
+                :disabled="saving"
+              >
+                <span class="btn-icon">✋</span>
+                Decline Job
+              </button>
+
+              <button
+                v-if="userRole === 3 && job.job_status === 'Assigned'"
+                @click="showTechnicianAssignment = true"
+                class="transition-action-btn status-in-progress-sp"
+                :disabled="saving"
+              >
+                <span class="btn-icon">▶️</span>
+                Start Work
+              </button>
+
+              <!-- Role 3 & 4 (In Progress Jobs) -->
+              <button
+                v-if="(userRole === 3 || userRole === 4) && job.job_status === 'In Progress'"
+                @click="initiateSPTransition('Completed')"
+                class="transition-action-btn status-completed-sp"
+                :disabled="saving"
+              >
+                <span class="btn-icon">✅</span>
+                Mark Completed
+              </button>
+
+              <button
+                v-if="(userRole === 3 || userRole === 4) && job.job_status === 'In Progress'"
+                @click="initiateSPTransition('Cannot repair')"
+                class="transition-action-btn status-cannot-repair-sp"
+                :disabled="saving"
+              >
+                <span class="btn-icon">❌</span>
+                Cannot Repair
+              </button>
+            </div>
+
+            <!-- Technician Assignment Overlay for "Start Work" action -->
+            <div v-if="showTechnicianAssignment" class="sp-technician-assignment-overlay">
+              <div class="sp-tech-form">
+                <h4 class="form-title">Start Work on Job</h4>
+                <p class="form-description">Select a technician and provide instructions to begin work on this job.</p>
+
+                <div class="form-grid">
+                  <!-- Technician Selection -->
+                  <div class="form-group">
+                    <label for="sp-tech-select" class="form-label">
+                      <span class="material-icon field-icon">person</span>
+                      Assign Technician *
+                    </label>
+                    <select
+                      id="sp-tech-select"
+                      v-model="selectedTechnicianId"
+                      class="form-input"
+                    >
+                      <option value="">-- Select Technician --</option>
+                      <option v-for="tech in technicians" :key="tech.id" :value="tech.id">
+                        {{ tech.full_name || tech.username }}
+                      </option>
+                    </select>
+                    <p class="form-help">A technician must be assigned to start work on this job.</p>
+                  </div>
+
+                  <!-- Technician Instructions -->
+                  <div class="form-group full-width">
+                    <label for="sp-tech-notes" class="form-label">
+                      <span class="material-icon field-icon">assignment</span>
+                      Technician Instructions
+                    </label>
+                    <textarea
+                      id="sp-tech-notes"
+                      v-model="technicianNotes"
+                      class="form-textarea"
+                      rows="4"
+                      placeholder="Provide detailed instructions for the technician working on this job..."
+                    ></textarea>
+                    <p class="form-help">Optionally provide specific instructions for the assigned technician.</p>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="form-actions">
+                  <button
+                    @click="startWorkOnJob"
+                    :disabled="!selectedTechnicianId || saving"
+                    class="btn-primary btn-start-work"
+                  >
+                    <span class="material-icon-sm">play_arrow</span>
+                    {{ saving ? 'Starting Work...' : 'Start Work' }}
+                  </button>
+                  <button
+                    @click="showTechnicianAssignment = false"
+                    :disabled="saving"
+                    class="btn-secondary btn-cancel"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Transition Notes Forms -->
+            <div v-if="pendingSPTransition" class="sp-transition-notes-form">
+              <h4 class="form-title transition-confirmation-title">
+                Confirm "{{ pendingSPTransition }}" Action
+              </h4>
+              <div v-if="pendingSPTransition === 'Declined'" class="transition-confirmation">
+                <div class="transition-message declined-message">
+                  <span class="material-icon status-icon">warning</span>
+                  <div class="message-content">
+                    <strong>Declining this job</strong> will terminate the service request. This action cannot be undone and the job will be returned to the client status.
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="decline-reason" class="form-label">
+                    <span class="material-icon field-icon">comment</span>
+                    Reason for Decline *
+                  </label>
+                  <textarea
+                    id="decline-reason"
+                    v-model="spTransitionNotes"
+                    class="form-textarea"
+                    rows="3"
+                    placeholder="Please explain why this job is being declined..."
+                    required
+                  ></textarea>
+                  <p class="form-help">This reason will be documented and sent to the client.</p>
+                </div>
+              </div>
+
+              <div v-if="pendingSPTransition === 'Completed'" class="transition-confirmation">
+                <div class="transition-message completed-message">
+                  <span class="material-icon status-icon">check_circle</span>
+                  <div class="message-content">
+                    <strong>Marking as completed</strong> will notify the client that work has finished and allow them to confirm receipt.
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="completion-notes" class="form-label">
+                    <span class="material-icon field-icon">note</span>
+                    Completion Notes
+                  </label>
+                  <textarea
+                    id="completion-notes"
+                    v-model="spTransitionNotes"
+                    class="form-textarea"
+                    rows="3"
+                    placeholder="Optional: Add any completion details or notes..."
+                  ></textarea>
+                  <p class="form-help">Optional notes about the completed work.</p>
+                </div>
+              </div>
+
+              <div v-if="pendingSPTransition === 'Cannot repair'" class="transition-confirmation">
+                <div class="transition-message cannot-repair-message">
+                  <span class="material-icon status-icon">build</span>
+                  <div class="message-content">
+                    <strong>Marking as "cannot repair"</strong> will notify the client that this item cannot be repaired and allow them to confirm receipt or reassignment.
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="cannot-repair-reason" class="form-label">
+                    <span class="material-icon field-icon">comment</span>
+                    Explanation *
+                  </label>
+                  <textarea
+                    id="cannot-repair-reason"
+                    v-model="spTransitionNotes"
+                    class="form-textarea"
+                    rows="3"
+                    placeholder="Please explain why this item cannot be repaired..."
+                    required
+                  ></textarea>
+                  <p class="form-help">A detailed explanation is required for transparency with the client.</p>
+                </div>
+              </div>
+
+              <!-- Confirmation Action Buttons -->
+              <div class="form-actions">
+                <button
+                  @click="confirmSPTransition"
+                  :disabled="(pendingSPTransition !== 'Completed' && !spTransitionNotes.trim()) || saving"
+                  class="btn-primary btn-confirm-transition"
+                >
+                  <span class="material-icon-sm">{{ getConfirmationIcon(pendingSPTransition) }}</span>
+                  {{ saving ? 'Updating...' : `Confirm ${pendingSPTransition}` }}
+                </button>
+                <button
+                  @click="cancelSPTransition"
+                  :disabled="saving"
+                  class="btn-secondary btn-cancel"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Editable Job Details (for XS provider jobs in all statuses) -->
           <div v-if="job?.assigned_provider_participant_id && userRole === 2 && availableProviders?.some(p => p.service_provider_id === job.assigned_provider_participant_id && p.provider_type === 'XS')" class="job-section job-details-section">
             <div class="section-header">
@@ -621,11 +829,28 @@
                       Change Service Provider
                     </label>
                     <select v-model="selectedProviderId" class="form-input">
-                      <option value="">-- Keep Current Provider --</option>
-                      <option v-for="provider in availableProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
+                      <option v-if="!isXSProviderJob" value="">-- Keep Current Provider --</option>
+                      <option v-for="provider in availableProviders" :key="provider.service_provider_id" :value="String(provider.service_provider_id)">
                         {{ provider.name }}<span v-if="provider.provider_type === 'XS'" class="provider-type external-provider"> (External)</span>
                       </option>
                     </select>
+                  </div>
+
+                  <!-- Transition Notes for XS Provider Changes -->
+                  <div v-if="isXSProviderJob && selectedProviderId && String(selectedProviderId) !== String(job.assigned_provider_participant_id)" class="form-group">
+                    <label for="transition-notes" class="form-label">
+                      <span class="material-icon field-icon">note</span>
+                      Transition Notes *
+                    </label>
+                    <textarea
+                      id="transition-notes"
+                      v-model="transitionNotes"
+                      class="form-textarea"
+                      rows="3"
+                      placeholder="Please provide notes for this provider change to document external system interactions..."
+                      required
+                    ></textarea>
+                    <p class="form-help">Required for external provider system documentation</p>
                   </div>
 
                   <!-- Technician Assignment -->
@@ -647,7 +872,7 @@
               <!-- Image Upload Area -->
               <div class="image-upload-area">
                 <ImageUpload
-                  ref="imageUpload"
+                  ref="imageUploadXS"
                   :max-images="10"
                   :max-file-size="10 * 1024 * 1024"
                   :existing-images="existingImages"
@@ -837,6 +1062,13 @@ export default {
     // Check if we're in XS provider mode (XS job + role 2)
     isXSProviderMode() {
       return this.isXSProviderJob;
+    },
+
+    // Check if the selected provider is an XS provider
+    isSelectedProviderXS() {
+      if (!this.selectedProviderId || !this.availableProviders) return false;
+      const provider = this.availableProviders.find(p => p.service_provider_id == this.selectedProviderId);
+      return provider?.provider_type === 'XS';
     }
   },
   data() {
@@ -863,8 +1095,11 @@ export default {
       // Technician assignment data
       selectedTechnicianId: this.job.assigned_technician_user_id || '',
       technicianNotes: this.job.technician_notes || '',
-      // Provider selection for Reported jobs
+      // Provider selection for Reported jobs and XS provider changes
       selectedProviderId: this.job.assigned_provider_participant_id || '',
+
+      // Transition notes for XS provider changes
+      transitionNotes: '',
 
       // Locations data for Role 2
       availableLocations: [],
@@ -881,7 +1116,12 @@ export default {
       // Cannot repair reassignment data
       selectedReassignProviderId: '',
       reassignmentNotes: '',
-      showReassignmentForm: false
+      showReassignmentForm: false,
+
+      // Service Provider Workflow Data
+      showTechnicianAssignment: false,
+      pendingSPTransition: null,
+      spTransitionNotes: ''
     }
   },
   watch: {
@@ -900,6 +1140,7 @@ export default {
         this.selectedProviderId = newJob?.assigned_provider_participant_id || '';
         this.selectedTechnicianId = newJob?.assigned_technician_user_id || '';
         this.technicianNotes = newJob?.technician_notes || '';
+        this.transitionNotes = '';
 
         // Force Vue to update bindings using nextTick
         this.$nextTick(() => {
@@ -1204,7 +1445,7 @@ export default {
       }
 
       // For XS provider state transitions, require transition notes
-      if (this.isXSProviderMode && (!this.stateTransitionNote || !this.stateTransitionNote.trim())) {
+      if (this.isSelectedProviderXS && (!this.stateTransitionNote || !this.stateTransitionNote.trim())) {
         alert('Please provide transition notes for external provider system documentation.');
         return;
       }
@@ -1217,7 +1458,7 @@ export default {
           action: targetStatus,
           note: this.stateTransitionNote,
           assigned_provider_id: targetStatus !== 'Rejected' ? parseInt(this.selectedProviderId) : null,
-          transition_notes: this.isXSProviderMode ? this.stateTransitionNote || '' : undefined
+          transition_notes: this.isSelectedProviderXS ? this.stateTransitionNote || '' : undefined
         };
 
         // Set job status for non-quote transitions
@@ -1321,8 +1562,19 @@ export default {
       this.error = null;
 
       try {
+        // Determine which ImageUpload component to use
+        let imageUploadRef = null;
+        if (this.$refs.imageUpload) {
+          imageUploadRef = this.$refs.imageUpload;
+        } else if (this.$refs.imageUploadXS) {
+          imageUploadRef = this.$refs.imageUploadXS;
+        } else {
+          console.warn('EditJobModal: No ImageUpload component found');
+          return;
+        }
+
         console.log('EditJobModal: Calling uploadImages on ImageUpload component');
-        const result = await this.$refs.imageUpload.uploadImages(this.job.id);
+        const result = await imageUploadRef.uploadImages(this.job.id);
 
         console.log('EditJobModal: uploadImages result:', result);
 
@@ -1357,17 +1609,31 @@ export default {
 
         if (this.hasImageChanges) {
           console.log('EditJobModal: Uploading images first before state transition');
-          const imageResult = await this.$refs.imageUpload.uploadImages(this.job.id);
-
-          console.log('EditJobModal: Image upload result:', imageResult);
-
-          if (!imageResult || !imageResult.success) {
-            imageUploadSuccessful = false;
-            imageUploadMessage = imageResult?.error || 'Failed to upload images';
-            console.error('EditJobModal: Image upload failed:', imageUploadMessage);
+          // Determine which ImageUpload component to use
+          let imageUploadRef = null;
+          if (this.$refs.imageUpload) {
+            imageUploadRef = this.$refs.imageUpload;
+          } else if (this.$refs.imageUploadXS) {
+            imageUploadRef = this.$refs.imageUploadXS;
           } else {
-            imageUploadMessage = imageResult.message;
-            console.log('EditJobModal: Images uploaded successfully');
+            console.warn('EditJobModal: No ImageUpload component found');
+            imageUploadSuccessful = false;
+            imageUploadMessage = 'No image upload component available';
+          }
+
+          if (imageUploadRef) {
+            const imageResult = await imageUploadRef.uploadImages(this.job.id);
+
+            console.log('EditJobModal: Image upload result:', imageResult);
+
+            if (!imageResult || !imageResult.success) {
+              imageUploadSuccessful = false;
+              imageUploadMessage = imageResult?.error || 'Failed to upload images';
+              console.error('EditJobModal: Image upload failed:', imageUploadMessage);
+            } else {
+              imageUploadMessage = imageResult.message;
+              console.log('EditJobModal: Images uploaded successfully');
+            }
           }
         } else {
           console.log('EditJobModal: No images to upload, proceeding with state transition only');
@@ -1533,6 +1799,10 @@ export default {
         // Include provider/technician changes
         if (this.selectedProviderId && this.selectedProviderId !== this.job.assigned_provider_participant_id) {
           updateData.assigned_provider_id = parseInt(this.selectedProviderId);
+          // Include transition notes for XS provider changes
+          if (this.isXSProviderJob && this.transitionNotes && this.transitionNotes.trim()) {
+            updateData.transition_notes = this.transitionNotes.trim();
+          }
         }
         if (this.selectedTechnicianId !== (this.job.assigned_technician_user_id || '')) {
           updateData.assigned_technician_user_id = this.selectedTechnicianId || null;
@@ -1647,6 +1917,136 @@ export default {
       } finally {
         this.saving = false;
       }
+    },
+
+    // Service Provider Workflow Methods
+    getServiceProviderTransitionDescription() {
+      const status = this.job.job_status;
+      const role = this.userRole;
+
+      if (role === 3 && status === 'Assigned') {
+        return 'You can decline this job assignment or assign a technician to begin work.';
+      } else if ((role === 3 || role === 4) && status === 'In Progress') {
+        return 'Track the progress of this job and move it to completion or mark it as unreparable.';
+      } else {
+        return 'Available actions for this job based on current status and your role.';
+      }
+    },
+
+    initiateSPTransition(status) {
+      if (status === 'Declined' || status === 'Cannot repair') {
+        this.pendingSPTransition = status;
+        this.spTransitionNotes = '';
+      } else {
+        // For Completed, go directly to confirmation
+        this.pendingSPTransition = status;
+        this.spTransitionNotes = '';
+      }
+    },
+
+    cancelSPTransition() {
+      this.pendingSPTransition = null;
+      this.spTransitionNotes = '';
+    },
+
+    getConfirmationIcon(status) {
+      switch (status) {
+        case 'Declined': return 'cancel';
+        case 'Completed': return 'check_circle';
+        case 'Cannot repair': return 'build';
+        default: return 'help';
+      }
+    },
+
+    async startWorkOnJob() {
+      if (!this.selectedTechnicianId) {
+        alert('Please select a technician to begin work on this job.');
+        return;
+      }
+
+      this.saving = true;
+      try {
+        const payload = {
+          job_id: this.job.id,
+          job_status: 'In Progress',
+          assigned_technician_user_id: parseInt(this.selectedTechnicianId),
+          technician_notes: this.technicianNotes || null
+        };
+
+        const response = await apiFetch('/backend/api/service-provider-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to start work on job');
+        }
+
+        const result = await response.json();
+
+        alert(`Work started successfully! Job status changed to "In Progress" and technician ${this.selectedTechnicianId ? 'assigned' : 'not assigned'}.`);
+
+        this.$emit('job-updated', result);
+        this.$emit('close');
+
+      } catch (error) {
+        console.error('Error in startWorkOnJob:', error);
+        alert('Failed to start work: ' + error.message);
+      } finally {
+        this.saving = false;
+        this.showTechnicianAssignment = false;
+      }
+    },
+
+    async confirmSPTransition() {
+      if (!this.pendingSPTransition) return;
+
+      // Validate required fields
+      if ((this.pendingSPTransition === 'Declined' || this.pendingSPTransition === 'Cannot repair') && !this.spTransitionNotes.trim()) {
+        alert(`Please provide ${this.pendingSPTransition === 'Declined' ? 'a reason for declining' : 'an explanation why this cannot be repaired'}.`);
+        return;
+      }
+
+      this.saving = true;
+      try {
+        const payload = {
+          job_id: this.job.id,
+          job_status: this.pendingSPTransition,
+          transition_notes: this.spTransitionNotes.trim() || null
+        };
+
+        const response = await apiFetch('/backend/api/service-provider-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update job status');
+        }
+
+        const result = await response.json();
+
+        const successMessage = this.pendingSPTransition === 'Declined'
+          ? 'Job declined successfully. The client will be notified.'
+          : this.pendingSPTransition === 'Completed'
+          ? 'Job marked as completed successfully. The client can now confirm receipt.'
+          : 'Job marked as "cannot repair" successfully. The client can review and decide next steps.';
+
+        alert(successMessage);
+
+        this.$emit('job-updated', result);
+        this.$emit('close');
+
+      } catch (error) {
+        console.error('Error in confirmSPTransition:', error);
+        alert('Failed to update job: ' + error.message);
+      } finally {
+        this.saving = false;
+        this.pendingSPTransition = null;
+        this.spTransitionNotes = '';
+      }
     }
   },
 
@@ -1753,10 +2153,8 @@ export default {
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
   z-index: 1000;
+  overflow: hidden; /* Prevent background scroll */
 }
 
 .modal-overlay {
@@ -1768,16 +2166,26 @@ export default {
 }
 
 .modal-content {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  max-width: 600px;
-  width: 90%;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   max-height: 90vh;
+  background: white;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.15);
   overflow-y: auto;
-  position: relative;
   z-index: 1001;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+.modal-content.open {
+  transform: translateY(0);
+}
+
+
 
 .modal-content.xs-provider-mode {
   border: 3px solid #ff6b35;
@@ -2545,5 +2953,242 @@ export default {
   color: #6c757d;
   font-size: 0.95em;
   margin: 0 0 16px 0;
+}
+
+/* ============ RESPONSIVE DESIGN ============ */
+
+/* Mobile: Bottom sheet behavior - touch devices and small screens */
+@media (max-width: 768px),
+       (hover: none) and (pointer: coarse),
+       (max-height: 600px) and (orientation: portrait),
+       (max-device-width: 480px),
+       (orientation: portrait) and (max-aspect-ratio: 4/3) {
+  .edit-job-modal {
+    padding: 0;
+  }
+
+  /* Override desktop modal styles - force full screen on mobile */
+  .modal-content {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important; /* Full viewport width */
+    height: 100vh !important; /* Full viewport height */
+    max-width: none !important; /* Remove any max-width constraints */
+    max-height: none !important; /* Remove any max-height constraints */
+    border-radius: 0 !important; /* Remove border radius for full screen */
+    transform: translateY(100%) !important;
+    padding: 0 !important; /* Remove internal padding */
+    margin: 0 !important; /* Remove any margins */
+  }
+
+  .modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+  }
+
+  .modal-content.open {
+    transform: translateY(0) !important;
+  }
+
+  /* Ensure modal-body fills available space properly */
+  .modal-body {
+    min-height: calc(100vh - 140px) !important;
+    max-height: calc(100vh - 140px) !important;
+    height: auto !important; /* Let content determine height */
+    overflow-y: auto !important;
+    padding: 16px !important;
+    /* Prevent horizontal overflow */
+    box-sizing: border-box;
+    word-wrap: break-word;
+  }
+
+  /* Center the title on mobile */
+  .modal-title {
+    position: absolute;
+    left: 50%;
+    top: 20px;
+    transform: translateX(-50%);
+    font-size: 1.25em;
+    text-align: center;
+    flex: none;
+  }
+
+  /* Swipe handle at top of modal */
+  .modal-header::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: #ddd;
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  /* Adjust header for mobile touch interaction */
+  .modal-header {
+    padding: 16px;
+    padding-top: 24px;
+    position: relative;
+  }
+
+  .modal-close {
+    position: absolute;
+    right: 16px;
+    top: 20px;
+    font-size: 24px;
+    color: #666;
+    background: rgba(0,0,0,0.1);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  /* Swipe-to-dismiss functionality */
+  .modal-content {
+    touch-action: pan-y;
+  }
+
+  /* Mobile layout adjustments */
+  .section-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .section-actions [class*="btn"] {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .transition-buttons-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .modal-footer .btn-secondary {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+/* Tablets and small desktops (769px+) - Centered modals */
+@media (min-width: 769px) {
+  .modal-content {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    bottom: auto;
+    right: auto;
+    width: auto; /* Let max-width control width */
+    transform: translate(-50%, -50%);
+  }
+
+  .modal-content.open {
+    transform: translate(-50%, -50%);
+  }
+
+  .edit-job-modal {
+    padding: 2rem;
+  }
+
+  .modal-header {
+    padding: 24px;
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .modal-body {
+    padding: 24px;
+  }
+
+  .section-content {
+    padding: 24px;
+  }
+
+  .section-actions {
+    gap: 16px;
+    margin-top: 32px;
+    padding-top: 20px;
+  }
+
+  .transition-buttons-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .modal-footer {
+    padding: 24px;
+  }
+
+  /* Remove slide-up transition for desktop centered modal */
+  .slide-up-enter-active,
+  .slide-up-leave-active,
+  .slide-up-enter-from,
+  .slide-up-leave-to,
+  .slide-up-enter-to,
+  .slide-up-leave-from {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* Medium screens (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .modal-content {
+    max-width: 720px;
+    border-radius: 12px;
+  }
+
+  .transition-buttons-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Large screens (1025px+) */
+@media (min-width: 1025px) {
+  .modal-content {
+    max-width: 800px;
+  }
+
+  .transition-buttons-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .modal-content {
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Print styles */
+@media print {
+  .edit-job-modal {
+    display: none;
+  }
 }
 </style>
