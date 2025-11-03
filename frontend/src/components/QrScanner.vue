@@ -194,8 +194,8 @@ export default {
 
         if (parsedData) {
           // Validate client ID matches current user
-          if (parsedData.clientId !== this.clientId) {
-            alert(`QR code is for a different client (ID: ${parsedData.clientId}). This QR code is not valid for your account.`)
+          if (parsedData.clientId && parsedData.clientId !== this.clientId) {
+            alert(`QR code is for a different client (ID: ${parsedData.clientId}). This QR code is not valid for your account.`);
             return
           }
 
@@ -205,7 +205,11 @@ export default {
 
           this.$emit('qr-detected', parsedData)
         } else {
-          alert('Invalid QR code format. Expected format: CLIENT:{id}|ITEM:{identifier}|LOCATION:{name} or CLIENT:{id}|ITEM:{identifier}|LOCATION:{name}|URL:{siteurl}')
+          // Handle the case where the QR code is just plain text
+          const plainTextData = { isUrl: false, itemIdentifier: qrData.trim(), raw: qrData };
+          this.stopCamera();
+          this.closeScanner();
+          this.$emit('qr-detected', plainTextData);
         }
       } catch (error) {
         console.error('Error parsing QR data:', error)

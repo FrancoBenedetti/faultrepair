@@ -19,7 +19,7 @@ export default {
   mounted() {
     const isAuthenticated = !isTokenExpired();
     const queryString = new URLSearchParams(this.query).toString();
-
+    
     if (isAuthenticated) {
       // User is logged in, redirect to CreateJob with the query string.
       // CreateJob will need to be updated to read from the route query.

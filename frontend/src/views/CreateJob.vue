@@ -237,7 +237,9 @@ export default {
         item_identifier: '',
         client_location_id: '0',
         fault_description: '',
-        contact_person: ''
+        contact_person: '',
+        assigned_provider_id: null, // For 'sp' parameter
+        approver_id: null // For 'mngr' parameter
       }
     }
   },
@@ -255,6 +257,7 @@ export default {
         locationId: query.location ? parseInt(query.location, 10) : null,
         assetId: query.asset || null,
         managerId: query.mngr ? parseInt(query.mngr, 10) : null,
+        // The 'sp' parameter is the service provider ID
         serviceProviderId: query.sp ? parseInt(query.sp, 10) : null,
       };
       // Use the same handler as the in-app scanner to populate the form
@@ -310,7 +313,25 @@ export default {
         }
       }
 
-      alert('QR code scanned successfully! Form fields have been populated.');
+      // Populate hidden assigned_provider_id from 'sp' parameter
+      if (qrData.serviceProviderId) {
+        this.newJob.assigned_provider_id = qrData.serviceProviderId;
+      }
+
+      // Populate hidden approver_id from 'mngr' parameter
+      if (qrData.managerId) {
+        this.newJob.approver_id = qrData.managerId;
+      }
+
+      // Provide a more informative alert message
+      let alertMessage = 'QR code scanned successfully! Form fields have been populated.';
+      if (qrData.serviceProviderId) {
+        alertMessage += ' A service provider has been suggested for this job.';
+      }
+      if (qrData.managerId) {
+        alertMessage += ' An approver has been suggested for this job.';
+      }
+      alert(alertMessage);
     },
 
     handleImagesChanged(images) {
@@ -326,7 +347,9 @@ export default {
           client_location_id: this.newJob.client_location_id === '0' ? null : this.newJob.client_location_id,
           item_identifier: this.newJob.item_identifier || null,
           fault_description: this.newJob.fault_description,
-          contact_person: this.newJob.contact_person || null
+          contact_person: this.newJob.contact_person || null,
+          assigned_provider_id: this.newJob.assigned_provider_id || null,
+          approver_id: this.newJob.approver_id || null
         }
 
         const response = await apiFetch('/backend/api/client-jobs.php', {

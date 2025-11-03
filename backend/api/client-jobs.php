@@ -308,6 +308,11 @@ try {
             }
         }
 
+        // The job status will always be 'Reported' on creation.
+        $job_status = 'Reported'; // Default status
+        $assigned_provider_id = $input['assigned_provider_id'] ?? null;
+        $approver_id = $input['approver_id'] ?? null;
+
         // Insert new job
         $stmt = $pdo->prepare("
             INSERT INTO jobs (
@@ -317,8 +322,10 @@ try {
                 fault_description,
                 reporting_user_id,
                 contact_person,
+                assigned_provider_participant_id,
+                approver_id,
                 job_status
-            ) VALUES (?, ?, ?, ?, ?, ?, 'Reported')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         $stmt->execute([
@@ -327,7 +334,10 @@ try {
             $input['item_identifier'] ?? null,
             $input['fault_description'],
             $user_id,
-            $input['contact_person'] ?? null
+            $input['contact_person'] ?? null,
+            $assigned_provider_id,      // The suggested provider from the QR scan is saved.
+            $approver_id,               // The approver from the QR scan is saved.
+            $job_status                 // New: dynamic status based on provider assignment.
         ]);
 
         $job_id = $pdo->lastInsertId();
