@@ -23,231 +23,168 @@
 
     <!-- Administrator Settings Section - Role 3 Only -->
     <div class="admin-settings-container bg-white rounded-xl shadow-lg border border-gray-200 p-0 mb-8" v-if="userRole === 3">
-        <div class="admin-section-header rounded-t-xl bg-white rounded-b-none p-6 pb-4">
-          <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-0 pb-0 border-b border-neutral-200" @click="toggleSection('administrator-settings')" style="cursor: pointer;">
-            <div class="section-title flex items-center gap-3">
-              <button class="expand-btn" :class="{ expanded: sectionsExpanded['administrator-settings'] }">
+      <div 
+        @click="toggleSection('administrator-settings')" 
+        class="admin-section-header rounded-t-xl bg-white p-6 pb-4 flex justify-between items-center cursor-pointer"
+        :class="{ 'rounded-b-xl': !sectionsExpanded['administrator-settings'] }"
+      >
+        <div class="section-title flex items-center gap-3">
+          <span class="material-icon text-purple-600">admin_panel_settings</span>
+          <h2 class="text-title-large text-on-surface mb-0">
+            Administrator Settings
+          </h2>
+        </div>
+        <button class="expand-btn" :class="{ expanded: sectionsExpanded['administrator-settings'] }">
+          <span class="material-icon-sm">expand_more</span>
+        </button>
+      </div>
+
+      <div v-show="sectionsExpanded['administrator-settings']" class="admin-subsections bg-gray-100 rounded-b-xl border-t border-gray-200 p-4 space-y-2">
+
+        <!-- Business Profile Sub-Section -->
+        <div class="subsection-container">
+          <div @click="toggleSection('profile')" class="subsection-header">
+            <div class="subsection-title">
+              <span class="material-icon text-blue-600">business</span>
+              <h4>Business Profile</h4>
+              <span class="completeness-badge">{{ technicianProfileCompleteness }}% Complete</span>
+            </div>
+            <div class="actions">
+              <button @click.stop="showProfileModal = true" class="btn-outlined btn-small">
+                <span class="material-icon-sm">edit</span>
+                Edit
+              </button>
+              <button class="expand-btn small" :class="{ expanded: sectionsExpanded.profile }">
                 <span class="material-icon-sm">expand_more</span>
               </button>
-              <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
-                <span class="material-icon text-purple-600">admin_panel_settings</span>
-                Administrator Settings
-              </h2>
             </div>
           </div>
-        </div>
-
-        <div v-show="sectionsExpanded['administrator-settings']" class="admin-subsections bg-gray-50 rounded-b-xl border-t border-gray-200">
-          <div class="p-6 space-y-6">
-
-            <!-- Business Profile Sub-Section -->
-            <div class="subsection-card" v-if="userRole === 3">
-              <div class="subsection-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-300" @click="toggleSection('profile')" style="cursor: pointer;">
-                <div class="subsection-title flex items-center gap-3">
-                  <button class="expand-btn small" :class="{ expanded: sectionsExpanded.profile }">
-                    <span class="material-icon-sm">expand_more</span>
-                  </button>
-                  <h4 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
-                    <span class="material-icon text-blue-600">business</span>
-                    Business Profile
-                    <span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">{{ technicianProfileCompleteness }}% Complete</span>
-                  </h4>
+          <div v-show="sectionsExpanded.profile" class="subsection-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Basic Info -->
+              <div class="bg-white border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center gap-2 mb-4">
+                  <span class="material-icon text-blue-600">business_center</span>
+                  <h4 class="font-semibold text-gray-900">Basic Information</h4>
                 </div>
-                <button @click.stop="showProfileModal = true" class="btn-outlined btn-small flex items-center gap-2">
-                  <span class="material-icon-sm">edit</span>
-                  Edit Profile
-                </button>
+                <div class="space-y-3">
+                  <div>
+                    <label class="text-sm font-medium text-gray-600">Business Name</label>
+                    <p class="text-gray-900">{{ profile.name || 'Not set' }}</p>
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium text-gray-600">Website</label>
+                    <p class="text-gray-900">{{ profile.website || 'Not set' }}</p>
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium text-gray-600">Status</label>
+                    <span :class="[
+                      'px-2 py-1 rounded-full text-xs font-medium',
+                      profile.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    ]">
+                      {{ profile.is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div v-show="sectionsExpanded.profile" class="subsection-content transition-all duration-300 ease-in-out">
+              <!-- Contact Info -->
+              <div class="bg-white border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center gap-2 mb-4">
+                  <span class="material-icon text-green-600">contact_phone</span>
+                  <h4 class="font-semibold text-gray-900">Contact Information</h4>
+                </div>
+                <div class="space-y-3">
+                  <div>
+                    <label class="text-sm font-medium text-gray-600">Manager</label>
+                    <p class="text-gray-900">{{ profile.manager_name || 'Not set' }}</p>
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium text-gray-600">Email</label>
+                    <p class="text-gray-900">{{ profile.manager_email || 'Not set' }}</p>
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium text-gray-600">Phone</label>
+                    <p class="text-gray-900">{{ profile.manager_phone || 'Not set' }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Address and Description -->
+            <div class="mt-6 bg-white border border-gray-200 rounded-lg p-4">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Basic Info -->
-                <div class="bg-white border border-gray-200 rounded-lg p-4">
-                  <div class="flex items-center gap-2 mb-4">
-                    <span class="material-icon text-blue-600">business_center</span>
-                    <h4 class="font-semibold text-gray-900">Basic Information</h4>
+                <div>
+                  <div class="flex items-center gap-2 mb-3">
+                    <span class="material-icon text-gray-600">location_on</span>
+                    <label class="font-semibold text-gray-900">Business Address</label>
                   </div>
-                  <div class="space-y-3">
-                    <div>
-                      <label class="text-sm font-medium text-gray-600">Business Name</label>
-                      <p class="text-gray-900">{{ profile.name || 'Not set' }}</p>
-                    </div>
-                    <div>
-                      <label class="text-sm font-medium text-gray-600">Website</label>
-                      <p class="text-gray-900">{{ profile.website || 'Not set' }}</p>
-                    </div>
-                    <div>
-                      <label class="text-sm font-medium text-gray-600">Status</label>
-                      <span :class="[
-                        'px-2 py-1 rounded-full text-xs font-medium',
-                        profile.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      ]">
-                        {{ profile.is_active ? 'Active' : 'Inactive' }}
-                      </span>
-                    </div>
-                  </div>
+                  <p class="text-gray-700 whitespace-pre-wrap">{{ profile.address || 'No address set' }}</p>
                 </div>
-
-                <!-- Contact Info -->
-                <div class="bg-white border border-gray-200 rounded-lg p-4">
-                  <div class="flex items-center gap-2 mb-4">
-                    <span class="material-icon text-green-600">contact_phone</span>
-                    <h4 class="font-semibold text-gray-900">Contact Information</h4>
+                <div>
+                  <div class="flex items-center gap-2 mb-3">
+                    <span class="material-icon text-gray-600">description</span>
+                    <label class="font-semibold text-gray-900">Business Description</label>
                   </div>
-                  <div class="space-y-3">
-                    <div>
-                      <label class="text-sm font-medium text-gray-600">Manager</label>
-                      <p class="text-gray-900">{{ profile.manager_name || 'Not set' }}</p>
-                    </div>
-                    <div>
-                      <label class="text-sm font-medium text-gray-600">Email</label>
-                      <p class="text-gray-900">{{ profile.manager_email || 'Not set' }}</p>
-                    </div>
-                    <div>
-                      <label class="text-sm font-medium text-gray-600">Phone</label>
-                      <p class="text-gray-900">{{ profile.manager_phone || 'Not set' }}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Address and Description -->
-              <div class="mt-6 bg-white border border-gray-200 rounded-lg p-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <div class="flex items-center gap-2 mb-3">
-                      <span class="material-icon text-gray-600">location_on</span>
-                      <label class="font-semibold text-gray-900">Business Address</label>
-                    </div>
-                    <p class="text-gray-700 whitespace-pre-wrap">{{ profile.address || 'No address set' }}</p>
-                  </div>
-                  <div>
-                    <div class="flex items-center gap-2 mb-3">
-                      <span class="material-icon text-gray-600">description</span>
-                      <label class="font-semibold text-gray-900">Business Description</label>
-                    </div>
-                    <p class="text-gray-700 line-clamp-3">{{ profile.description || 'No description set' }}</p>
+                  <p class="text-gray-700 line-clamp-3">{{ profile.description || 'No description set' }}</p>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-            <!-- Services Offered Sub-Section -->
-            <div class="subsection-card" v-if="userRole === 3">
-            <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-200" @click="toggleSection('services')" style="cursor: pointer;">
-              <div class="section-title flex items-center gap-3">
-                <button class="expand-btn small" :class="{ expanded: sectionsExpanded.services }">
-                  <span class="material-icon-sm">expand_more</span>
-                </button>
-                <h3 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
-                  <span class="material-icon text-green-600">build</span>
-                  Services Offered
-                </h3>
-              </div>
-              <button @click.stop="showServicesModal = true" class="btn-outlined btn-small flex items-center gap-2">
+        <!-- Services Offered Sub-Section -->
+        <div class="subsection-container">
+          <div @click="toggleSection('services')" class="subsection-header">
+            <div class="subsection-title">
+              <span class="material-icon text-green-600">build</span>
+              <h4>Services Offered</h4>
+            </div>
+            <div class="actions">
+              <button @click.stop="showServicesModal = true" class="btn-outlined btn-small">
                 <span class="material-icon-sm">settings</span>
                 Configure
               </button>
-            </div>
-
-            <div v-show="sectionsExpanded.services" class="section-content transition-all duration-300 ease-in-out">
-              <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <div class="p-4 border-b border-gray-200">
-                  <div class="flex items-center justify-between">
-                    <h4 class="font-semibold text-gray-900">Configured Services ({{ services.length }})</h4>
-                    <span class="text-sm text-gray-600">Click "Configure" to manage services</span>
-                  </div>
-                </div>
-
-                <div v-if="services.length === 0" class="p-8 text-center">
-                  <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-4">
-                    <span class="material-icon text-gray-400">build</span>
-                  </div>
-                  <h3 class="text-lg font-semibold text-gray-900 mb-2">No Services Configured</h3>
-                  <p class="text-gray-600 mb-4">Configure your services to start accepting jobs.</p>
-                  <button @click="showServicesModal = true" class="btn-filled">
-                    Configure Services
-                  </button>
-                </div>
-
-                <div v-else class="divide-y divide-gray-200">
-                  <div v-for="service in services" :key="service.id" class="p-4 hover:bg-gray-50">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg flex items-center justify-center" :style="{ backgroundColor: getCategoryColor(service.category) }">
-                          <span class="material-icon-sm text-white">{{ getCategoryIcon(service.category) }}</span>
-                        </div>
-                        <div>
-                          <div class="font-medium text-gray-900">{{ service.name }}</div>
-                          <div class="text-sm text-gray-600">{{ service.category }}</div>
-                        </div>
-                      </div>
-                      <div class="flex items-center gap-3">
-                        <span v-if="service.is_primary" class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                          Primary
-                        </span>
-                        <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                          Active
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <button class="expand-btn small" :class="{ expanded: sectionsExpanded.services }">
+                <span class="material-icon-sm">expand_more</span>
+              </button>
             </div>
           </div>
-
-            <!-- Service Regions Sub-Section -->
-            <div class="subsection-card" v-if="userRole === 3">
-              <div class="subsection-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-300" @click="toggleSection('regions')" style="cursor: pointer;">
-                <div class="subsection-title flex items-center gap-3">
-                  <button class="expand-btn small" :class="{ expanded: sectionsExpanded.regions }">
-                    <span class="material-icon-sm">expand_more</span>
-                  </button>
-                  <h4 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
-                    <span class="material-icon text-orange-600">location_on</span>
-                    Service Regions
-                  </h4>
+          <div v-show="sectionsExpanded.services" class="subsection-content">
+            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div class="p-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-semibold text-gray-900">Configured Services ({{ services.length }})</h4>
+                  <span class="text-sm text-gray-600">Click "Configure" to manage services</span>
                 </div>
-                <button @click.stop="showRegionsModal = true" class="btn-outlined btn-small flex items-center gap-2">
-                  <span class="material-icon-sm">settings</span>
-                  Configure
+              </div>
+
+              <div v-if="services.length === 0" class="p-8 text-center">
+                <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-4">
+                  <span class="material-icon text-gray-400">build</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">No Services Configured</h3>
+                <p class="text-gray-600 mb-4">Configure your services to start accepting jobs.</p>
+                <button @click="showServicesModal = true" class="btn-filled">
+                  Configure Services
                 </button>
               </div>
 
-              <div v-show="sectionsExpanded.regions" class="subsection-content transition-all duration-300 ease-in-out">
-              <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <div class="p-4 border-b border-gray-200">
+              <div v-else class="divide-y divide-gray-200">
+                <div v-for="service in services" :key="service.id" class="p-4 hover:bg-gray-50">
                   <div class="flex items-center justify-between">
-                    <h4 class="font-semibold text-gray-900">Active Regions ({{ regions.length }})</h4>
-                    <span class="text-sm text-gray-600">Click "Configure" to manage regions</span>
-                  </div>
-                </div>
-
-                <div v-if="regions.length === 0" class="p-8 text-center">
-                  <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-4">
-                    <span class="material-icon text-gray-400">location_off</span>
-                  </div>
-                  <h3 class="text-lg font-semibold text-gray-900 mb-2">No Regions Configured</h3>
-                  <p class="text-gray-600 mb-4">Configure your service regions to define where you operate.</p>
-                  <button @click="showRegionsModal = true" class="btn-filled">
-                    Configure Regions
-                  </button>
-                </div>
-
-                <div v-else class="divide-y divide-gray-200">
-                  <div v-for="region in regions" :key="region.id" class="p-4 hover:bg-gray-50">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-orange-500">
-                          <span class="material-icon-sm text-white">location_on</span>
-                        </div>
-                        <div>
-                          <div class="font-medium text-gray-900">{{ region.name }}</div>
-                          <div class="text-sm text-gray-600">{{ region.code }}</div>
-                        </div>
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-lg flex items-center justify-center" :style="{ backgroundColor: getCategoryColor(service.category) }">
+                        <span class="material-icon-sm text-white">{{ getCategoryIcon(service.category) }}</span>
                       </div>
+                      <div>
+                        <div class="font-medium text-gray-900">{{ service.name }}</div>
+                        <div class="text-sm text-gray-600">{{ service.category }}</div>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <span v-if="service.is_primary" class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                        Primary
+                      </span>
                       <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
                         Active
                       </span>
@@ -257,103 +194,162 @@
               </div>
             </div>
           </div>
+        </div>
 
-            <!-- Users Sub-Section -->
-            <div class="subsection-card" v-if="userRole === 3">
-              <div class="subsection-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-300" @click="toggleSection('technicians')" style="cursor: pointer;">
-                <div class="subsection-title flex items-center gap-3">
-                  <button class="expand-btn small" :class="{ expanded: sectionsExpanded.technicians }">
-                    <span class="material-icon-sm">expand_more</span>
-                  </button>
-                  <h4 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
-                    <span class="material-icon text-blue-600">group</span>
-                    Users
-                  </h4>
+        <!-- Service Regions Sub-Section -->
+        <div class="subsection-container">
+          <div @click="toggleSection('regions')" class="subsection-header">
+            <div class="subsection-title">
+              <span class="material-icon text-orange-600">location_on</span>
+              <h4>Service Regions</h4>
+            </div>
+            <div class="actions">
+              <button @click.stop="showRegionsModal = true" class="btn-outlined btn-small">
+                <span class="material-icon-sm">settings</span>
+                Configure
+              </button>
+              <button class="expand-btn small" :class="{ expanded: sectionsExpanded.regions }">
+                <span class="material-icon-sm">expand_more</span>
+              </button>
+            </div>
+          </div>
+          <div v-show="sectionsExpanded.regions" class="subsection-content">
+            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div class="p-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-semibold text-gray-900">Active Regions ({{ regions.length }})</h4>
+                  <span class="text-sm text-gray-600">Click "Configure" to manage regions</span>
                 </div>
-                <button @click.stop="openAddTechnicianModal" class="btn-outlined btn-small flex items-center gap-2">
-                  <span class="material-icon-sm">person_add</span>
-                  Add User
+              </div>
+
+              <div v-if="regions.length === 0" class="p-8 text-center">
+                <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-4">
+                  <span class="material-icon text-gray-400">location_off</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">No Regions Configured</h3>
+                <p class="text-gray-600 mb-4">Configure your service regions to define where you operate.</p>
+                <button @click="showRegionsModal = true" class="btn-filled">
+                  Configure Regions
                 </button>
               </div>
 
-              <div v-show="sectionsExpanded.technicians" class="subsection-content transition-all duration-300 ease-in-out">
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="technician in technicians" :key="technician.id" class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                  <div class="flex justify-between items-center p-4 bg-gray-50 border-b border-gray-200">
+              <div v-else class="divide-y divide-gray-200">
+                <div v-for="region in regions" :key="region.id" class="p-4 hover:bg-gray-50">
+                  <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                      <div class="w-12 h-12 rounded-full flex items-center justify-center" :class="technician.role_id === 3 ? 'bg-blue-600' : 'bg-purple-600'">
-                        <span class="material-icon text-white">{{
-                          technician && technician.full_name ?
-                            technician.full_name.charAt(0).toUpperCase() :
-                            technician && technician.username ?
-                            technician.username.charAt(0).toUpperCase() :
-                            'T'
-                        }}</span>
+                      <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-orange-500">
+                        <span class="material-icon-sm text-white">location_on</span>
                       </div>
                       <div>
-                        <h3 class="font-semibold text-gray-900">{{ technician.full_name || 'Unnamed User' }}</h3>
-                        <div class="flex gap-2">
-                          <span :class="[
-                            'px-2 py-1 rounded-full text-xs font-medium',
-                            technician.role_id === 3 ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                          ]">
-                            {{ roleDisplayNames && roleDisplayNames[technician.role_id] ? roleDisplayNames[technician.role_id] : getFallbackRoleName(technician.role_id) }}
-                          </span>
-                          <span :class="[
-                            'px-2 py-1 rounded-full text-xs font-medium',
-                            technician.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          ]">
-                            {{ technician.is_active ? 'Active' : 'Inactive' }}
-                          </span>
-                        </div>
+                        <div class="font-medium text-gray-900">{{ region.name }}</div>
+                        <div class="text-sm text-gray-600">{{ region.code }}</div>
                       </div>
                     </div>
-                    <div class="flex gap-2">
-                      <button @click="viewTechnicianJobs(technician)" class="btn-round" title="View Jobs">
-                        <span class="material-icon-sm">work</span>
-                      </button>
-                      <button @click="editTechnician(technician)" class="btn-round" title="Edit Technician">
-                        <span class="material-icon-sm">edit</span>
-                      </button>
-                      <button @click="deleteTechnician(technician)" class="btn-round-filled" title="Delete Technician">
-                        <span class="material-icon-sm">delete</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="p-4">
-                    <p class="text-sm text-gray-600 flex items-center gap-1 mb-2">
-                      <span class="material-icon-sm">email</span>
-                      {{ technician.email }}
-                    </p>
-                    <p v-if="technician.phone" class="text-sm text-gray-600 flex items-center gap-1">
-                      <span class="material-icon-sm">phone</span>
-                      {{ technician.phone }}
-                    </p>
-                  </div>
-
-                  <div class="px-4 pb-4">
-                    <p class="text-xs text-gray-500">
-                      Added {{ formatDate(technician.created_at) }}
-                    </p>
+                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                      Active
+                    </span>
                   </div>
                 </div>
-
-                <!-- Add Technician Card -->
-                <button @click="openAddTechnicianModal" class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-purple-400 hover:bg-purple-50 transition-colors flex flex-col items-center justify-center gap-3 text-gray-500 hover:text-purple-600">
-                  <span class="material-icon text-3xl">person_add</span>
-                  <div class="text-center">
-                    <div class="font-medium">Add Technician</div>
-                    <div class="text-sm">Create a new technician account</div>
-                  </div>
-                </button>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Users Sub-Section -->
+        <div class="subsection-container">
+          <div @click="toggleSection('technicians')" class="subsection-header">
+            <div class="subsection-title">
+              <span class="material-icon text-blue-600">group</span>
+              <h4>Users</h4>
+            </div>
+            <div class="actions">
+              <button @click.stop="openAddTechnicianModal" class="btn-outlined btn-small">
+                <span class="material-icon-sm">person_add</span>
+                Add User
+              </button>
+              <button class="expand-btn small" :class="{ expanded: sectionsExpanded.technicians }">
+                <span class="material-icon-sm">expand_more</span>
+              </button>
+            </div>
+          </div>
+          <div v-show="sectionsExpanded.technicians" class="subsection-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div v-for="technician in technicians" :key="technician.id" class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                <div class="flex justify-between items-center p-4 bg-gray-50 border-b border-gray-200">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center" :class="technician.role_id === 3 ? 'bg-blue-600' : 'bg-purple-600'">
+                      <span class="material-icon text-white">{{
+                        technician && technician.full_name ?
+                          technician.full_name.charAt(0).toUpperCase() :
+                          technician && technician.username ?
+                          technician.username.charAt(0).toUpperCase() :
+                          'T'
+                      }}</span>
+                    </div>
+                    <div>
+                      <h3 class="font-semibold text-gray-900">{{ technician.full_name || 'Unnamed User' }}</h3>
+                      <div class="flex gap-2">
+                        <span :class="[
+                          'px-2 py-1 rounded-full text-xs font-medium',
+                          technician.role_id === 3 ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                        ]">
+                          {{ roleDisplayNames && roleDisplayNames[technician.role_id] ? roleDisplayNames[technician.role_id] : getFallbackRoleName(technician.role_id) }}
+                        </span>
+                        <span :class="[
+                          'px-2 py-1 rounded-full text-xs font-medium',
+                          technician.is_active
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        ]">
+                          {{ technician.is_active ? 'Active' : 'Inactive' }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <button @click="viewTechnicianJobs(technician)" class="btn-round" title="View Jobs">
+                      <span class="material-icon-sm">work</span>
+                    </button>
+                    <button @click="editTechnician(technician)" class="btn-round" title="Edit Technician">
+                      <span class="material-icon-sm">edit</span>
+                    </button>
+                    <button @click="deleteTechnician(technician)" class="btn-round-filled" title="Delete Technician">
+                      <span class="material-icon-sm">delete</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="p-4">
+                  <p class="text-sm text-gray-600 flex items-center gap-1 mb-2">
+                    <span class="material-icon-sm">email</span>
+                    {{ technician.email }}
+                  </p>
+                  <p v-if="technician.phone" class="text-sm text-gray-600 flex items-center gap-1">
+                    <span class="material-icon-sm">phone</span>
+                    {{ technician.phone }}
+                  </p>
+                </div>
+
+                <div class="px-4 pb-4">
+                  <p class="text-xs text-gray-500">
+                    Added {{ formatDate(technician.created_at) }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Add Technician Card -->
+              <button @click="openAddTechnicianModal" class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-purple-400 hover:bg-purple-50 transition-colors flex flex-col items-center justify-center gap-3 text-gray-500 hover:text-purple-600">
+                <span class="material-icon text-3xl">person_add</span>
+                <div class="text-center">
+                  <div class="font-medium">Add Technician</div>
+                  <div class="text-sm">Create a new technician account</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+    </div>
 
       <!-- Jobs Management Section -->
       <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
@@ -3351,4 +3347,78 @@ getCurrentUserName() {
     gap: 10px;
   }
 }
+
+/* Admin Settings Section */
+.admin-settings-container {
+  /* container styles */
+}
+
+.admin-section-header {
+  transition: background-color 0.2s ease;
+}
+
+.admin-section-header:hover {
+  background-color: #f9fafb; /* gray-50 */
+}
+
+.admin-subsections {
+  /* background-color: #f9fafb; /* gray-50 */
+  /* padding: 1rem; */
+}
+
+.subsection-container {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb; /* gray-200 */
+  border-radius: 0.75rem; /* 12px */
+  overflow: hidden;
+  margin-left: 1rem; /* Indentation */
+}
+
+.subsection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.subsection-header:hover {
+  background-color: #f9fafb; /* gray-50 */
+}
+
+.subsection-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* 12px */
+  font-size: 1.125rem; /* 18px */
+  font-weight: 600;
+}
+
+.subsection-title h4 {
+  margin: 0;
+  font-size: 1rem; /* 16px */
+  font-weight: 500;
+}
+
+.completeness-badge {
+  font-size: 0.75rem; /* 12px */
+  padding: 0.25rem 0.5rem;
+  background-color: #e0e7ff; /* indigo-100 */
+  color: #3730a3; /* indigo-800 */
+  border-radius: 9999px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* 8px */
+}
+
+.subsection-content {
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb; /* gray-200 */
+  background-color: #f9fafb; /* gray-50 */
+}
+
 </style>
