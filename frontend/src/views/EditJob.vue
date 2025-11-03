@@ -208,6 +208,18 @@
                 Start Work
               </button>
 
+              <!-- Role 3 (Admin) - Incomplete Jobs -->
+              <button
+                type="button"
+                v-if="userRole === 3 && job.job_status === 'Incomplete'"
+                @click.stop="openTechnicianAssignment"
+                class="transition-action-btn status-in-progress-sp"
+                :disabled="saving"
+              >
+                <span class="btn-icon">▶️</span>
+                Restart Work
+              </button>
+
               <!-- Role 3 & 4 (In Progress Jobs) -->
               <button
                 type="button"
@@ -233,14 +245,65 @@
             </div>
           </div>
 
-          <!-- Assignment Workflow - Role 2 Users Can Assign Provider & Transition Reported Jobs -->
-          <div v-if="job.job_status === 'Reported' && userRole === 2" class="job-section assignment-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <!-- Client Actions for S-Type Provider Jobs -->
+          <div v-if="userRole === 2 && job?.assigned_provider_participant_id && !isXSProviderJob && ['Completed', 'Cannot repair'].includes(job.job_status)" class="job-section client-review-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="section-header mb-6">
+              <h3 class="section-title text-xl font-semibold text-gray-900 flex items-center gap-3">
+                <span class="material-icon section-icon text-blue-600">rate_review</span>
+                Review & Confirm Work
+              </h3>
+              <p class="text-sm text-gray-600 mt-2">The service provider has updated the job status. Please review and select the next action.</p>
+            </div>
+
+            <div class="transition-buttons-grid">
+              <!-- Actions for 'Completed' status -->
+              <template v-if="job.job_status === 'Completed'">
+                <button type="button" @click="initiateClientTransition('Confirmed')" class="transition-action-btn status-confirmed">
+                  <span class="btn-icon">👍</span>
+                  Confirm Completion
+                </button>
+                <button type="button" @click="initiateClientTransition('Incomplete')" class="transition-action-btn status-incomplete">
+                  <span class="btn-icon">🔄</span>
+                  Mark as Incomplete
+                </button>
+              </template>
+
+              <!-- Actions for 'Cannot repair' status -->
+              <template v-if="job.job_status === 'Cannot repair'">
+                <button type="button" @click="initiateClientTransition('Confirmed')" class="transition-action-btn status-confirmed">
+                  <span class="btn-icon">👍</span>
+                  Acknowledge & Close
+                </button>
+                <button type="button" @click="initiateClientTransition('Incomplete')" class="transition-action-btn status-incomplete">
+                  <span class="btn-icon">🔄</span>
+                  Request Review
+                </button>
+                <button type="button" @click="showReassignmentForm = true" class="transition-action-btn status-reassign">
+                  <span class="btn-icon">🔄</span>
+                  Reassign Provider
+                </button>
+              </template>
+            </div>
+          </div>
+
+          <!-- Assignment Workflow - Role 2 Users Can Assign Provider & Transition Reported/Declined Jobs -->
+          <div v-if="(job.job_status === 'Reported' || job.job_status === 'Declined') && userRole === 2" class="job-section assignment-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="section-header mb-6">
               <h3 class="section-title text-xl font-semibold text-gray-900 flex items-center gap-3">
                 <span class="material-icon section-icon text-blue-600">assignment_ind</span>
                 Provider Assignment & Job Transition
               </h3>
               <p class="text-sm text-gray-600 mt-2">Select a service provider and choose how to proceed with this job.</p>
+            </div>
+
+            <div v-if="job.job_status === 'Declined'" class="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400">
+              <div class="flex items-center">
+                <span class="material-icon text-yellow-600 mr-2">info</span>
+                <div>
+                  <strong class="text-yellow-900">This job was declined by the previous provider.</strong>
+                  <p class="text-yellow-700 text-sm">You can now reassign it to a different provider, request a new quote, or reject the job.</p>
+                </div>
+              </div>
             </div>
 
             <div v-if="!availableProviders || availableProviders.length === 0" class="no-providers-alert mb-6">
@@ -411,6 +474,18 @@
               >
                 <span class="btn-icon">🔄</span>
                 Reassign Provider
+              </button>
+
+              <!-- Request Review option for Cannot repair -->
+              <button
+                type="button"
+                v-if="job.job_status === 'Cannot repair'"
+                @click="initiateTransition('Incomplete')"
+                class="transition-action-btn status-incomplete"
+                :disabled="saving"
+              >
+                <span class="btn-icon">🔄</span>
+                Request Review
               </button>
 
               <!-- Confirm option for Cannot repair -->
@@ -612,6 +687,87 @@
             </div>
           </div>
 
+          <!-- Client Transition Notes Form -->
+          <div v-if="pendingClientTransition" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg max-w-md w-full p-6">
+              <h4 class="text-xl font-semibold text-gray-900 mb-4">
+                Confirm "{{ pendingClientTransition }}" Action
+              </h4>
+
+              <!-- Incomplete Confirmation -->
+              <div v-if="pendingClientTransition === 'Incomplete'">
+                <div class="mb-4 p-4 bg-orange-50 border-l-4 border-orange-400">
+                  <div class="flex items-center">
+                    <span class="material-icon text-orange-600 mr-2">warning</span>
+                    <div>
+                      <strong class="text-orange-900">Marking as Incomplete</strong>
+                      <p class="text-orange-700 text-sm">will return the job to the service provider for further work. Please provide clear notes about what is still required.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="incomplete-reason" class="form-label flex items-center gap-2 mb-2">
+                    <span class="material-icon field-icon text-gray-500">comment</span>
+                    Reason for Incomplete Status <span class="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="incomplete-reason"
+                    v-model="clientTransitionNotes"
+                    class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows="3"
+                    placeholder="Please explain why the job is considered incomplete..."
+                    required
+                  ></textarea>
+                  <p class="text-sm text-gray-600 mt-1">This reason will be sent to the service provider.</p>
+                </div>
+              </div>
+
+              <!-- Confirmed Confirmation -->
+              <div v-if="pendingClientTransition === 'Confirmed'">
+                <div class="mb-4 p-4 bg-green-50 border-l-4 border-green-400">
+                  <div class="flex items-center">
+                    <span class="material-icon text-green-600 mr-2">check_circle</span>
+                    <div>
+                      <strong class="text-green-900">Confirming Job Completion</strong>
+                      <p class="text-green-700 text-sm">This will close the job. This action cannot be undone.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="confirmation-notes" class="form-label flex items-center gap-2 mb-2">
+                  <span class="material-icon field-icon text-gray-500">note</span>
+                  Confirmation Notes
+                  </label>
+                  <textarea
+                    id="confirmation-notes"
+                    v-model="clientTransitionNotes"
+                    class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows="3"
+                    placeholder="Optional: Add any final comments..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Confirmation Action Buttons -->
+              <div class="flex gap-3 justify-end mt-6">
+                <button
+                  @click="cancelClientTransition"
+                  class="btn-outlined border-gray-400 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  @click="confirmClientTransition"
+                  :disabled="(pendingClientTransition === 'Incomplete' && !clientTransitionNotes.trim()) || saving"
+                  class="btn-filled bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  <span class="material-icon-sm mr-2">{{ getConfirmationIcon(pendingClientTransition) }}</span>
+                  {{ saving ? 'Updating...' : `Confirm ${pendingClientTransition}` }}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Provider Reassignment Overlay -->
           <div v-if="showReassignmentForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-lg max-w-lg w-full p-6">
@@ -753,6 +909,10 @@ export default {
       technicianNotes: '',
       spTransitionNotes: '',
       technicians: [],
+
+      // Client Workflow Data
+      pendingClientTransition: null,
+      clientTransitionNotes: '',
 
       // XS Provider Transition Data
       selectedTransition: null,
@@ -1057,6 +1217,8 @@ export default {
         return 'You can decline this job assignment or assign a technician to begin work.'
       } else if ((role === 3 || role === 4) && status === 'In Progress') {
         return 'Track the progress of this job and move it to completion or mark it as unreparable.'
+      } else if (role === 3 && status === 'Incomplete') {
+        return 'The client has marked this job as incomplete. Assign a technician to restart work.'
       } else {
         return 'Available actions for this job based on current status and your role.'
       }
@@ -1088,6 +1250,8 @@ export default {
         case 'Declined': return 'cancel'
         case 'Completed': return 'check_circle'
         case 'Cannot repair': return 'build'
+        case 'Incomplete': return 'sync'
+        case 'Confirmed': return 'thumb_up'
         default: return 'help'
       }
     },
@@ -1180,6 +1344,63 @@ export default {
         this.saving = false
         this.pendingSPTransition = null
         this.spTransitionNotes = ''
+      }
+    },
+
+    // Client workflow methods for S-Type jobs
+    initiateClientTransition(status) {
+      if (status === 'Incomplete') {
+        this.pendingClientTransition = status
+        this.clientTransitionNotes = ''
+      } else {
+        this.pendingClientTransition = status
+        this.clientTransitionNotes = ''
+      }
+    },
+
+    cancelClientTransition() {
+      this.pendingClientTransition = null
+      this.clientTransitionNotes = ''
+    },
+
+    async confirmClientTransition() {
+      if (!this.pendingClientTransition) return
+
+      if (this.pendingClientTransition === 'Incomplete' && !this.clientTransitionNotes.trim()) {
+        alert('Please provide a reason why the job is incomplete.')
+        return
+      }
+
+      this.saving = true
+      try {
+        const payload = {
+          job_id: this.job.id,
+          job_status: this.pendingClientTransition,
+          transition_notes: this.clientTransitionNotes.trim() || null
+        }
+
+        const response = await apiFetch('/backend/api/client-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to update job status')
+        }
+
+        const result = await response.json()
+        alert('Job status updated successfully!')
+        this.$emit('job-updated', result)
+        this.returnToDashboard()
+
+      } catch (error) {
+        console.error('Error in confirmClientTransition:', error)
+        alert('Failed to update job: ' + error.message)
+      } finally {
+        this.saving = false
+        this.pendingClientTransition = null
+        this.clientTransitionNotes = ''
       }
     },
 
