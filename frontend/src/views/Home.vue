@@ -239,6 +239,14 @@ export default {
         if (response.ok && data.token) {
           localStorage.setItem('token', data.token);
 
+          // Check for QR redirect data after successful login
+          const qrRedirectData = localStorage.getItem('qrRedirectData');
+          if (qrRedirectData) {
+            localStorage.removeItem('qrRedirectData'); // Clear it after use
+            this.$router.push(`/client/create-job?${qrRedirectData}`);
+            return; // Stop further redirection
+          }
+
           const payload = JSON.parse(atob(data.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
           if (payload.entity_type === 'client') {
             this.$router.push('/client-dashboard');

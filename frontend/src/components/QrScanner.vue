@@ -214,52 +214,55 @@ export default {
     },
 
     parseQrData(qrData) {
-      // Expected formats:
-      // CLIENT:{client_id}|ITEM:{item_identifier}|LOCATION:{location_name}
-      // or
-      // CLIENT:{client_id}|ITEM:{item_identifier}|LOCATION:{location_name}|URL:{siteurl}
-      const parts = qrData.split('|')
+      // Check if the scanned data is a URL with query parameters.
+      try {
+        const url = new URL(qrData);
+        // It's a valid URL, let's parse the query string.
+        const params = url.searchParams;
 
-      if (parts.length < 3 || parts.length > 4) {
-        return null
-      }
+        // Extract data based on the new proposed format.
+        // Use .get() which returns null if the parameter is not found.
+        const clientId = params.get('client') ? parseInt(params.get('client'), 10) : null;
+        const itemIdentifier = params.get('item') || null;
+        const locationId = params.get('location') ? parseInt(params.get('location'), 10) : null;
+        
+        // Extract new potential fields
+        const assetId = params.get('asset') || null;
+        const managerId = params.get('mngr') ? parseInt(params.get('mngr'), 10) : null;
+        const serviceProviderId = params.get('sp') ? parseInt(params.get('sp'), 10) : null;
 
-      const clientPart = parts[0].trim()
-      const itemPart = parts[1].trim()
-      const locationPart = parts[2].trim()
+        // We need at least an item identifier to proceed.
+        if (!itemIdentifier) {
+          return null;
+        }
 
-      if (!clientPart.startsWith('CLIENT:') ||
-          !itemPart.startsWith('ITEM:') ||
-          !locationPart.startsWith('LOCATION:')) {
-        return null
-      }
+        return {
+          isUrl: true,
+          clientId,
+          itemIdentifier,
+          locationId, // Now we pass locationId instead of locationName
+          assetId,
+          managerId,
+          serviceProviderId,
+          raw: qrData
+        };
 
-      const clientId = parseInt(clientPart.substring(7)) // Remove 'CLIENT:'
-      const itemIdentifier = itemPart.substring(5) // Remove 'ITEM:'
-      const locationName = locationPart.substring(9) // Remove 'LOCATION:'
-
-      if (isNaN(clientId) || !itemIdentifier.trim()) {
-        return null
-      }
-
-      // Check for optional URL field
-      let siteUrl = null
-      if (parts.length === 4) {
-        const urlPart = parts[3].trim()
-        if (urlPart.startsWith('URL:')) {
-          siteUrl = urlPart.substring(4).trim() // Remove 'URL:'
-        } else {
-          // If there's a 4th part but it's not a URL, invalid format
-          return null
+      } catch (error) {
+        // It's not a valid URL, treat it as a plain string.
+        // This provides backward compatibility and handles simple text QR codes.
+        if (qrData && qrData.trim()) {
+          return {
+            isUrl: false,
+            itemIdentifier: qrData.trim(),
+            clientId: null,
+            locationId: null,
+            raw: qrData
+          };
         }
       }
 
-      return {
-        clientId: clientId,
-        itemIdentifier: itemIdentifier.trim(),
-        locationName: locationName.trim(),
-        siteUrl: siteUrl // Optional field, may be null
-      }
+      // Return null if qrData is empty or just whitespace.
+      return null;
     }
   }
 }

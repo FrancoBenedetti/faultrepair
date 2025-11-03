@@ -174,40 +174,52 @@ CREATE TABLE IF NOT EXISTS `invitation_access_log` (
 -- Data exporting was unselected.
 
 -- Dumping structure for table snappy.jobs
-CREATE TABLE IF NOT EXISTS `jobs` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `client_location_id` int(11) DEFAULT NULL,
-  `client_id` int(11) NOT NULL COMMENT 'Direct reference to the client participant',
-  `item_identifier` varchar(100) DEFAULT NULL,
-  `fault_description` text DEFAULT NULL,
-  `technician_notes` text DEFAULT NULL,
-  `assigned_provider_participant_id` int(11) DEFAULT NULL,
-  `reporting_user_id` int(11) NOT NULL,
-  `assigning_user_id` int(11) DEFAULT NULL,
-  `contact_person` varchar(100) DEFAULT NULL,
-  `assigned_technician_user_id` int(11) DEFAULT NULL,
-  `job_status` varchar(50) DEFAULT 'Reported',
-  `archived_by_client` tinyint(1) DEFAULT 0,
-  `archived_by_service_provider` tinyint(1) DEFAULT 0,
-  `quotation_required` tinyint(1) DEFAULT 0 COMMENT 'Whether this job requires a quotation before work',
-  `current_quotation_id` int(11) DEFAULT NULL COMMENT 'Reference to active quotation for this job',
-  `quotation_deadline` date DEFAULT NULL COMMENT 'Deadline for quotation submission',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `client_location_id` (`client_location_id`),
-  KEY `client_id` (`client_id`),
-  KEY `assigned_provider_participant_id` (`assigned_provider_participant_id`),
-  KEY `reporting_user_id` (`reporting_user_id`),
-  KEY `assigning_user_id` (`assigning_user_id`),
-  KEY `assigned_technician_user_id` (`assigned_technician_user_id`),
-  CONSTRAINT `jobs_ibfk_1` FOREIGN KEY (`client_location_id`) REFERENCES `locations` (`id`),
-  CONSTRAINT `jobs_ibfk_2` FOREIGN KEY (`client_id`) REFERENCES `participants` (`participantId`),
-  CONSTRAINT `jobs_ibfk_3` FOREIGN KEY (`assigned_provider_participant_id`) REFERENCES `participants` (`participantId`),
-  CONSTRAINT `jobs_ibfk_4` FOREIGN KEY (`reporting_user_id`) REFERENCES `users` (`userId`),
-  CONSTRAINT `jobs_ibfk_5` FOREIGN KEY (`assigning_user_id`) REFERENCES `users` (`userId`),
-  CONSTRAINT `jobs_ibfk_6` FOREIGN KEY (`assigned_technician_user_id`) REFERENCES `users` (`userId`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `jobs` (
+	`id` INT(11) NOT NULL AUTO_INCREMENT,
+	`client_location_id` INT(11) NULL DEFAULT NULL,
+	`client_id` INT(11) NOT NULL,
+	`item_identifier` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
+	`fault_description` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
+	`technician_notes` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
+	`assigned_provider_participant_id` INT(11) NULL DEFAULT NULL,
+	`reporting_user_id` INT(11) NULL DEFAULT NULL,
+	`approver_id` INT(11) NULL DEFAULT NULL,
+	`assigning_user_id` INT(11) NULL DEFAULT NULL,
+	`contact_person` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
+	`assigned_technician_user_id` INT(11) NULL DEFAULT NULL,
+	`job_status` VARCHAR(50) NULL DEFAULT 'Reported' COLLATE 'utf8mb4_general_ci',
+	`archived_by_client` TINYINT(1) NULL DEFAULT '0',
+	`archived_by_service_provider` TINYINT(1) NULL DEFAULT '0',
+	`created_at` TIMESTAMP NOT NULL DEFAULT current_timestamp(),
+	`updated_at` TIMESTAMP NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+	`quotation_required` TINYINT(1) NULL DEFAULT '0' COMMENT 'Whether this job requires a quotation before work',
+	`current_quotation_id` INT(11) NULL DEFAULT NULL COMMENT 'Reference to active quotation for this job',
+	`quotation_deadline` DATE NULL DEFAULT NULL COMMENT 'Deadline for quotation submission',
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `client_location_id` (`client_location_id`) USING BTREE,
+	INDEX `assigned_provider_participant_id` (`assigned_provider_participant_id`) USING BTREE,
+	INDEX `reporting_user_id` (`reporting_user_id`) USING BTREE,
+	INDEX `assigning_user_id` (`assigning_user_id`) USING BTREE,
+	INDEX `assigned_technician_user_id` (`assigned_technician_user_id`) USING BTREE,
+	INDEX `idx_jobs_quotation_required` (`quotation_required`) USING BTREE,
+	INDEX `idx_jobs_current_quotation` (`current_quotation_id`) USING BTREE,
+	INDEX `idx_jobs_quotation_deadline` (`quotation_deadline`) USING BTREE,
+	INDEX `idx_jobs_quotation_workflow` (`job_status`, `quotation_required`, `current_quotation_id`) USING BTREE,
+	INDEX `fk_jobs_client_id` (`client_id`) USING BTREE,
+	INDEX `FK_jobs_users` (`approver_id`) USING BTREE,
+	CONSTRAINT `FK_jobs_users` FOREIGN KEY (`approver_id`) REFERENCES `users` (`userId`) ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT `fk_jobs_client_id` FOREIGN KEY (`client_id`) REFERENCES `participants` (`participantId`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `jobs_ibfk_1` FOREIGN KEY (`client_location_id`) REFERENCES `locations` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `jobs_ibfk_2` FOREIGN KEY (`assigned_provider_participant_id`) REFERENCES `participants` (`participantId`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `jobs_ibfk_3` FOREIGN KEY (`reporting_user_id`) REFERENCES `users` (`userId`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `jobs_ibfk_4` FOREIGN KEY (`assigning_user_id`) REFERENCES `users` (`userId`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `jobs_ibfk_5` FOREIGN KEY (`assigned_technician_user_id`) REFERENCES `users` (`userId`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `jobs_ibfk_quotation` FOREIGN KEY (`current_quotation_id`) REFERENCES `job_quotations` (`id`) ON UPDATE RESTRICT ON DELETE SET NULL
+)
+COLLATE='utf8mb4_general_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=47
+;
 
 -- Data exporting was unselected.
 

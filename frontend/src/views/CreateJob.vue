@@ -243,6 +243,23 @@ export default {
   },
   async mounted() {
     await this.loadLocations()
+
+    // Check for QR data from the route query on component mount
+    const query = this.$route.query;
+    if (Object.keys(query).length > 0) {
+      // Construct a data object similar to what the QrScanner component produces
+      const qrData = {
+        isUrl: true,
+        clientId: query.client ? parseInt(query.client, 10) : null,
+        itemIdentifier: query.item || null,
+        locationId: query.location ? parseInt(query.location, 10) : null,
+        assetId: query.asset || null,
+        managerId: query.mngr ? parseInt(query.mngr, 10) : null,
+        serviceProviderId: query.sp ? parseInt(query.sp, 10) : null,
+      };
+      // Use the same handler as the in-app scanner to populate the form
+      this.handleQrDetected(qrData);
+    }
   },
   methods: {
     async loadLocations() {
@@ -272,46 +289,28 @@ export default {
     handleQrDetected(qrData) {
       console.log('QR data detected:', qrData)
 
-      try {
-        // First, try to validate client ID if present
-        if (qrData.clientId && qrData.clientId !== this.getClientId()) {
-          alert(`QR code is for a different client (ID: ${qrData.clientId}). This QR code is not valid for your account.`)
-          return
-        }
-
-        // Check if structured data was successfully parsed
-        if (qrData.itemIdentifier && qrData.itemIdentifier.trim()) {
-          this.newJob.item_identifier = qrData.itemIdentifier.trim()
-        } else {
-          // No structured item data - check if we have any location data
-          if (qrData.locationName && qrData.locationName.trim()) {
-            this.newJob.item_identifier = qrData.locationName.trim()
-          } else {
-            // No structured data at all - check if qrData is available as string
-            const rawQrString = arguments[0]
-            if (rawQrString && typeof rawQrString === 'string' && rawQrString.trim()) {
-              this.newJob.item_identifier = rawQrString.trim()
-            } else {
-              return
-            }
-          }
-        }
-
-        // Handle location matching
-        if (qrData.locationName && qrData.locationName.trim() && this.locations && this.locations.length > 0) {
-          const matchingLocation = this.locations.find(location =>
-            location.name.toLowerCase() === qrData.locationName.toLowerCase()
-          )
-          if (matchingLocation) {
-            this.newJob.client_location_id = matchingLocation.id.toString()
-          }
-        }
-
-        alert('QR code scanned successfully! Item identifier and location have been filled in.')
-      } catch (error) {
-        console.error('Error processing QR data:', error)
-        alert('Error reading QR code. Please enter the item identifier manually.')
+      // Validate client ID if provided in the QR data
+      if (qrData.clientId && qrData.clientId !== this.getClientId()) {
+        alert(`QR code is for a different client (ID: ${qrData.clientId}). This QR code is not valid for your account.`);
+        return;
       }
+
+      // Populate Item Identifier
+      if (qrData.itemIdentifier) {
+        this.newJob.item_identifier = qrData.itemIdentifier;
+      }
+
+      // Populate Location if an ID is provided and it exists in our list
+      if (qrData.locationId) {
+        const locationExists = this.locations.some(loc => loc.id === qrData.locationId);
+        if (locationExists) {
+          this.newJob.client_location_id = qrData.locationId.toString();
+        } else {
+          alert(`Location with ID ${qrData.locationId} from QR code was not found in your list of locations.`);
+        }
+      }
+
+      alert('QR code scanned successfully! Form fields have been populated.');
     },
 
     handleImagesChanged(images) {

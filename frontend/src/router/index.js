@@ -120,6 +120,12 @@ const routes = [
     component: ClientRegistration
   },
   {
+    path: '/qr',
+    name: 'QrHandler',
+    component: () => import('../views/QrHandler.vue'),
+    props: route => ({ query: route.query })
+  },
+  {
     path: '/service-provider-registration',
     name: 'ServiceProviderRegistrationInvited',
     component: ServiceProviderRegistration
