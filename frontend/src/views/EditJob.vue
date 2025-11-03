@@ -335,7 +335,17 @@
                       <span v-if="provider.address" class="text-gray-500 ml-2">- {{ provider.address }}</span>
                     </option>
                   </select>
-                  <p class="text-sm text-gray-600 mt-1">Required for requesting service or quote. Optional for job rejection.</p>
+                  <div class="mt-4 flex justify-between items-center">
+                      <p class="text-sm text-gray-600">Required for requesting service or quote.</p>
+                      <button
+                        type="button"
+                        @click="saveProviderAssignment"
+                        :disabled="saving || !selectedProviderForAssignment || job.assigned_provider_participant_id?.toString() === selectedProviderForAssignment"
+                        class="btn-outlined border-gray-400 text-gray-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Save Provider
+                      </button>
+                  </div>
                 </div>
               </div>
 
@@ -390,6 +400,22 @@
                 <span class="text-sm bg-orange-100 px-2 py-1 rounded-full">External Provider</span>
               </h3>
               <p class="text-sm text-orange-700 mt-2">{{ getTransitionDescription() }}</p>
+            </div>
+
+            <div class="form-group my-6">
+              <label for="xs-transition-notes" class="form-label flex items-center gap-2 mb-2">
+                <span class="material-icon field-icon text-gray-500">comment</span>
+                Transition Notes <span class="text-red-500">*</span>
+              </label>
+              <textarea
+                id="xs-transition-notes"
+                v-model="transitionNotes"
+                class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows="3"
+                placeholder="A note is required to document the state change for this external provider job..."
+                required
+              ></textarea>
+              <p class="text-sm text-gray-600 mt-1">For XS provider jobs, a note is always required to document the reason for the status change.</p>
             </div>
 
             <div class="transition-buttons-grid">
@@ -969,6 +995,11 @@ export default {
           // Initialize editable data
           this.editableJob = { ...this.job }
 
+          // If a provider is already assigned (e.g. from QR code), pre-select them.
+          if (this.job.assigned_provider_participant_id) {
+            this.selectedProviderForAssignment = this.job.assigned_provider_participant_id.toString();
+          }
+
           // Load images if in Reported status
           if (this.job.job_status === 'Reported') {
             await this.loadExistingImages()
@@ -1053,9 +1084,25 @@ export default {
     },
 
     async saveAndContinue(sectionType) {
-      // Implementation to be migrated from modal
-      console.log('Save and continue:', sectionType)
-      // Will implement section-based save logic
+      this.saving = true;
+      try {
+        if (sectionType === 'job-details') {
+          await this.saveJobDetails();
+        }
+
+        await this.saveImageChanges();
+
+        alert('Changes saved successfully.');
+
+        // Reload job data to get the latest state, e.g., for newly uploaded images
+        await this.loadJob();
+
+      } catch (error) {
+        console.error('Save failed:', error);
+        alert('Failed to save changes: ' + (error.message || error));
+      } finally {
+        this.saving = false;
+      }
     },
 
     async saveAndClose(sectionType) {
@@ -1096,13 +1143,15 @@ export default {
       // Only include changed fields
       const jobFields = ['item_identifier', 'contact_person', 'fault_description']
       jobFields.forEach(field => {
-        if (this.editableJob[field] !== this.job[field]) {
+        const oldValue = this.job[field] || '';
+        const newValue = this.editableJob[field] || '';
+        if (oldValue !== newValue) {
           updateData[field] = this.editableJob[field] || null
         }
       })
 
-      // Add location if for Role 2
-      if (this.userRole === 2 && this.selectedLocationId) {
+      // Add location if for Role 2 and it has changed
+      if (this.userRole === 2 && this.selectedLocationId && this.job.client_location_id?.toString() !== this.selectedLocationId) {
         updateData.client_location_id = this.selectedLocationId
       }
 
@@ -1454,7 +1503,6 @@ export default {
       try {
         // Comprehensive payload with transition logging
         const payload = {
-          action: targetStatus,
           transition_notes: this.transitionNotes?.trim() || '',
           assigned_provider_id: targetStatus !== 'Rejected' ? parseInt(this.job.assigned_provider_participant_id) : null
         }
@@ -1519,6 +1567,45 @@ export default {
     },
 
     // Provider assignment workflow methods for "Reported" jobs (role 2)
+    async saveProviderAssignment() {
+      if (!this.selectedProviderForAssignment) {
+        alert('Please select a service provider to save.');
+        return;
+      }
+
+      if (this.job.assigned_provider_participant_id?.toString() === this.selectedProviderForAssignment) {
+        alert('Provider selection has not changed.');
+        return;
+      }
+
+      this.saving = true;
+      try {
+        const payload = {
+          job_id: this.job.id,
+          assigned_provider_id: parseInt(this.selectedProviderForAssignment),
+        };
+
+        const response = await apiFetch('/backend/api/client-jobs.php', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to save provider assignment');
+        }
+
+        alert('Service provider selection saved.');
+        await this.loadJob();
+
+      } catch (error) {
+        console.error('Error saving provider:', error);
+        alert('Failed to save provider: ' + error.message);
+      } finally {
+        this.saving = false;
+      }
+    },
+
     async requestService() {
       // Validate provider selection (required for service request)
       if (!this.selectedProviderForAssignment) {
@@ -1679,7 +1766,8 @@ export default {
           job_id: this.job.id,
           action: 'reassign_provider',
           assigned_provider_id: parseInt(this.selectedReassignProviderId),
-          notes: this.reassignmentNotes.trim()
+          transition_notes: this.reassignmentNotes.trim(),
+          note: `Job reassigned. Reason: ${this.reassignmentNotes.trim()}`
         }
 
         // Make the API call using the client-jobs endpoint
