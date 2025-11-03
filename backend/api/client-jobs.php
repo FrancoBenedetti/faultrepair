@@ -4,6 +4,7 @@ ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/client-jobs.log');
 require_once '../config/database.php';
 require_once '../includes/JWT.php';
 require_once '../includes/subscription.php';
+require_once '../includes/job-status-validation.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS');
@@ -476,7 +477,9 @@ try {
         }
 
         // For XS provider jobs, validate mandatory notes on ALL status changes
-        if (isset($input['job_status']) && $isXSProvider && $role_id === 2) {
+        // Check for job_status, action, or request_state_change fields
+        $hasStatusChange = isset($input['job_status']) || isset($input['action']) || isset($input['request_state_change']);
+        if ($hasStatusChange && $isXSProvider && $role_id === 2) {
             if (!isset($input['transition_notes']) || empty(trim($input['transition_notes']))) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Notes are required for external provider transitions to document external system interactions.']);

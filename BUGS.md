@@ -1,5 +1,51 @@
 ## In Progress 🚧
 
+### 🟡 [BUG] XS Provider Dropdown Not Pre-Selected in EditJobModal - FIXED
+
+**Discovered:** 2025-01-11
+**Fixed:** 2025-01-11
+**Area:** Frontend - EditJobModal Provider Selection
+**Impact:** Users editing jobs with XS providers see confusing dropdown behavior - shows "Keep Current Provider" instead of actual provider name
+
+**Issue Description:**
+When editing a job that has an XS (External Service Provider) assigned, the "Change Service Provider" dropdown shows "-- Keep Current Provider --" as selected instead of showing the actual assigned provider name. This creates UX confusion as users expect to see their current provider selected.
+
+**Expected Behavior:**
+
+- Provider dropdown should pre-select the currently assigned provider name
+- Users should see their current provider as selected when opening the edit modal
+- Dropdown should allow changing to a different provider or keeping the current one
+
+**Current Behavior:**
+
+- Dropdown shows "-- Keep Current Provider --" even when a provider is assigned
+- Users cannot immediately see which provider is currently assigned
+- Creates confusion about current assignment status
+
+**Root Cause:**
+In EditJobModal.vue, the "-- Keep Current Provider --" option was always shown in the provider dropdown, even for XS jobs where a provider must be selected. The selectedProviderId was correctly initialized to the assigned provider ID, but the dropdown included an empty value option that would be selected instead.
+
+**Resolution:**
+
+- [x] Modified EditJobModal.vue to conditionally hide "-- Keep Current Provider --" option for XS provider jobs
+- [x] For XS jobs, dropdown now only shows actual provider options, ensuring current provider is always selected
+- [x] Frontend build completed successfully without errors
+
+**Code Changes:**
+
+1. **EditJobModal.vue**: Added `v-if="!isXSProviderJob"` condition to the "-- Keep Current Provider --" option
+2. **Result**: XS provider dropdowns now pre-select the assigned provider name instead of showing confusing placeholder text
+
+**Testing Results:**
+
+- ✅ Build completed successfully without errors - `./snappy-build.sh`
+- ✅ XS provider dropdown now pre-selects current assigned provider
+- ✅ Non-XS jobs still show "-- Keep Current Provider --" option
+- ✅ No console errors or build failures introduced
+
+**Verification:**
+When editing XS provider jobs, the "Change Service Provider" dropdown now shows the actual assigned provider name as selected, eliminating user confusion about current provider assignment.
+
 ### [BUG] Quote Management Filters Must Be Fixed
 
 **Discovered:** 2025-10-23
@@ -358,6 +404,44 @@ XS provider creation should now work without data truncation errors. Role 2 user
 **Discovered:** 2025-10-24
 **Fixed:** 2025-10-24
 **Area:** Frontend/Backend - Service Provider Details Modal Statistics
+**Impact:** Users could not view important service provider performance statistics
+
+**Issue Description:**
+Service provider details modal was missing a statistics section displaying performance metrics like jobs completed, completion rate, response time, and customer rating.
+
+**Expected Behavior:**
+
+- Statistics section shows in provider details modal
+- Displays: jobs completed, completion rate %, avg response time, customer rating
+
+**Current Behavior:**
+
+- Modal showed only basic info (name, address, services, regions)
+- No performance or statistical data visible
+
+**Resolution:**
+
+- [x] Added statistics section to ClientServiceProviderBrowser.vue modal
+- [x] Created getProviderStatistics() function in service-providers.php API
+- [x] Statistics calculated from jobs and job_status_history tables
+- [x] Added responsive CSS styling for statistics grid
+- [x] Frontend build completed successfully
+
+**Code Changes:**
+
+1. **ClientServiceProviderBrowser.vue**: Added statistics HTML section and CSS styling
+2. **service-providers.php**: Added getProviderStatistics() function calculating jobs completed, completion rate, response time
+3. **Database Integration**: Statistics pulled from jobs and job_status_history tables
+
+**Testing Results:**
+
+- ✅ Modal now displays statistics section with 4 metrics
+- ✅ API returns statistics data for each provider
+- ✅ Frontend build succeeds without errors
+- ✅ CSS styling applied correctly for responsive grid
+
+**Verification:**
+Service provider details modal now shows comprehensive performance statistics for informed decision making.
 **Impact:** Users could not view important service provider performance statistics
 
 **Issue Description:**

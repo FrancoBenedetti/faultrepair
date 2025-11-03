@@ -829,11 +829,28 @@
                       Change Service Provider
                     </label>
                     <select v-model="selectedProviderId" class="form-input">
-                      <option value="">-- Keep Current Provider --</option>
-                      <option v-for="provider in availableProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
+                      <option v-if="!isXSProviderJob" value="">-- Keep Current Provider --</option>
+                      <option v-for="provider in availableProviders" :key="provider.service_provider_id" :value="String(provider.service_provider_id)">
                         {{ provider.name }}<span v-if="provider.provider_type === 'XS'" class="provider-type external-provider"> (External)</span>
                       </option>
                     </select>
+                  </div>
+
+                  <!-- Transition Notes for XS Provider Changes -->
+                  <div v-if="isXSProviderJob && selectedProviderId && String(selectedProviderId) !== String(job.assigned_provider_participant_id)" class="form-group">
+                    <label for="transition-notes" class="form-label">
+                      <span class="material-icon field-icon">note</span>
+                      Transition Notes *
+                    </label>
+                    <textarea
+                      id="transition-notes"
+                      v-model="transitionNotes"
+                      class="form-textarea"
+                      rows="3"
+                      placeholder="Please provide notes for this provider change to document external system interactions..."
+                      required
+                    ></textarea>
+                    <p class="form-help">Required for external provider system documentation</p>
                   </div>
 
                   <!-- Technician Assignment -->
@@ -1045,6 +1062,13 @@ export default {
     // Check if we're in XS provider mode (XS job + role 2)
     isXSProviderMode() {
       return this.isXSProviderJob;
+    },
+
+    // Check if the selected provider is an XS provider
+    isSelectedProviderXS() {
+      if (!this.selectedProviderId || !this.availableProviders) return false;
+      const provider = this.availableProviders.find(p => p.service_provider_id == this.selectedProviderId);
+      return provider?.provider_type === 'XS';
     }
   },
   data() {
@@ -1071,8 +1095,11 @@ export default {
       // Technician assignment data
       selectedTechnicianId: this.job.assigned_technician_user_id || '',
       technicianNotes: this.job.technician_notes || '',
-      // Provider selection for Reported jobs
+      // Provider selection for Reported jobs and XS provider changes
       selectedProviderId: this.job.assigned_provider_participant_id || '',
+
+      // Transition notes for XS provider changes
+      transitionNotes: '',
 
       // Locations data for Role 2
       availableLocations: [],
@@ -1113,6 +1140,7 @@ export default {
         this.selectedProviderId = newJob?.assigned_provider_participant_id || '';
         this.selectedTechnicianId = newJob?.assigned_technician_user_id || '';
         this.technicianNotes = newJob?.technician_notes || '';
+        this.transitionNotes = '';
 
         // Force Vue to update bindings using nextTick
         this.$nextTick(() => {
@@ -1417,7 +1445,7 @@ export default {
       }
 
       // For XS provider state transitions, require transition notes
-      if (this.isXSProviderMode && (!this.stateTransitionNote || !this.stateTransitionNote.trim())) {
+      if (this.isSelectedProviderXS && (!this.stateTransitionNote || !this.stateTransitionNote.trim())) {
         alert('Please provide transition notes for external provider system documentation.');
         return;
       }
@@ -1430,7 +1458,7 @@ export default {
           action: targetStatus,
           note: this.stateTransitionNote,
           assigned_provider_id: targetStatus !== 'Rejected' ? parseInt(this.selectedProviderId) : null,
-          transition_notes: this.isXSProviderMode ? this.stateTransitionNote || '' : undefined
+          transition_notes: this.isSelectedProviderXS ? this.stateTransitionNote || '' : undefined
         };
 
         // Set job status for non-quote transitions
@@ -1771,6 +1799,10 @@ export default {
         // Include provider/technician changes
         if (this.selectedProviderId && this.selectedProviderId !== this.job.assigned_provider_participant_id) {
           updateData.assigned_provider_id = parseInt(this.selectedProviderId);
+          // Include transition notes for XS provider changes
+          if (this.isXSProviderJob && this.transitionNotes && this.transitionNotes.trim()) {
+            updateData.transition_notes = this.transitionNotes.trim();
+          }
         }
         if (this.selectedTechnicianId !== (this.job.assigned_technician_user_id || '')) {
           updateData.assigned_technician_user_id = this.selectedTechnicianId || null;
