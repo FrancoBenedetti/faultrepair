@@ -966,6 +966,86 @@
       </div>
     </div>
 
+    <!-- Regions Modal -->
+    <div v-if="showRegionsModal" class="fixed inset-0 z-50 flex items-center justify-center">
+      <!-- Overlay -->
+      <div class="absolute inset-0 bg-black/50" @click="showRegionsModal = false"></div>
+
+      <!-- Modal Content -->
+      <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" @click.stop>
+        <!-- Header -->
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+          <h3 class="text-xl font-semibold text-gray-900 flex items-center gap-3">
+            <span class="material-icon text-orange-600">location_on</span>
+            Configure Service Regions
+          </h3>
+          <button @click="showRegionsModal = false" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
+          <!-- Search Input -->
+          <div class="mb-6">
+            <input
+              type="text"
+              v-model="regionSearchTerm"
+              placeholder="Search regions..."
+              class="form-input"
+            >
+          </div>
+
+          <!-- Regions List -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div
+              v-for="region in filteredRegions"
+              :key="region.id"
+              class="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+              @click="toggleRegionSelection(region.id)"
+            >
+              <input
+                type="checkbox"
+                :checked="selectedRegions.includes(region.id)"
+                class="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500"
+                @click.stop
+                @change="toggleRegionSelection(region.id)"
+              >
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-orange-500">
+                <span class="material-icon-sm text-white">location_on</span>
+              </div>
+              <div class="flex-1">
+                <div class="font-medium text-gray-900">{{ region.name }}</div>
+                <div class="text-sm text-gray-600">{{ region.code }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex justify-end gap-3 pt-6 border-t border-gray-200 p-6">
+          <button
+            type="button"
+            @click="showRegionsModal = false"
+            class="btn-filled flex items-center gap-2"
+            :disabled="loading"
+          >
+            <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
+            <span v-else class="material-icon-sm">close</span>
+            {{ loading ? 'Saving...' : 'Cancel' }}
+          </button>
+          <button
+            type="button"
+            @click="updateRegions"
+            class="btn-filled flex items-center gap-2"
+            :disabled="loading"
+          >
+            <span v-if="loading" class="material-icon-sm animate-spin">refresh</span>
+            <span v-else class="material-icon-sm">save</span>
+            {{ loading ? 'Saving...' : 'Save Regions' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Add Technician Modal -->
     <div v-if="showAddTechnicianModal" class="fixed inset-0 z-50 flex items-center justify-center">
       <!-- Overlay -->
@@ -1754,6 +1834,15 @@ export default {
         }
       }
       return null
+    },
+    filteredRegions() {
+      if (!this.availableRegions) return [];
+      if (!this.regionSearchTerm) return this.availableRegions;
+      const searchTerm = this.regionSearchTerm.toLowerCase();
+      return this.availableRegions.filter(region =>
+        region.name.toLowerCase().includes(searchTerm) ||
+        region.code.toLowerCase().includes(searchTerm)
+      );
     }
   },
   data() {
@@ -1799,6 +1888,7 @@ export default {
     selectedCategoryFilter: '',
     expandedCategories: {},
     searchTimeout: null, // For debounced search
+    regionSearchTerm: '',
     jobFilters: {
       status: '',
       archive_status: 'active', // Default to active jobs for service providers
@@ -2179,6 +2269,15 @@ getCurrentUserName() {
     getRegionName(regionId) {
       const region = this.availableRegions.find(r => r.id === regionId)
       return region ? region.name : 'Unknown Region'
+    },
+
+    toggleRegionSelection(regionId) {
+      const index = this.selectedRegions.indexOf(regionId);
+      if (index > -1) {
+        this.selectedRegions.splice(index, 1);
+      } else {
+        this.selectedRegions.push(regionId);
+      }
     },
 
     signOut() {

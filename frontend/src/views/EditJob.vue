@@ -85,6 +85,7 @@
                     maxlength="100"
                     placeholder="Enter item identifier..."
                     required
+                    :readonly="userRole === 3 || userRole === 4"
                   />
                 </div>
 
@@ -119,6 +120,7 @@
                     class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     maxlength="100"
                     placeholder="Contact person for this job..."
+                    :readonly="userRole === 3 || userRole === 4"
                   />
                 </div>
 
@@ -135,6 +137,7 @@
                     maxlength="1000"
                     placeholder="Describe the fault or issue in detail..."
                     required
+                    :readonly="userRole === 3 || userRole === 4"
                   ></textarea>
                 </div>
               </div>
