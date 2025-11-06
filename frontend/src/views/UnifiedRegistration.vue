@@ -436,14 +436,14 @@ export default {
         const data = await response.json()
 
         if (response.ok) {
+          let successMessage = 'Registration successful! Please check your email to verify your account before signing in.'
           // Handle auto-approval for client→service provider invitations
           if (this.invitationData && this.invitationData.invitation_type === 'service_provider' &&
               this.invitationData.inviter_details.entity_type === 'client') {
-            alert('Registration successful! You have been automatically approved as a service provider for ' +
-                  this.invitationData.inviter_details.entity_name + '. Please check your email to verify your account before signing in.')
-          } else {
-            alert('Registration successful! Please check your email to verify your account before signing in.')
+            successMessage = 'Registration successful! You have been automatically approved as a service provider for ' +
+                  this.invitationData.inviter_details.entity_name + '. ' + successMessage
           }
+          alert(successMessage)
           this.$router.push('/')
         } else {
           alert(data.error || 'Registration failed. Please try again.')
