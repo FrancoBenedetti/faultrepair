@@ -9,28 +9,23 @@
       :profile-completeness="profileCompleteness"
       dashboard-type="client"
       :is-admin="isAdmin"
-      :show-upgrade-button="isAdmin"
       :show-invite-users="isAdmin"
       :is-primary-disabled="!clientProfile?.is_enabled"
       @navigate="handleNavigate"
     />
 
-    <!-- Collapsible User Identity Section -->
-    <CollapsibleUserIdentity
-      :user-display-name="getCurrentUserName()"
-      :user-role="userRole"
-      :role-display-names="roleDisplayNames"
-      :organization-name="getOrganizationName()"
-      :profile-completeness="profileCompleteness"
-      :can-invite-users="isAdmin"
-      @edit-profile="$emit('edit-profile-modal')"
-      @upgrade="handleUpgradeClick"
-      @navigate="handleNavigate"
-    />
+    <!-- Sign Out Button (Ideally integrated within UnifiedDashboardHeader component) -->
+    <!-- For now, placed adjacent to the header component. -->
+    <div class="flex justify-end p-4">
+      <button @click="signOut" class="btn-outlined flex items-center gap-2">
+        <span class="material-icon-sm">logout</span>
+        Sign Out
+      </button>
+    </div>
 
     <div class="dashboard-content space-y-6">
       <!-- Administrator Settings Section - Only for budget controllers (role 2) -->
-      <div class="admin-settings-container bg-white rounded-xl shadow-lg border border-gray-200 p-0 mb-8" v-if="userRole === 2">
+      <div class="admin-settings-container bg-white rounded-xl shadow-lg border border-gray-200 p-0 mb-8" v-if="userRole === 2 && clientProfile?.is_enabled">
         <div class="admin-section-header rounded-t-xl bg-white rounded-b-none p-6 pb-4">
           <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-0 pb-0 border-b border-neutral-200" @click="toggleSection('administrator-settings')" style="cursor: pointer;">
             <div class="section-title flex items-center gap-3">
@@ -41,6 +36,15 @@
                 <span class="material-icon text-purple-600">admin_panel_settings</span>
                 Administrator Settings
               </h2>
+            </div>
+            <!-- Admin-specific actions: Upgrade and Subscription Plan -->
+            <div class="admin-header-actions flex items-center gap-4">
+              <span class="text-sm text-gray-600">Current Plan: Basic</span>
+              <button @click.stop="handleUpgradeClick" class="btn-filled flex items-center gap-2" v-if="isAdmin">
+                <span class="material-icon-sm">workspace_premium</span>
+                Upgrade
+              </button>
+              <!-- Add other admin actions here if needed -->
             </div>
           </div>
         </div>
@@ -169,7 +173,7 @@
       <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
         <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200" @click="toggleSection('jobs')" style="cursor: pointer;">
           <div class="section-title flex items-center gap-3">
-            <button class="expand-btn" :class="{ expanded: sectionsExpanded.jobs }">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded.jobs }" @click.stop>
               <span class="material-icon-sm">expand_more</span>
             </button>
             <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
@@ -301,7 +305,6 @@ import { apiFetch, handleTokenExpiration, loadRoleSettings } from '@/utils/api.j
 
 // New component imports
 import UnifiedDashboardHeader from '@/components/dashboard/UnifiedDashboardHeader.vue'
-import CollapsibleUserIdentity from '@/components/dashboard/CollapsibleUserIdentity.vue'
 import BusinessProfileSection from '@/components/dashboard/BusinessProfileSection.vue'
 import UserManagementSection from '@/components/dashboard/UserManagementSection.vue'
 import ProviderManagementSection from '@/components/dashboard/ProviderManagementSection.vue'
@@ -324,9 +327,7 @@ export default {
   components: {
     ImageUpload,
     QrScanner,
-    // New components
     UnifiedDashboardHeader,
-    CollapsibleUserIdentity,
     BusinessProfileSection,
     UserManagementSection,
     ProviderManagementSection,
@@ -545,7 +546,7 @@ export default {
       }
     }
   },
-  methods: {
+ methods: {
     checkUserPermissions() {
       try {
         const token = localStorage.getItem('token')
