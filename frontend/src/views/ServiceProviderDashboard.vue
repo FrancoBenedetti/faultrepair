@@ -4,6 +4,7 @@
       <!-- Unified Dashboard Header -->
       <UnifiedDashboardHeader
         :org-name="getOrganizationName()"
+        :user-name="getCurrentUserName()"
         :profile-completeness="profileCompleteness"
         :user-role="userRole"
         :role-display-names="roleDisplayNames"

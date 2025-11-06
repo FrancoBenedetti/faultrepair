@@ -3,6 +3,7 @@
     <!-- Unified Dashboard Header -->
     <UnifiedDashboardHeader
       :org-name="getOrganizationName()"
+      :user-name="getCurrentUserName()"
       :user-role="userRole"
       :role-display-names="roleDisplayNames"
       :profile-completeness="profileCompleteness"

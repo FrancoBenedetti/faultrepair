@@ -30,8 +30,8 @@
         <!-- User menu dropdown -->
         <div class="user-menu-dropdown" v-if="userMenuOpen">
           <button @click="toggleUserMenu" class="user-avatar-btn">
-            <div class="user-avatar">
-              <span class="material-icon">{{ getCurrentUserName().charAt(0).toUpperCase() }}</span>
+            <div class="user-avatar" v-if="getCurrentUserName">
+              <span class="material-icon">{{ getCurrentUserName.charAt(0).toUpperCase() }}</span>
             </div>
             <span class="material-icon-sm">expand_more</span>
           </button>
@@ -39,7 +39,7 @@
           <div v-if="userMenuExpanded" class="user-menu-content">
             <div class="user-info-item">
               <span class="label">Signed in as:</span>
-              <span class="value">{{ getCurrentUserName() }}</span>
+              <span class="value">{{ getCurrentUserName }}</span>
             </div>
             <div class="user-info-item" v-if="userRole">
               <span class="label">Role:</span>
@@ -90,8 +90,8 @@
             <div class="menu-section">
               <div class="menu-item">
                 <span class="material-icon-sm text-blue-600">person</span>
-                <div>
-                  <div class="item-title">{{ getCurrentUserName() }}</div>
+                <div v-if="getCurrentUserName">
+                  <div class="item-title">{{ getCurrentUserName }}</div>
                   <div class="item-subtitle">{{ roleDisplayNames && roleDisplayNames[userRole] ? roleDisplayNames[userRole] : getFallbackRoleName(userRole) }}</div>
                 </div>
               </div>
@@ -193,12 +193,12 @@
 
         <!-- User Info -->
         <div class="user-info-section">
-          <div class="user-avatar" @click="toggleUserTooltip" title="Click for details">
-            <span class="material-icon">{{ getCurrentUserName().charAt(0).toUpperCase() }}</span>
+          <div class="user-avatar" @click="toggleUserTooltip" title="Click for details" v-if="getCurrentUserName">
+            <span class="material-icon">{{ getCurrentUserName.charAt(0).toUpperCase() }}</span>
           </div>
 
           <div class="user-details">
-            <div class="user-name">{{ getCurrentUserName() }}</div>
+            <div class="user-name">{{ getCurrentUserName }}</div>
             <div class="user-role" v-if="userRole">
               {{ roleDisplayNames && roleDisplayNames[userRole] ? roleDisplayNames[userRole] : getFallbackRoleName(userRole) }}
             </div>
@@ -242,6 +242,12 @@ export default {
     orgName: {
       type: String,
       default: 'Organization'
+    },
+
+    // User name to display, passed as a prop
+    userName: {
+      type: String,
+      default: ''
     },
 
     // User information
@@ -317,18 +323,55 @@ export default {
 
   computed: {
     primaryActionText() {
-      return this.dashboardType === 'client' ? 'Service Request' : 'Create Invitation'
+      return 'Send Invitation'
     },
 
     primaryActionTitle() {
-      return this.dashboardType === 'client' ? 'Create a new service request' : 'Create an invitation for new users'
+      return 'Send an invitation to new users'
     },
 
     mobileDashboardLabel() {
       return this.dashboardType === 'client' ? 'Client Dashboard' : 'Service Dashboard'
     }
   },
+  computed: {
+    // Move getCurrentUserName from methods to computed
+    getCurrentUserName() {
+      // Prioritize the name passed via props
+      if (this.userName) {
+        return this.userName;
+      }
 
+      // Get current user name from localStorage
+      try {
+        const userData = localStorage.getItem('user')
+        if (userData) {
+          const user = JSON.parse(userData)
+          if (user.first_name && user.last_name) {
+            return `${user.first_name} ${user.last_name}`.trim()
+          }
+          return user.username || 'User'
+        }
+      } catch (error) {
+        console.warn('Failed to get user data for UnifiedDashboardHeader:', error)
+      }
+
+      // Fallback to 'User' if no data available
+      return 'User'
+    },
+
+    primaryActionText() {
+      return 'Send Invitation'
+    },
+
+    primaryActionTitle() {
+      return 'Send an invitation to new users'
+    },
+
+    mobileDashboardLabel() {
+      return this.dashboardType === 'client' ? 'Client Dashboard' : 'Service Dashboard'
+    }
+  },
   methods: {
     checkMobile() {
       this.isMobile = window.innerWidth < 768
@@ -361,45 +404,6 @@ export default {
       this.actionsDropdownOpen = !this.actionsDropdownOpen
     },
 
-    // Action Handlers
-    handlePrimaryAction() {
-      if (this.isPrimaryDisabled) return
-
-      if (this.dashboardType === 'client') {
-        this.$emit('navigate', '/client/create-job')
-      } else {
-        this.$emit('navigate', '/create-invitation')
-      }
-    },
-
-    handleUpgradeClick() {
-      alert('Upgrade to Premium feature coming soon! Contact sales for more information.')
-    },
-
-    // Utility Functions
-    getPrimaryActionIcon() {
-      return this.dashboardType === 'client' ? 'add' : 'person_add'
-    },
-
-    getCurrentUserName() {
-      // Get current user name from localStorage
-      try {
-        const userData = localStorage.getItem('user')
-        if (userData) {
-          const user = JSON.parse(userData)
-          if (user.first_name && user.last_name) {
-            return `${user.first_name} ${user.last_name}`.trim()
-          }
-          return user.username || 'User'
-        }
-      } catch (error) {
-        console.warn('Failed to get user data for UnifiedDashboardHeader:', error)
-      }
-
-      // Fallback to 'User' if no data available
-      return 'User'
-    },
-
     getFallbackRoleName(roleId) {
       switch (roleId) {
         case 1:
@@ -429,6 +433,22 @@ export default {
         'service-provider': 'service-provider-icon'
       }
       return iconClasses[this.dashboardType] || ''
+    },
+
+    // Action Handlers
+    handlePrimaryAction() {
+      if (this.isPrimaryDisabled) return
+
+      this.$emit('navigate', '/create-invitation')
+    },
+
+    handleUpgradeClick() {
+      alert('Upgrade to Premium feature coming soon! Contact sales for more information.')
+    },
+
+    // Utility Functions
+    getPrimaryActionIcon() {
+      return 'person_add'
     },
 
     signOut() {

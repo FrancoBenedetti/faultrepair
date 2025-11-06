@@ -238,6 +238,10 @@ export default {
 
         if (response.ok && data.token) {
           localStorage.setItem('token', data.token);
+          // Store user details for display in other components
+          if (data.user) {
+            localStorage.setItem('user', JSON.stringify(data.user));
+          }
 
           // Check for QR redirect data after successful login
           const qrRedirectData = localStorage.getItem('qrRedirectData');
