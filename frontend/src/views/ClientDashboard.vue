@@ -283,6 +283,13 @@
       @close="showProviderDetailsModal = false"
       @view-jobs="handleViewProviderJobs($event)"
     />
+
+    <AddXSProviderModal
+      v-if="showAddXSProviderModal"
+      @close="showAddXSProviderModal = false"
+      @provider-added="handleXSProviderAdded"
+    />
+
   </div>
 </template>
 
