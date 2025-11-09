@@ -40,8 +40,9 @@
         </div>
       </div>
 
-      <div v-show="sectionsExpanded['administrator-settings']" class="admin-subsections bg-gray-100 rounded-b-xl border-t border-gray-200 p-4 space-y-2">
-
+      <!-- This div now correctly wraps all the admin subsections -->
+      <div v-show="sectionsExpanded['administrator-settings']" class="admin-subsections bg-gray-50 rounded-b-xl border-t border-gray-200">
+        <div class="p-6 space-y-6">
         <!-- Business Profile Sub-Section -->
         <div class="subsection-container">
           <div @click="toggleSection('profile')" class="subsection-header">
@@ -131,7 +132,7 @@
                   </div>
                 </div>
               </div>
-            </div>
+        </div>
 
         <!-- Services Offered Sub-Section -->
         <div class="subsection-container">
@@ -348,6 +349,7 @@
               </button>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
