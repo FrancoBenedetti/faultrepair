@@ -591,7 +591,7 @@
     </div>
 
     <!-- Edit Business Profile Modal -->
-    <div v-if="showProfileModal" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div v-if="showProfileModal" class="fixed inset-0 flex items-center justify-center" style="z-index: 2000;">
       <!-- Overlay -->
       <div class="absolute inset-0 bg-black/50" @click="showProfileModal = false"></div>
 
@@ -803,7 +803,7 @@
     </div>
 
     <!-- Services Modal -->
-    <div v-if="showServicesModal" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div v-if="showServicesModal" class="fixed inset-0 flex items-center justify-center" style="z-index: 2000;">
       <!-- Overlay -->
       <div class="absolute inset-0 bg-black/50" @click="showServicesModal = false"></div>
 
@@ -970,7 +970,7 @@
     </div>
 
     <!-- Regions Modal -->
-    <div v-if="showRegionsModal" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div v-if="showRegionsModal" class="fixed inset-0 flex items-center justify-center" style="z-index: 2000;">
       <!-- Overlay -->
       <div class="absolute inset-0 bg-black/50" @click="showRegionsModal = false"></div>
 
@@ -1050,7 +1050,7 @@
     </div>
 
     <!-- Add Technician Modal -->
-    <div v-if="showAddTechnicianModal" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div v-if="showAddTechnicianModal" class="fixed inset-0 flex items-center justify-center" style="z-index: 2000;">
       <!-- Overlay -->
       <div class="absolute inset-0 bg-black/50" @click="closeAddTechnicianModal"></div>
 
@@ -1161,7 +1161,7 @@
     </div>
 
     <!-- Edit Technician Modal -->
-    <div v-if="showEditTechnicianModal" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div v-if="showEditTechnicianModal" class="fixed inset-0 flex items-center justify-center" style="z-index: 2000;">
       <!-- Overlay -->
       <div class="absolute inset-0 bg-black/50" @click="closeEditTechnicianModal"></div>
 
@@ -1307,7 +1307,7 @@
     </div>
 
     <!-- Job Details Modal -->
-    <div v-if="showJobDetailsModal" class="modal-overlay" @click="showJobDetailsModal = false">
+    <div v-if="showJobDetailsModal" class="modal-overlay" @click="showJobDetailsModal = false" style="z-index: 2000;">
       <div class="modal-content large-modal" @click.stop>
         <div class="modal-header">
           <h3 class="flex items-center gap-3">
@@ -1421,7 +1421,7 @@
 
 
     <!-- Edit Quote Modal -->
-    <div v-if="showEditQuoteModal" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div v-if="showEditQuoteModal" class="fixed inset-0 flex items-center justify-center" style="z-index: 2000;">
       <!-- Overlay -->
       <div class="absolute inset-0 bg-black/50" @click="closeEditQuoteModal"></div>
 
@@ -1613,7 +1613,7 @@
     />
 
     <!-- Quote Details Modal -->
-    <div v-if="showQuoteDetailsModal" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div v-if="showQuoteDetailsModal" class="fixed inset-0 flex items-center justify-center" style="z-index: 2000;">
       <!-- Overlay -->
       <div class="absolute inset-0 bg-black/50" @click="showQuoteDetailsModal = false"></div>
 
@@ -1761,7 +1761,7 @@
     </div>
 
     <!-- Image Modal for Full Size View -->
-    <div v-if="selectedImage" class="modal-overlay" @click="selectedImage = null">
+    <div v-if="selectedImage" class="modal-overlay" @click="selectedImage = null" style="z-index: 2100;">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>{{ selectedImage.original_filename }}</h3>
