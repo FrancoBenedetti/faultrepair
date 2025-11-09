@@ -3,6 +3,14 @@
     <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Header -->
       <div class="text-center mb-8">
+        <div class="text-left mb-4">
+          <router-link
+            :to="userEntityType === 'client' ? '/client-dashboard' : '/service-provider-dashboard'"
+            class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+          >
+            <span class="material-icon-sm">arrow_back</span> Back to Dashboard
+          </router-link>
+        </div>
         <h1 class="text-3xl font-bold text-gray-900">Create Invitation</h1>
         <p class="mt-2 text-sm text-gray-600">
           Invite someone to join the {{ userEntityType === 'client' ? 'service provider' : 'client' }} platform
