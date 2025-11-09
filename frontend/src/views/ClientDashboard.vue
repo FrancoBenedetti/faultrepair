@@ -273,13 +273,60 @@
       @submit="handleUpdateClientProfile"
     />
 
-    <!-- Now using the restored ProviderDetailsModal -->
-    <ProviderDetailsModal
-      v-if="showProviderDetailsModal"
-      :provider="selectedProvider"
-      @close="showProviderDetailsModal = false"
-      @view-jobs="handleViewProviderJobs($event)"
-    />
+    <!-- Provider Details Modal (copied from ClientServiceProviderBrowser for consistency) -->
+    <div v-if="showProviderDetailsModal" class="modal-overlay" @click="showProviderDetailsModal = false">
+      <div class="modal-content large-modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ selectedProvider.name }}</h3>
+          <button @click="showProviderDetailsModal = false" class="close-btn">&times;</button>
+        </div>
+
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
+          <!-- Company Information -->
+          <div class="job-info-section">
+            <h4>Company Information</h4>
+            <div class="info-grid">
+              <div class="info-item full-width">
+                <strong>Address:</strong> {{ selectedProvider.address }}
+              </div>
+              <div v-if="selectedProvider.website" class="info-item">
+                <strong>Website:</strong>
+                <a :href="selectedProvider.website" target="_blank" class="text-blue-600 hover:underline">{{ selectedProvider.website }}</a>
+              </div>
+              <div v-if="selectedProvider.manager_name" class="info-item">
+                <strong>Manager:</strong> {{ selectedProvider.manager_name }}
+              </div>
+              <div v-if="selectedProvider.manager_email" class="info-item">
+                <strong>Manager Email:</strong>
+                <a :href="'mailto:' + selectedProvider.manager_email" class="text-blue-600 hover:underline">{{ selectedProvider.manager_email }}</a>
+              </div>
+              <div v-if="selectedProvider.manager_phone" class="info-item">
+                <strong>Manager Phone:</strong> {{ selectedProvider.manager_phone }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Business Details -->
+          <div class="job-info-section">
+            <h4>Business Details</h4>
+            <div class="info-grid">
+              <div v-if="selectedProvider.vat_number" class="info-item">
+                <strong>VAT Number:</strong> {{ selectedProvider.vat_number }}
+              </div>
+              <div v-if="selectedProvider.business_registration_number" class="info-item">
+                <strong>Registration No:</strong> {{ selectedProvider.business_registration_number }}
+              </div>
+              <div v-if="selectedProvider.description" class="info-item full-width">
+                <strong>Description:</strong> {{ selectedProvider.description }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer p-4 bg-gray-50 border-t">
+          <button @click="showProviderDetailsModal = false" class="btn-outlined">Close</button>
+        </div>
+      </div>
+    </div>
 
     <AddXSProviderModal
       v-if="showAddXSProviderModal"
@@ -311,7 +358,6 @@ import EditJobModal from '@/components/modals/EditJobModal.vue'
 import JobDetailsModal from '@/components/modals/JobDetailsModal.vue'
 import ProviderDetailsModal from '@/components/modals/ProviderDetailsModal.vue'
 import QuotationDetailsModal from '@/components/modals/QuotationDetailsModal.vue'
-import AddXSProviderModal from '@/components/modals/AddXSProviderModal.vue'
 import EditProfileModal from '@/components/modals/EditProfileModal.vue'
 
 export default {
@@ -332,9 +378,7 @@ export default {
     JobDetailsModal,
     EditJobModal,
     EditLocationModal,
-    ProviderDetailsModal,
     QuotationDetailsModal,
-    AddXSProviderModal,
     EditProfileModal
   },
   data() {
@@ -2009,6 +2053,10 @@ Are you sure you want to proceed?`;
 .section-header h2 {
   margin: 0;
   color: #333;
+  }
+
+  .info-item.full-width {
+    grid-column: 1 / -1;
 }
 
 /* Expand Button */
