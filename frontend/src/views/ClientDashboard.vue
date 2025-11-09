@@ -14,15 +14,6 @@
       @navigate="handleNavigate"
     />
 
-    <!-- Sign Out Button (Ideally integrated within UnifiedDashboardHeader component) -->
-    <!-- For now, placed adjacent to the header component. -->
-    <div class="flex justify-end p-4">
-      <button @click="signOut" class="btn-outlined flex items-center gap-2">
-        <span class="material-icon-sm">logout</span>
-        Sign Out
-      </button>
-    </div>
-
     <div class="dashboard-content space-y-6">
       <!-- Administrator Settings Section - Only for budget controllers (role 2) -->
       <div class="admin-settings-container bg-white rounded-xl shadow-lg border border-gray-200 p-0 mb-8" v-if="userRole === 2 && clientProfile?.is_enabled">

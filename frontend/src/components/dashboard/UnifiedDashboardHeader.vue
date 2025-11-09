@@ -27,6 +27,11 @@
           <span class="btn-text">{{ primaryActionText }}</span>
         </button>
 
+        <!-- Sign Out Button for Mobile -->
+        <button @click="signOut" class="btn-icon" title="Sign Out">
+          <span class="material-icon-sm">logout</span>
+        </button>
+
         <!-- User menu dropdown -->
         <div class="user-menu-dropdown" v-if="userMenuOpen">
           <button @click="toggleUserMenu" class="user-avatar-btn">
@@ -169,28 +174,6 @@
           {{ primaryActionText }}
         </button>
 
-        <!-- Secondary Actions Dropdown -->
-        <div class="dropdown-container">
-          <button @click="toggleActionsDropdown" class="dropdown-trigger">
-            <span class="material-icon-sm">more_vert</span>
-          </button>
-
-          <div v-if="actionsDropdownOpen" class="dropdown-menu">
-            <button @click="handleUpgradeClick" v-if="showUpgradeButton" class="dropdown-item">
-              <span class="material-icon-sm">upgrade</span>
-              Upgrade to Premium
-            </button>
-            <button @click.stop="$emit('navigate', '/create-invitation')" v-if="showInviteUsers" class="dropdown-item">
-              <span class="material-icon-sm">person_add</span>
-              Invite Users
-            </button>
-            <button @click="signOut" class="dropdown-item">
-              <span class="material-icon-sm">logout</span>
-              Sign Out
-            </button>
-          </div>
-        </div>
-
         <!-- User Info -->
         <div class="user-info-section">
           <div class="user-avatar" @click="toggleUserTooltip" title="Click for details" v-if="getCurrentUserName">
@@ -229,6 +212,11 @@
             </div>
           </div>
         </div>
+
+        <!-- Sign Out Button for Desktop -->
+        <button @click="signOut" class="btn-icon" title="Sign Out">
+          <span class="material-icon-sm">logout</span>
+        </button>
       </div>
     </div>
   </header>
@@ -542,6 +530,18 @@ export default {
   opacity: 0.6;
 }
 
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: background-color 0.2s, color 0.2s;
+}
 .btn-primary-mobile .btn-text {
   display: none;
 }
@@ -919,6 +919,11 @@ export default {
   background: #9ca3af;
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+.btn-icon:hover {
+  background-color: #f9fafb;
+  color: #111827;
 }
 
 .dropdown-container {
