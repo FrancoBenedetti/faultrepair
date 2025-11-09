@@ -309,12 +309,34 @@
             <div class="provider-info-section">
               <h4>Company Information</h4>
               <div class="info-grid">
-                <div class="info-item">
+                <div class="info-item full-width">
                   <strong>Address:</strong> {{ selectedProvider.address }}
                 </div>
                 <div v-if="selectedProvider.website" class="info-item">
                   <strong>Website:</strong>
                   <a :href="selectedProvider.website" target="_blank">{{ selectedProvider.website }}</a>
+                </div>
+                <div v-if="selectedProvider.manager_name" class="info-item">
+                  <strong>Manager:</strong> {{ selectedProvider.manager_name }}
+                </div>
+                <div v-if="selectedProvider.manager_email" class="info-item">
+                  <strong>Manager Email:</strong>
+                  <a :href="'mailto:' + selectedProvider.manager_email">{{ selectedProvider.manager_email }}</a>
+                </div>
+                <div v-if="selectedProvider.manager_phone" class="info-item">
+                  <strong>Manager Phone:</strong> {{ selectedProvider.manager_phone }}
+                </div>
+              </div>
+            </div>
+
+            <div class="provider-info-section">
+              <h4>Business Details</h4>
+              <div class="info-grid">
+                <div v-if="selectedProvider.vat_number" class="info-item">
+                  <strong>VAT Number:</strong> {{ selectedProvider.vat_number }}
+                </div>
+                <div v-if="selectedProvider.business_registration_number" class="info-item">
+                  <strong>Registration No:</strong> {{ selectedProvider.business_registration_number }}
                 </div>
                 <div v-if="selectedProvider.description" class="info-item full-width">
                   <strong>Description:</strong> {{ selectedProvider.description }}
@@ -1171,6 +1193,7 @@ export default {
 .info-grid {
   display: grid;
   gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .info-item {

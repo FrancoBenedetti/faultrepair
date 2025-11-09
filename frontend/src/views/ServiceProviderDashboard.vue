@@ -531,7 +531,7 @@
 
         <div v-show="sectionsExpanded.clients" class="section-content transition-all duration-300 ease-in-out">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div v-for="client in approvedClients" :key="client.id" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div v-for="client in approvedClients" :key="client.id" @click="viewClientDetails(client)" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
               <div class="flex items-start justify-between mb-4">
                 <div class="flex items-center gap-3">
                   <div class="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center">
@@ -564,7 +564,7 @@
               </div>
 
               <div class="flex gap-2">
-                <button @click="viewClientJobs(client.id)" class="btn-filled btn-small flex items-center gap-1 flex-1">
+                <button @click.stop="viewClientJobs(client.id)" class="btn-filled btn-small flex items-center gap-1 flex-1">
                   <span class="material-icon-sm">work</span>
                   View Jobs
                 </button>
@@ -586,6 +586,73 @@
             </div>
             <h3 class="text-xl font-semibold text-gray-900 mb-2">No Approved Clients Yet</h3>
             <p class="text-gray-600">Clients will appear here once they approve your services.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Client Details Modal -->
+    <div v-if="selectedClient" class="modal-overlay" @click="selectedClient = null" style="z-index: 2000;">
+      <div class="modal-content large-modal" @click.stop>
+        <div class="modal-header">
+          <h3 class="flex items-center gap-3">
+            <span class="material-icon text-orange-600">business</span>
+            Client Details: {{ selectedClient.name }}
+          </h3>
+          <button @click="selectedClient = null" class="close-btn">&times;</button>
+        </div>
+
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
+          <!-- Client Information -->
+          <div class="job-info-section">
+            <div class="info-grid">
+              <div class="info-item full-width">
+                <label>Address:</label>
+                <span>{{ selectedClient.address || 'N/A' }}</span>
+              </div>
+              <div v-if="selectedClient.website" class="info-item">
+                <label>Website:</label>
+                <a :href="selectedClient.website" target="_blank" class="text-blue-600 hover:underline">{{ selectedClient.website }}</a>
+              </div>
+              <div class="info-item">
+                <label>Approved Since:</label>
+                <span>{{ formatDate(selectedClient.approved_at) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Manager Contact -->
+          <div class="job-info-section">
+            <h4>Manager Contact</h4>
+            <div class="info-grid">
+              <div class="info-item">
+                <label>Name:</label>
+                <span>{{ selectedClient.manager_name || 'N/A' }}</span>
+              </div>
+              <div class="info-item">
+                <label>Email:</label>
+                <a :href="'mailto:' + selectedClient.manager_email" class="text-blue-600 hover:underline">{{ selectedClient.manager_email || 'N/A' }}</a>
+              </div>
+              <div class="info-item">
+                <label>Phone:</label>
+                <span>{{ selectedClient.manager_phone || 'N/A' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Business Details -->
+          <div class="job-info-section">
+            <h4>Business Details</h4>
+            <div class="info-grid">
+              <div class="info-item">
+                <label>VAT Number:</label>
+                <span>{{ selectedClient.vat_number || 'N/A' }}</span>
+              </div>
+              <div class="info-item">
+                <label>Registration No:</label>
+                <span>{{ selectedClient.business_registration_number || 'N/A' }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1878,6 +1945,7 @@ export default {
       editingTechnician: null,
       selectedJob: null,
       selectedImage: null,
+      selectedClient: null,
       editingJob: null,
       originalJobStatus: null,
       originalProviderId: null,
@@ -2261,6 +2329,11 @@ getCurrentUserName() {
 
     viewTechnicianJobs(technician) {
       this.$router.push(`/service-provider/technician/${technician.id}/jobs`)
+    },
+
+    viewClientDetails(client) {
+      // This method will open the new client details modal
+      this.selectedClient = client;
     },
 
     formatDate(dateString) {
