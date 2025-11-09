@@ -151,8 +151,7 @@
                   :approved-providers="approvedProviders"
                   :is-admin="isAdmin"
                   @view-provider-jobs="handleViewProviderJobs"
-                  @browse-providers="$router.push('/browse-providers')"
-                  @add-xs-provider="showAddXSProviderModal = true"
+                  @browse-providers="$router.push('/browse-providers')" @add-xs-provider="$router.push('/client/add-provider')"
                 />
               </div>
             </div>
@@ -273,67 +272,6 @@
       @submit="handleUpdateClientProfile"
     />
 
-    <!-- Provider Details Modal (copied from ClientServiceProviderBrowser for consistency) -->
-    <div v-if="showProviderDetailsModal" class="modal-overlay" @click="showProviderDetailsModal = false">
-      <div class="modal-content large-modal" @click.stop>
-        <div class="modal-header">
-          <h3>{{ selectedProvider.name }}</h3>
-          <button @click="showProviderDetailsModal = false" class="close-btn">&times;</button>
-        </div>
-
-        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
-          <!-- Company Information -->
-          <div class="job-info-section">
-            <h4>Company Information</h4>
-            <div class="info-grid">
-              <div class="info-item full-width">
-                <strong>Address:</strong> {{ selectedProvider.address }}
-              </div>
-              <div v-if="selectedProvider.website" class="info-item">
-                <strong>Website:</strong>
-                <a :href="selectedProvider.website" target="_blank" class="text-blue-600 hover:underline">{{ selectedProvider.website }}</a>
-              </div>
-              <div v-if="selectedProvider.manager_name" class="info-item">
-                <strong>Manager:</strong> {{ selectedProvider.manager_name }}
-              </div>
-              <div v-if="selectedProvider.manager_email" class="info-item">
-                <strong>Manager Email:</strong>
-                <a :href="'mailto:' + selectedProvider.manager_email" class="text-blue-600 hover:underline">{{ selectedProvider.manager_email }}</a>
-              </div>
-              <div v-if="selectedProvider.manager_phone" class="info-item">
-                <strong>Manager Phone:</strong> {{ selectedProvider.manager_phone }}
-              </div>
-            </div>
-          </div>
-
-          <!-- Business Details -->
-          <div class="job-info-section">
-            <h4>Business Details</h4>
-            <div class="info-grid">
-              <div v-if="selectedProvider.vat_number" class="info-item">
-                <strong>VAT Number:</strong> {{ selectedProvider.vat_number }}
-              </div>
-              <div v-if="selectedProvider.business_registration_number" class="info-item">
-                <strong>Registration No:</strong> {{ selectedProvider.business_registration_number }}
-              </div>
-              <div v-if="selectedProvider.description" class="info-item full-width">
-                <strong>Description:</strong> {{ selectedProvider.description }}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer p-4 bg-gray-50 border-t">
-          <button @click="showProviderDetailsModal = false" class="btn-outlined">Close</button>
-        </div>
-      </div>
-    </div>
-
-    <AddXSProviderModal
-      v-if="showAddXSProviderModal"
-      @close="showAddXSProviderModal = false"
-      @provider-added="handleXSProviderAdded"
-    />
-
   </div>
 </template>
 
@@ -405,12 +343,7 @@ export default {
       showEditLocationModal: false,
       showEditProfileModal: false, // Client profile editing modal
       editingLocation: {
-        id: null,
-        name: '',
-        address: '',
-        coordinates: '',
-        access_rules: '',
-        access_instructions: ''
+        id: null, name: '', address: '', coordinates: '', access_rules: '', access_instructions: ''
       },
       editingProfile: { // Client profile editing data
         name: '',
@@ -425,10 +358,7 @@ export default {
         is_active: true
       },
       showJobDetailsModal: false,
-      showProviderDetailsModal: false,
       showQuotationDetailsModal: false,
-      showEditJobModal: false,
-      showAddXSProviderModal: false,
       showJobConfirmationModal: false,
       showJobRejectionModal: false,
       showQuoteResponseModal: false,
@@ -437,7 +367,6 @@ export default {
       rejectionJob: null,
       quoteResponseJob: null,
       quoteRejectionJob: null,
-      selectedProvider: null,
       confirmationNotes: '',
       rejectionNotes: '',
       quoteResponseNotes: '',
@@ -489,7 +418,6 @@ export default {
       selectedJob: null,
       selectedImage: null,
       locationsViewMode: 'cards', // 'cards' or 'table'
-      editingJob: null,
       originalJobStatus: null,
       originalProviderId: null,
       editingImages: [], // Array to store additional images for editing
@@ -513,9 +441,7 @@ export default {
 
     // CRITICAL FIX: Explicitly reset all modals on component mount to prevent modal state bleeding
     // Force reset all modals to false on every component mount
-    this.showJobDetailsModal = false
-    this.showEditJobModal = false
-    this.showAddUserModal = false
+    this.showJobDetailsModal = false; this.showAddUserModal = false
     this.showEditUserModal = false
     this.showCreateJobModal = false
     this.showAddLocationModal = false
@@ -962,9 +888,9 @@ export default {
     },
 
     handleViewProviderJobs(provider) {
-      // Open provider details modal
-      this.selectedProvider = provider
-      this.showProviderDetailsModal = true
+      // Navigate to the dynamic provider details page
+      const providerId = provider.service_provider_id || provider.id;
+      this.$router.push(`/client/provider/${providerId}`);
     },
 
     async handleViewJobDetails(job) {

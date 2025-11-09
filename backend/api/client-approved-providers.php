@@ -41,8 +41,13 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        // Get client's approved providers
-        getApprovedProviders($entity_id);
+        if (isset($_GET['provider_id'])) {
+            // Get a single provider's details
+            getSingleApprovedProvider($entity_id, (int)$_GET['provider_id']);
+        } else {
+            // Get all of client's approved providers
+            getApprovedProviders($entity_id);
+        }
         break;
 
     case 'POST':
@@ -67,7 +72,7 @@ function getApprovedProviders($participant_id) {
     try {
         $query = "
             SELECT
-                pa.id,
+                p.participantId as id,
                 pa.provider_participant_id as service_provider_id,
                 p.name, p.address, p.website, p.description, p.logo_url,
                 p.manager_name,
@@ -90,7 +95,7 @@ function getApprovedProviders($participant_id) {
             LEFT JOIN jobs j ON pa.client_participant_id = j.client_id
                 AND pa.provider_participant_id = j.assigned_provider_participant_id
             WHERE pa.client_participant_id = ? AND p.is_active = TRUE
-            GROUP BY pa.id, p.participantId, pt.participantType
+            GROUP BY p.participantId, pt.participantType
             ORDER BY pa.created_at DESC
         ";
 
@@ -146,6 +151,69 @@ function getApprovedProviders($participant_id) {
         echo json_encode(['error' => 'Failed to retrieve approved providers: ' . $e->getMessage()]);
     }
 }
+
+function getSingleApprovedProvider($client_participant_id, $provider_id) {
+    global $pdo;
+
+    try {
+        $query = "
+            SELECT
+                p.participantId as id,
+                p.name, p.address, p.website, p.description, p.logo_url,
+                p.manager_name,
+                p.manager_email,
+                p.manager_phone,
+                p.vat_number,
+                p.business_registration_number,
+                pt.participantType as provider_type,
+                pa.created_at as approved_at
+            FROM participants p
+            JOIN participant_approvals pa ON p.participantId = pa.provider_participant_id
+            JOIN participant_type pt ON p.participantId = pt.participantId
+            WHERE pa.client_participant_id = ?
+            AND pa.provider_participant_id = ?
+            AND p.is_active = TRUE
+            LIMIT 1
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$client_participant_id, $provider_id]);
+        $provider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$provider) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Provider not found or not approved for this client.']);
+            return;
+        }
+
+        // Get detailed services and regions (if applicable)
+        $provider['services'] = [];
+        $provider['regions'] = [];
+
+        if ($provider['provider_type'] === 'S') {
+            try {
+                $stmt = $pdo->prepare("SELECT s.id, s.name, s.category FROM services s JOIN service_provider_services sps ON s.id = sps.service_id WHERE sps.service_provider_id = ?");
+                $stmt->execute([$provider_id]);
+                $provider['services'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) { /* Ignore if table doesn't exist */ }
+
+            try {
+                $stmt = $pdo->prepare("SELECT r.id, r.name, r.code FROM regions r JOIN service_provider_regions spr ON r.id = spr.region_id WHERE spr.service_provider_id = ?");
+                $stmt->execute([$provider_id]);
+                $provider['regions'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) { /* Ignore if table doesn't exist */ }
+        }
+
+        echo json_encode([
+            'provider' => $provider
+        ]);
+
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to retrieve provider details: ' . $e->getMessage()]);
+    }
+}
+
 
 function addApprovedProvider($participant_id, $user_id) {
     global $pdo;

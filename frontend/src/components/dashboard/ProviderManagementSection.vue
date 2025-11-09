@@ -1,11 +1,11 @@
 <template>
   <!-- Action buttons -->
   <div class="section-header-actions mb-6" v-if="isAdmin">
-    <button @click="$emit('add-xs-provider')" class="btn-filled mr-2">
+    <button @click.stop="$emit('add-xs-provider')" class="btn-filled mr-2">
       <span class="material-icon-sm mr-2">add</span>
       Add External Provider
     </button>
-    <button @click="$emit('browse-providers')" class="btn-outlined">
+    <button @click.stop="$emit('browse-providers')" class="btn-outlined">
       <span class="material-icon-sm mr-2">search</span>
       Browse Platform Providers
     </button>
@@ -28,8 +28,9 @@
           <span class="material-icon text-on-primary">{{ provider.name.charAt(0).toUpperCase() }}</span>
         </div>
         <div class="provider-actions flex gap-2">
-          <button @click.stop="$emit('view-provider-jobs', provider)" class="btn-outlined btn-small">
-            <span class="material-icon-sm">visibility</span>
+          <button @click.stop="$emit('view-provider-jobs', provider)" class="btn-outlined btn-small" :aria-label="provider.provider_type === 'S' ? 'View Provider' : 'Edit Provider'">
+            <span v-if="provider.provider_type === 'S'" class="material-icon-sm">visibility</span>
+            <span v-else class="material-icon-sm">edit</span>
           </button>
         </div>
       </template>

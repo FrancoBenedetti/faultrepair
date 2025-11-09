@@ -232,6 +232,22 @@ const routes = [
     })
   },
   {
+    path: '/client/add-provider',
+    name: 'AddProvider',
+    // Lazy-load the component for better performance
+    component: () => import('../views/AddProvider.vue'),
+    meta: { requiresAuth: true, userType: 'client' }
+  },
+  {
+    path: '/client/provider/:id',
+    name: 'ProviderDetails',
+    component: () => import('../views/ProviderDetails.vue'),
+    meta: { requiresAuth: true, userType: 'client' },
+    props: (route) => ({
+      id: parseInt(route.params.id),
+    }),
+  },
+  {
     path: '/jobs/:id/edit',
     name: 'EditJob',
     component: () => import('../views/EditJob.vue'),

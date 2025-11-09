@@ -587,12 +587,18 @@ try {
             }
         }
 
+        // Handle archiving by client budget controllers (applies to ALL job types, S and XS)
+        if ($role_id === 2 && isset($input['archived_by_client'])) {
+            $updates[] = "archived_by_client = ?";
+            $params[] = $input['archived_by_client'] ? 1 : 0;
+        }
+
         // Handle fields that can be edited by budget controllers (including provider assignment and archiving) - non-XS jobs
         if ($role_id === 2 && !$isXSProvider) {
             if (isset($input['assigned_provider_id'])) {
                 $updates[] = "assigned_provider_participant_id = ?";
                 $params[] = $input['assigned_provider_id'];
-
+                
                 error_log(__FILE__.'/'.__LINE__.'/ >>>> '.json_encode([$entity_id, $input['assigned_provider_id']]));
                 error_log(__FILE__.'/'.__LINE__.'/ >>>> '."SELECT id FROM participant_approvals WHERE client_participant_id = ? AND provider_participant_id = ?");
                 // Verify provider is approved for this client
@@ -608,12 +614,6 @@ try {
                         exit;
                     }
                 }
-            }
-
-            // Handle archiving by client budget controllers
-            if (isset($input['archived_by_client'])) {
-                $updates[] = "archived_by_client = ?";
-                $params[] = $input['archived_by_client'] ? 1 : 0;
             }
 
             // Handle quote request workflow
