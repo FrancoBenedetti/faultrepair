@@ -352,6 +352,26 @@
                 </div>
               </div>
 
+              <!-- Step 1.5: Transition Notes (for XS Providers) -->
+              <div v-if="isAssigningToXSProvider" class="provider-selection-step mb-6">
+                <h4 class="text-lg font-semibold text-gray-900 mb-4">Step 1.5: Add Transition Notes</h4>
+                 <div class="form-group">
+                  <label for="assignment-transition-notes" class="form-label flex items-center gap-2 mb-2">
+                    <span class="material-icon field-icon text-gray-500">comment</span>
+                    Transition Notes <span class="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="assignment-transition-notes"
+                    v-model="transitionNotes"
+                    class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows="3"
+                    placeholder="A note is required to document the state change for this external provider job..."
+                    required
+                  ></textarea>
+                  <p class="text-sm text-gray-600 mt-1">For XS provider jobs, a note is always required to document the reason for the status change.</p>
+                </div>
+              </div>
+
               <!-- Step 2: Transition Options -->
               <div class="transition-options-step">
                 <h4 class="text-lg font-semibold text-gray-900 mb-4">Step 2: Choose Action</h4>
@@ -962,6 +982,12 @@ export default {
     // Check if we're in XS provider mode (XS job + role 2)
     isXSProviderMode() {
       return this.isXSProviderJob
+    },
+
+    isAssigningToXSProvider() {
+      if (!this.selectedProviderForAssignment || !this.availableProviders) return false;
+      const provider = this.availableProviders.find(p => p.service_provider_id == this.selectedProviderForAssignment);
+      return provider?.provider_type === 'XS';
     }
   },
   async mounted() {
@@ -1616,13 +1642,20 @@ export default {
         return
       }
 
+      if (this.isAssigningToXSProvider && (!this.transitionNotes || !this.transitionNotes.trim())) {
+        alert('Please provide transition notes for assigning a job to an external provider.');
+        return;
+      }
+
       this.saving = true
       try {
         // Prepare payload for service request - this assigns provider and sets status to "Assigned"
         const payload = {
           job_id: this.job.id,
           assigned_provider_id: parseInt(this.selectedProviderForAssignment),
-          job_status: 'Assigned'
+          job_status: 'Assigned',
+          // Add transition notes if it's an XS provider
+          ...(this.isAssigningToXSProvider && { transition_notes: this.transitionNotes.trim() })
         }
 
         const response = await apiFetch('/backend/api/client-jobs.php', {
@@ -1661,13 +1694,20 @@ export default {
         return
       }
 
+      if (this.isAssigningToXSProvider && (!this.transitionNotes || !this.transitionNotes.trim())) {
+        alert('Please provide transition notes for requesting a quote from an external provider.');
+        return;
+      }
+
       this.saving = true
       try {
         // Prepare payload for quote request - this assigns provider and sets status to "Quote Requested"
         const payload = {
           job_id: this.job.id,
           assigned_provider_id: parseInt(this.selectedProviderForAssignment),
-          job_status: 'Quote Requested'
+          job_status: 'Quote Requested',
+          // Add transition notes if it's an XS provider
+          ...(this.isAssigningToXSProvider && { transition_notes: this.transitionNotes.trim() })
         }
 
         const response = await apiFetch('/backend/api/client-jobs.php', {

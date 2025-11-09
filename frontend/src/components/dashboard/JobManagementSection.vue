@@ -50,8 +50,8 @@
       <Card
         v-for="job in jobs"
         :key="job.id"
-        clickable
-        @click="$emit('view-job-details', job)"
+        clickable="true"
+        @click="$emit('job-card-click', job)"
         :class="{ 'xs-provider-job': isXSProviderJob(job) }"
       >
         <template #header>
@@ -64,23 +64,11 @@
             </div>
           </div>
           <div class="job-actions flex gap-2">
-            <!-- For admin users (budget controllers) - emit correct action based on permissions -->
-            <button v-if="isAdmin && canEditJob(job)" @click.stop="$emit('edit-job', job)" class="btn-outlined btn-small">
-              <span class="material-icon-sm">edit</span>
-            </button>
-            <button v-else-if="isAdmin && !canEditJob(job)" @click.stop="$emit('view-job-details', job)" class="btn-outlined btn-small">
+            <!-- Explicit "View Details" button -->
+            <button @click.stop="$emit('view-job-details', job)" class="btn-outlined btn-small">
               <span class="material-icon-sm">visibility</span>
             </button>
-            <!-- For regular users, show edit if they can edit, otherwise view -->
-            <template v-else>
-              <button v-if="canEditJob(job)" @click.stop="$emit('edit-job', job)" class="btn-outlined btn-small">
-                <span class="material-icon-sm">edit</span>
-              </button>
-              <button v-else @click.stop="$emit('view-job-details', job)" class="btn-outlined btn-small">
-                <span class="material-icon-sm">visibility</span>
-              </button>
-            </template>
-
+            
             <!-- Archive/Unarchive button for budget controllers -->
             <button v-if="isAdmin" @click.stop="$emit('toggle-archive-job', job)" class="btn-outlined btn-small" :class="{ 'text-orange-600 border-orange-600': job.archived_by_client }">
               <span class="material-icon-sm">{{ job.archived_by_client ? 'unarchive' : 'archive' }}</span>

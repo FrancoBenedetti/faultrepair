@@ -195,6 +195,7 @@
             @load-jobs="loadJobs"
             @create-job="showCreateJobModal = true"
             @view-job-details="handleViewJobDetails($event)"
+            @job-card-click="handleJobCardClick($event)"
             @edit-job="handleEditJob($event)"
             @toggle-archive-job="toggleArchiveJob($event)"
             @confirm-job="handleConfirmJob($event)"
@@ -939,6 +940,16 @@ export default {
           console.error('Failed to load job images:', error)
           this.selectedJob.images = []
         }
+      }
+    },
+
+    handleJobCardClick(job) {
+      // If user can edit, card click navigates to edit page.
+      // Otherwise, it opens the view details modal.
+      if (this.canEditJob(job)) {
+        this.handleEditJob(job);
+      } else {
+        this.handleViewJobDetails(job);
       }
     },
 

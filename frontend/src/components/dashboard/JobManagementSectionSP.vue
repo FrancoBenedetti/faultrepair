@@ -56,20 +56,17 @@
         <LoadingState v-if="jobs === null" class="col-span-full" message="Loading jobs..." />
 
         <!-- Job cards -->
-        <Card v-else-if="jobs && jobs.length > 0" v-for="job in jobs" :key="job.id" class="job-card overflow-hidden transition-all duration-200 hover:shadow-elevation-3">
+        <Card v-else-if="jobs && jobs.length > 0" v-for="job in jobs" :key="job.id" class="job-card overflow-hidden transition-all duration-200 hover:shadow-elevation-3" clickable="true" @click="$emit('job-card-click', job)">
           <template #header>
             <div class="job-status">
               <StatusBadge :status="job.job_status" />
             </div>
             <div class="job-actions flex gap-2">
-              <button v-if="userRole === 3 || (userRole === 4 && (job.assigned_technician_user_id == currentUserId || job.job_status !== 'In Progress'))"
-                      @click="$emit('view-job-details', job)" class="btn-outlined btn-small">
+              <!-- Explicit "View Details" button -->
+              <button @click.stop="$emit('view-job-details', job)" class="btn-outlined btn-small">
                 <span class="material-icon-sm">visibility</span>
               </button>
-              <button v-if="userRole === 3 || (userRole === 4 && job.assigned_technician_user_id == currentUserId)"
-                      @click="$emit('edit-job', job)" class="btn-outlined btn-small">
-                <span class="material-icon-sm">edit</span>
-              </button>
+
               <!-- Archive/Unarchive button for service provider admins -->
               <button v-if="userRole === 3" @click.stop="$emit('toggle-archive-job', job)" class="btn-outlined btn-small" :class="{ 'text-orange-600 border-orange-600': job.archived_by_service_provider }">
                 <span class="material-icon-sm">{{ job.archived_by_service_provider ? 'unarchive' : 'archive' }}</span>

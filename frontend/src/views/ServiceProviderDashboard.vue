@@ -383,6 +383,7 @@
             @update-job-filters="jobFilters = $event; loadJobs()"
             @refresh-jobs="loadJobs"
             @view-job-details="selectedJob = $event; showJobDetailsModal = true"
+            @job-card-click="handleJobCardClick"
             @edit-job="handleEditJob"
             @toggle-archive-job="toggleArchiveJob"
           />
@@ -2667,6 +2668,15 @@ getCurrentUserName() {
       return false
     },
 
+    handleJobCardClick(job) {
+      // If user can edit, card click navigates to edit page.
+      // Otherwise, it opens the view details modal.
+      if (this.canEditJobDetails(job)) {
+        this.handleEditJob(job);
+      } else {
+        this.selectedJob = job; this.showJobDetailsModal = true;
+      }
+    },
     // Quote Management Methods
     async loadQuotes() {
       console.log('🔍 loadQuotes: Starting quote loading...')
