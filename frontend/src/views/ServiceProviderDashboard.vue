@@ -132,6 +132,7 @@
                   </div>
                 </div>
               </div>
+          </div>
         </div>
 
         <!-- Services Offered Sub-Section -->
@@ -349,7 +350,6 @@
               </button>
             </div>
           </div>
-        </div>
         </div>
       </div>
     </div>
