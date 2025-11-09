@@ -12,32 +12,32 @@
         :show-invite-users="userRole === 3"
         @navigate="handleNavigate"
       />
-
-      <!-- Collapsible User Identity -->
-      <CollapsibleUserIdentity
-        :user-name="getCurrentUserName()"
-        :organization-name="getOrganizationName()"
-        :user-role="userRole"
-        :is-collapsed-default="false"
-      />
     </div>
 
     <!-- Administrator Settings Section - Role 3 Only -->
     <div class="admin-settings-container bg-white rounded-xl shadow-lg border border-gray-200 p-0 mb-8" v-if="userRole === 3">
       <div 
-        @click="toggleSection('administrator-settings')" 
-        class="admin-section-header rounded-t-xl bg-white p-6 pb-4 flex justify-between items-center cursor-pointer"
-        :class="{ 'rounded-b-xl': !sectionsExpanded['administrator-settings'] }"
+        class="admin-section-header rounded-t-xl bg-white rounded-b-none p-6 pb-4"
       >
-        <div class="section-title flex items-center gap-3">
-          <span class="material-icon text-purple-600">admin_panel_settings</span>
-          <h2 class="text-title-large text-on-surface mb-0">
-            Administrator Settings
-          </h2>
+        <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-0 pb-0 border-b border-neutral-200" @click="toggleSection('administrator-settings')" style="cursor: pointer;">
+          <div class="section-title flex items-center gap-3">
+            <button class="expand-btn" :class="{ expanded: sectionsExpanded['administrator-settings'] }">
+              <span class="material-icon-sm">expand_more</span>
+            </button>
+            <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
+              <span class="material-icon text-purple-600">admin_panel_settings</span>
+              Administrator Settings
+            </h2>
+          </div>
+          <!-- Admin-specific actions: Upgrade and Subscription Plan -->
+          <div class="admin-header-actions flex items-center gap-4">
+            <span class="text-sm text-gray-600">Current Plan: Basic</span>
+            <button @click.stop="handleUpgradeClick" class="btn-filled flex items-center gap-2" v-if="userRole === 3">
+              <span class="material-icon-sm">workspace_premium</span>
+              Upgrade
+            </button>
+          </div>
         </div>
-        <button class="expand-btn" :class="{ expanded: sectionsExpanded['administrator-settings'] }">
-          <span class="material-icon-sm">expand_more</span>
-        </button>
       </div>
 
       <div v-show="sectionsExpanded['administrator-settings']" class="admin-subsections bg-gray-100 rounded-b-xl border-t border-gray-200 p-4 space-y-2">
@@ -1786,7 +1786,6 @@ import LoadingState from '@/components/shared/LoadingState.vue'
 import StatusBadge from '@/components/shared/StatusBadge.vue'
 import EditJobModal from '@/components/modals/EditJobModal.vue'
 import UnifiedDashboardHeader from '@/components/dashboard/UnifiedDashboardHeader.vue'
-import CollapsibleUserIdentity from '@/components/dashboard/CollapsibleUserIdentity.vue'
 
 export default {
   name: 'ServiceProviderDashboard',
@@ -1799,8 +1798,7 @@ export default {
     LoadingState,
     StatusBadge,
     EditJobModal,
-    UnifiedDashboardHeader,
-    CollapsibleUserIdentity
+    UnifiedDashboardHeader
   },
   computed: {
     currentTechnician() {
