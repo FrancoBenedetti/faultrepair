@@ -141,7 +141,7 @@ export default {
         });
         const data = await response.json();
         if (response.ok) {
-          alert('Registration successful! Please check your email to verify your account before signing in.');
+          alert(data.message || 'Registration successful! Please check your email to verify your account before signing in.');
           this.$router.push('/');
         } else {
           alert(data.error);

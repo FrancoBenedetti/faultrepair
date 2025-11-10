@@ -3,7 +3,7 @@
  2. In future, deal with response.
 
 # Job cards
- 1 Archive button is not working for external providers
+ 1 
  2. 
 
 # EditJob.vue
