@@ -208,7 +208,7 @@ CREATE TABLE `jobs` (
 	INDEX `fk_jobs_client_id` (`client_id`) USING BTREE,
 	INDEX `FK_jobs_users` (`approver_id`) USING BTREE,
 	CONSTRAINT `FK_jobs_users` FOREIGN KEY (`approver_id`) REFERENCES `users` (`userId`) ON UPDATE NO ACTION ON DELETE NO ACTION,
-	CONSTRAINT `fk_jobs_client_id` FOREIGN KEY (`client_id`) REFERENCES `participants` (`participantId`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `fk_jobs_client_id` FOREIGN KEY (`client_id`) REFERENCES `participants`(`participantId`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `jobs_ibfk_1` FOREIGN KEY (`client_location_id`) REFERENCES `locations` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `jobs_ibfk_2` FOREIGN KEY (`assigned_provider_participant_id`) REFERENCES `participants` (`participantId`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `jobs_ibfk_3` FOREIGN KEY (`reporting_user_id`) REFERENCES `users` (`userId`) ON UPDATE RESTRICT ON DELETE RESTRICT,
@@ -628,3 +628,28 @@ CREATE TABLE IF NOT EXISTS `user_roles` (
 /*!40014 SET FOREIGN_KEY_CHECKS=IFNULL(@OLD_FOREIGN_KEY_CHECKS, 1) */;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40111 SET SQL_NOTES=IFNULL(@OLD_SQL_NOTES, 1) */;
+
+--
+-- Table structure for table `assets`
+--
+
+CREATE TABLE `assets` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `list_owner_id` INT NOT NULL COMMENT 'Participant ID of the list owner (either the client or a service provider). Determines who can edit the record.',
+  `client_id` INT NOT NULL COMMENT 'Participant ID of the client that owns the asset.',
+  `asset_no` VARCHAR(255) NOT NULL,
+  `item` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `location_id` INT NULL COMMENT 'Site ID where the item is located',
+  `manager_id` INT NULL COMMENT 'User ID of the manager responsible for approvals',
+  `sp_id` INT NULL COMMENT 'Optional: A default Service Provider ID to associate with the asset',
+  `star` BOOLEAN DEFAULT FALSE,
+  `status` VARCHAR(50) DEFAULT 'active' COMMENT 'e.g., active, inactive, unavailable, decommissioned',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `unique_asset_in_list` (`list_owner_id`, `client_id`, `asset_no`),
+  FOREIGN KEY (`list_owner_id`) REFERENCES `participants`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`client_id`) REFERENCES `participants`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`location_id`) REFERENCES `client_locations`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`sp_id`) REFERENCES `participants`(`id`) ON DELETE SET NULL
+) COMMENT='Stores asset information. Editing is controlled by list_owner_id.';

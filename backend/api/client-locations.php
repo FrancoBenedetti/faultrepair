@@ -43,7 +43,36 @@ $method = $_SERVER['REQUEST_METHOD'];
 try {
     switch ($method) {
         case 'GET':
-            // Get all locations for this client
+            $client_id_filter = $entity_id; // Default to the logged-in user's own entity ID.
+
+            // If a client_id is passed in the query, a service provider might be requesting it.
+            if (isset($_GET['client_id']) && !empty($_GET['client_id'])) {
+                $requested_client_id = (int)$_GET['client_id'];
+                
+                // Authorization check for the requested client_id
+                $has_permission = false;
+                if ($role_id == 2 && $entity_id == $requested_client_id) {
+                    // Client admin is requesting their own locations.
+                    $has_permission = true;
+                    $client_id_filter = $requested_client_id;
+                } elseif ($role_id == 3) {
+                    // Service provider must be approved for the requested client.
+                    $stmt = $pdo->prepare("SELECT id FROM participant_approvals WHERE client_participant_id = ? AND provider_participant_id = ?");
+                    $stmt->execute([$requested_client_id, $entity_id]);
+                    if ($stmt->fetch()) {
+                        $has_permission = true;
+                        $client_id_filter = $requested_client_id;
+                    }
+                }
+
+                if (!$has_permission) {
+                    http_response_code(403);
+                    echo json_encode(['error' => 'Access denied. You do not have permission to view locations for this client.']);
+                    exit;
+                }
+            }
+
+            // Get all locations for the determined client ID
             $stmt = $pdo->prepare("
                 SELECT
                     l.id,
@@ -60,7 +89,7 @@ try {
                 ORDER BY l.name ASC
             ");
 
-            $stmt->execute([$entity_id]);
+            $stmt->execute([$client_id_filter]);
             $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode([
