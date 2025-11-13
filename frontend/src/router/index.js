@@ -80,6 +80,12 @@ const routes = [
     meta: { requiresAuth: true, userType: 'service_provider' }
   },
   {
+    path: '/service-provider-dashboard/asset-manager',
+    name: 'ServiceProviderAssetManager',
+    component: () => import('../views/ServiceProviderAssetManager.vue'),
+    meta: { requiresAuth: true, userType: 'service_provider' }
+  },
+  {
     path: '/service-provider/client/:clientId/jobs',
     name: 'ServiceProviderClientJobs',
     component: ServiceProviderClientJobs,

@@ -34,7 +34,7 @@
                 <option v-for="manager in managers" :key="manager.id" :value="manager.id">{{ manager.first_name }} {{ manager.last_name }}</option>
               </select>
             </div>
-            <div>
+            <div v-if="!isServiceProvider">
               <label for="sp_id" class="block text-sm font-medium text-gray-700">Service Provider</label>
               <select id="sp_id" v-model="form.sp_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                 <option value="">Select Service Provider</option>
@@ -80,6 +80,10 @@ export default {
     managers: {
       type: Array,
       default: () => [],
+    },
+    isServiceProvider: { // New prop
+      type: Boolean,
+      default: false,
     },
   },
   data() {

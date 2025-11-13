@@ -47,28 +47,18 @@ try {
     // Get approved clients for this service provider
     $stmt = $pdo->prepare("
         SELECT
-            p.participantId as id,
-            p.name,
-            p.address,
-            pa.created_at as approved_at,
-            NULL as notes,
-            COUNT(j.id) as total_jobs,
-            COUNT(CASE WHEN j.job_status IN ('Reported', 'Assigned', 'In Progress') THEN 1 END) as active_jobs,
-            COUNT(CASE WHEN j.job_status = 'Completed' THEN 1 END) as completed_jobs
+            p.participantId as client_id,
+            p.name as client_name
         FROM participant_approvals pa
         JOIN participants p ON pa.client_participant_id = p.participantId
-        LEFT JOIN jobs j ON j.client_location_id IN (
-            SELECT id FROM locations WHERE participant_id = p.participantId
-        ) AND j.assigned_provider_participant_id = ?
         WHERE pa.provider_participant_id = ?
-        GROUP BY p.participantId, p.name, p.address, pa.created_at
-        ORDER BY pa.created_at DESC
+        ORDER BY p.name ASC
     ");
 
-    $stmt->execute([$entity_id, $entity_id]);
+    $stmt->execute([$entity_id]);
     $approved_clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    echo json_encode(['clients' => $approved_clients]);
+    echo json_encode(['approved_clients' => $approved_clients]);
 
 } catch (Exception $e) {
     http_response_code(500);

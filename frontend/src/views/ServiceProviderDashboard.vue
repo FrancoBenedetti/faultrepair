@@ -351,6 +351,23 @@
             </div>
           </div>
         </div>
+
+        <!-- Asset Management Sub-Section -->
+        <div class="subsection-container">
+          <div
+            class="subsection-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-300"
+            @click="$router.push('/service-provider-dashboard/asset-manager')"
+            style="cursor: pointer;"
+          >
+            <div class="subsection-title flex items-center gap-3">
+              <h4 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                <span class="material-icon text-blue-600">inventory_2</span>
+                Asset Management
+              </h4>
+            </div>
+            <span class="material-icon-sm text-gray-400">arrow_forward</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2080,9 +2097,9 @@ export default {
 
         if (response.ok) {
           const data = await response.json()
-          this.profile = data.profile
-          this.services = data.services
-          this.regions = data.regions
+          this.profile = data.profile || {}
+          this.services = data.services || []
+          this.regions = data.regions || []
           this.profileCompleteness = data.profile_completeness
 
           // Initialize form data
@@ -2314,7 +2331,7 @@ getCurrentUserName() {
 
         if (response.ok) {
           const data = await response.json()
-          this.approvedClients = data.clients
+          this.approvedClients = data.clients || []
         } else {
           console.error('Failed to load approved clients')
         }
@@ -2394,7 +2411,7 @@ getCurrentUserName() {
 
         if (response.ok) {
           const data = await response.json()
-          this.technicians = data.technicians
+          this.technicians = data.technicians || []
         } else {
           console.error('Failed to load technicians')
         }
