@@ -843,13 +843,13 @@
                     <option value="">-- Choose a different provider --</option>
                     <option
                       v-for="provider in availableProviders"
-                      :key="provider.service_provider_id"
-                      :value="provider.service_provider_id"
-                      :disabled="provider.service_provider_id == job.assigned_provider_participant_id"
+                      :key="provider.id"
+                      :value="provider.id"
+                      :disabled="provider.id == job.assigned_provider_participant_id"
                     >
                       {{ provider.name }}
                       <span v-if="provider.provider_type === 'XS'" class="text-orange-600 ml-2">(External)</span>
-                      <span v-if="provider.service_provider_id == job.assigned_provider_participant_id" class="text-gray-400 ml-2">(Current)</span>
+                      <span v-if="provider.id == job.assigned_provider_participant_id" class="text-gray-400 ml-2">(Current)</span>
                     </option>
                   </select>
                   <p class="text-sm text-gray-600 mt-1">Only showing providers different from the current one. The current provider is marked as "(Current)" and disabled.</p>
@@ -1026,20 +1026,17 @@ export default {
           // Initialize editable data
           this.editableJob = { ...this.job }
 
-          // If a provider is already assigned (e.g. from QR code), pre-select them.
-          if (this.job.assigned_provider_participant_id) {
-            this.selectedProviderForAssignment = this.job.assigned_provider_participant_id.toString();
-          }
-
-          // Load images if in Reported status
-          if (this.job.job_status === 'Reported') {
-            await this.loadExistingImages()
-            await this.loadLocations()
-          }
-        } else {
-          throw new Error('Failed to load job')
-        }
-      } catch (error) {
+                  // Load images and locations
+                  await this.loadExistingImages()
+                  await this.loadLocations()
+          
+                  // If a provider is already assigned (e.g. from QR code), pre-select them.
+                  if (this.job.assigned_provider_participant_id) {
+                    this.selectedProviderForAssignment = this.job.assigned_provider_participant_id.toString();
+                  }
+                } else {
+                  throw new Error('Failed to load job')
+                }      } catch (error) {
         this.error = error.message
       } finally {
         this.loading = false
@@ -1066,14 +1063,15 @@ export default {
         const response = await apiFetch('/backend/api/client-locations.php')
 
         if (response.ok) {
-          const data = await response.json()
-          this.availableLocations = data.locations || []
-
-          // Set current location if job has one
-          if (this.job.client_location_id) {
-            this.selectedLocationId = this.job.client_location_id.toString()
-          }
-        }
+                const data = await response.json()
+                this.availableLocations = data.locations || []
+                console.log('Available locations:', this.availableLocations);
+                console.log('Job client_location_id:', this.job.client_location_id);
+          
+                // Set current location if job has one
+                if (this.job.client_location_id) {
+                  this.selectedLocationId = this.job.client_location_id.toString()
+                }        }
       } catch (error) {
         console.error('Error loading locations:', error)
       } finally {
@@ -1809,8 +1807,9 @@ export default {
         const payload = {
           job_id: this.job.id,
           action: 'reassign_provider',
+          job_status: 'Assigned',
           assigned_provider_id: parseInt(this.selectedReassignProviderId),
-          transition_notes: this.reassignmentNotes.trim(),
+          reassignment_notes: this.reassignmentNotes.trim(),
           note: `Job reassigned. Reason: ${this.reassignmentNotes.trim()}`
         }
 
