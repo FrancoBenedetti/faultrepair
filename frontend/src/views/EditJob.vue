@@ -1642,7 +1642,7 @@ export default {
         return
       }
 
-      if (this.isAssigningToXSProvider && (!this.transitionNotes || !this.transitionNotes.trim())) {
+      if (this.isXSProviderMode && (!this.transitionNotes || !this.transitionNotes.trim())) {
         alert('Please provide transition notes for assigning a job to an external provider.');
         return;
       }
@@ -1694,7 +1694,7 @@ export default {
         return
       }
 
-      if (this.isAssigningToXSProvider && (!this.transitionNotes || !this.transitionNotes.trim())) {
+      if (this.isXSProviderMode && (!this.transitionNotes || !this.transitionNotes.trim())) {
         alert('Please provide transition notes for requesting a quote from an external provider.');
         return;
       }
