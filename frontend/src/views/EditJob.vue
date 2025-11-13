@@ -327,12 +327,12 @@
                 <h4 class="text-lg font-semibold text-gray-900 mb-4">Step 1: Select Service Provider</h4>
                 <div class="form-group">
                   <select
-                    v-model="selectedProviderForAssignment"
+                    v-model.number="selectedProviderForAssignment"
                     class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     :disabled="saving"
                   >
-                    <option value="">-- Choose a service provider --</option>
-                    <option v-for="provider in availableProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
+                    <option :value="null">-- Choose a service provider --</option>
+                    <option v-for="provider in availableProviders" :key="provider.id" :value="provider.id">
                       {{ provider.name }}
                       <span v-if="provider.provider_type === 'XS'" class="text-orange-600 ml-2">(External)</span>
                       <span v-if="provider.address" class="text-gray-500 ml-2">- {{ provider.address }}</span>
@@ -343,7 +343,7 @@
                       <button
                         type="button"
                         @click="saveProviderAssignment"
-                        :disabled="saving || !selectedProviderForAssignment || job.assigned_provider_participant_id?.toString() === selectedProviderForAssignment"
+                        :disabled="saving || !selectedProviderForAssignment || job.assigned_provider_participant_id === selectedProviderForAssignment"
                         class="btn-outlined border-gray-400 text-gray-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Save Provider
@@ -366,7 +366,6 @@
                     class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     rows="3"
                     placeholder="A note is required to document the state change for this external provider job..."
-                    required
                   ></textarea>
                   <p class="text-sm text-gray-600 mt-1">For XS provider jobs, a note is always required to document the reason for the status change.</p>
                 </div>
@@ -951,7 +950,7 @@ export default {
 
       // Service Provider Workflow Data
       availableProviders: [],
-      selectedProviderForAssignment: '',
+      selectedProviderForAssignment: null,
       showTechnicianAssignment: false,
       pendingSPTransition: null,
       selectedTechnicianId: '',
@@ -1239,7 +1238,6 @@ export default {
           const data = await response.json()
           // The endpoint returns 'approved_providers' array
           this.availableProviders = data.approved_providers || []
-          console.log(`Loaded ${this.availableProviders.length} approved providers`)
         } else {
           console.error('Failed to load approved providers:', response.status)
           this.availableProviders = []
