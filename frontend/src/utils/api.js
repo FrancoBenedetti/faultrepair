@@ -152,10 +152,14 @@ export const apiFetch = async (endpoint, options = {}) => {
   const config = {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
       ...options.headers,
     },
   };
+
+  // If the body is not FormData, set Content-Type to application/json
+  if (!(options.body instanceof FormData)) {
+    config.headers['Content-Type'] = 'application/json';
+  }
 
   const response = await fetch(finalUrl, config);
 

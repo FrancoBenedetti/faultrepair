@@ -1,6 +1,12 @@
 <template>
   <div class="asset-manager p-6 bg-gray-50 min-h-screen">
     <div class="max-w-7xl mx-auto">
+      <div class="mb-4">
+        <button @click="$router.push('/client-dashboard')" class="btn-secondary flex items-center gap-2">
+          <span class="material-icon-sm">arrow_back</span>
+          Back to Dashboard
+        </button>
+      </div>
       <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
         <div class="section-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-neutral-200">
           <h2 class="text-title-large text-on-surface mb-0 flex items-center gap-3">
@@ -8,6 +14,10 @@
             Asset Management
           </h2>
           <div class="section-header-actions flex items-center gap-4">
+            <button @click="showCsvUploadModal = true" class="btn-outlined flex items-center gap-2">
+              <span class="material-icon-sm">upload_file</span>
+              Upload CSV
+            </button>
             <button @click="openAssetModal()" class="btn-filled flex items-center gap-2">
               <span class="material-icon-sm">add</span>
               Add Asset
@@ -69,17 +79,25 @@
       @close="closeAssetModal"
       @save="saveAsset"
     />
+
+    <CsvUploadModal
+      v-if="showCsvUploadModal"
+      @close="showCsvUploadModal = false"
+      @uploadSuccess="fetchAssets"
+    />
   </div>
 </template>
 
 <script>
 import { apiFetch } from '@/utils/api.js';
 import AssetModal from '@/components/modals/AssetModal.vue';
+import CsvUploadModal from '@/components/modals/CsvUploadModal.vue';
 
 export default {
   name: 'AssetManager',
   components: {
     AssetModal,
+    CsvUploadModal,
   },
   data() {
     return {
@@ -90,6 +108,7 @@ export default {
       loading: true,
       showAssetModal: false,
       selectedAsset: null,
+      showCsvUploadModal: false, // New data property
     };
   },
   async mounted() {
@@ -99,6 +118,7 @@ export default {
   methods: {
     async fetchAssets() {
       this.loading = true;
+      console.log('Fetching assets...'); // Add this line
       try {
         const payload = this.getJwtPayload();
         if (!payload) {
@@ -112,6 +132,7 @@ export default {
           const data = await response.json();
           const myList = data.asset_lists.find(list => list.list_owner_id === clientId);
           this.assets = myList ? myList.assets : [];
+          console.log('Assets fetched:', this.assets); // Add this line
         } else {
           console.error('Failed to fetch assets');
           this.assets = [];
