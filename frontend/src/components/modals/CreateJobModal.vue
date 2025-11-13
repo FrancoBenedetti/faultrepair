@@ -7,6 +7,16 @@
       </div>
 
       <form @submit.prevent="handleSubmit" class="job-form">
+        <div class="form-group" v-if="starredAssets.length > 0">
+            <label for="starred-asset">Select a Starred Item</label>
+            <select id="starred-asset" @change="handleAssetSelected" class="form-control">
+                <option value="">-- Select a starred item --</option>
+                <option v-for="asset in starredAssets" :key="asset.id" :value="asset.id">
+                    {{ asset.asset_no }}-{{ asset.item }}
+                </option>
+            </select>
+            <small class="form-help">Quickly populate the form by selecting a pre-starred asset.</small>
+        </div>
         <div class="form-row">
           <div class="form-group">
             <label for="item-identifier">Item Identifier *</label>
@@ -93,10 +103,38 @@ export default {
     creatingJob: {
       type: Boolean,
       default: false
+    },
+    starredAssets: {
+      type: Array,
+      default: () => []
     }
   },
   emits: ['close', 'submit', 'qr-detected', 'images-changed'],
   methods: {
+    handleAssetSelected(event) {
+      const assetId = event.target.value;
+      if (!assetId) return;
+
+      const selectedAsset = this.starredAssets.find(asset => asset.id.toString() === assetId);
+      if (!selectedAsset) return;
+
+      // Populate form fields from the selected asset
+      this.newJob.item_identifier = `${selectedAsset.asset_no}-${selectedAsset.item}` || '';
+
+      if (selectedAsset.location_id) {
+        const locationExists = this.locations.some(loc => loc.id.toString() === selectedAsset.location_id.toString());
+        if (locationExists) {
+          this.newJob.client_location_id = selectedAsset.location_id.toString();
+        } else {
+          alert(`Location "${selectedAsset.location_name}" from the selected asset was not found in your list of locations.`);
+          this.newJob.client_location_id = '0'; // Reset to default
+        }
+      } else {
+        this.newJob.client_location_id = '0'; // Reset to default if asset has no location
+      }
+
+      alert(`Selected "${selectedAsset.item}". The form has been populated.`);
+    },
     handleSubmit() {
       this.$emit('submit')
     },

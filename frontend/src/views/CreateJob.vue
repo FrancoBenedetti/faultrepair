@@ -343,7 +343,7 @@ export default {
 
       // Populate Location if an ID is provided and it exists in our list
       if (qrData.locationId) {
-        const locationExists = this.locations.some(loc => loc.id === qrData.locationId);
+        const locationExists = this.locations.some(loc => loc.id == qrData.locationId);
         if (locationExists) {
           this.newJob.client_location_id = qrData.locationId.toString();
         } else {
@@ -382,7 +382,7 @@ export default {
       // Populate form fields from the selected asset
       this.newJob.item_identifier = `${selectedAsset.asset_no}-${selectedAsset.item}` || '';
 
-      if (selectedAsset.loimmediatelycation_id) {
+      if (selectedAsset.location_id) {
         const locationExists = this.locations.some(loc => loc.id.toString() === selectedAsset.location_id.toString());
         if (locationExists) {
           this.newJob.client_location_id = selectedAsset.location_id.toString();

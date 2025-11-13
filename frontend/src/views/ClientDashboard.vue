@@ -256,6 +256,7 @@
       :locations="locations"
       :creating-job="creatingJob"
       :new-job="newJob"
+      :starred-assets="starredAssets"
       @close="closeCreateJobModal"
       @submit="handleCreateJob"
       @qr-detected="handleQrDetected"
@@ -343,6 +344,7 @@ export default {
       approvedProviders: null, // Start as null to show loading state
       jobs: null, // Start as null to show loading state
       locations: [], // Client locations for job creation
+      starredAssets: [],
       availableRoles: [],
       userRole: null, // Store user's role
       userId: null, // Store user's ID
@@ -405,7 +407,9 @@ export default {
         client_location_id: '',
         item_identifier: '',
         fault_description: '',
-        contact_person: ''
+        contact_person: '',
+        assigned_provider_id: null,
+        approver_id: null
       },
       jobToAssign: null,
       selectedImages: [], // Array to store selected images from component
@@ -486,6 +490,7 @@ export default {
     this.loadAvailableRoles()
     this.loadLocations()
     this.loadJobs()
+    this.loadStarredAssets()
   },
   computed: {
     entityId() {
@@ -526,6 +531,27 @@ export default {
     }
   },
  methods: {
+    async loadStarredAssets() {
+      try {
+        const clientId = this.getClientId();
+        if (!clientId) {
+          console.error('Could not load starred assets: Client ID is not available.');
+          return;
+        }
+
+        const response = await apiFetch(`/backend/api/assets.php?client_id=${clientId}`);
+        if (response.ok) {
+          const data = await response.json();
+          this.starredAssets = data.asset_lists
+            .flatMap(list => list.assets)
+            .filter(asset => asset.star == 1);
+        } else {
+          console.error('Failed to load starred assets');
+        }
+      } catch (error) {
+        console.error('Error loading starred assets:', error);
+      }
+    },
     checkUserPermissions() {
       try {
         const token = localStorage.getItem('token')
@@ -1188,7 +1214,9 @@ export default {
           client_location_id: this.newJob.client_location_id,
           item_identifier: this.newJob.item_identifier || null,
           fault_description: this.newJob.fault_description,
-          contact_person: this.newJob.contact_person || null
+          contact_person: this.newJob.contact_person || null,
+          assigned_provider_id: this.newJob.assigned_provider_id || null,
+          approver_id: this.newJob.approver_id || null
         }
 
         const response = await apiFetch('/backend/api/client-jobs.php', {
@@ -1273,7 +1301,9 @@ export default {
         client_location_id: '',
         item_identifier: '',
         fault_description: '',
-        contact_person: ''
+        contact_person: '',
+        assigned_provider_id: null,
+        approver_id: null
       }
       // Clear selected images in component
       if (this.$refs.imageUpload) {
@@ -1754,93 +1784,50 @@ Are you sure you want to proceed?`;
 
     // QR Scanner methods
     handleQrDetected(qrData) {
-      console.log('QR data detected:', qrData)
+      console.log('QR data detected:', qrData);
 
-      try {
-        // Initialize extracted data tracking
-        let extractedFields = {}
-        let extractionMethod = 'structured' // 'structured' or 'fallback'
+      // Validate client ID if provided in the QR data
+      if (qrData.clientId && qrData.clientId !== this.getClientId()) {
+        alert(`QR code is for a different client (ID: ${qrData.clientId}). This QR code is not valid for your account.`);
+        return;
+      }
 
-        // First, try to validate client ID if present
-        if (qrData.clientId && qrData.clientId !== this.getClientId()) {
-          alert(`QR code is for a different client (ID: ${qrData.clientId}). This QR code is not valid for your account.`)
-          return
-        }
+      // Populate Item Identifier
+      if (qrData.itemIdentifier) {
+        this.newJob.item_identifier = qrData.itemIdentifier;
+      } else if (qrData.raw) {
+        this.newJob.item_identifier = qrData.raw;
+      }
 
-        // Check if structured data was successfully parsed
-        if (qrData.itemIdentifier && qrData.itemIdentifier.trim()) {
-          // We have structured item data - use it
-          this.newJob.item_identifier = qrData.itemIdentifier.trim()
-          extractedFields.item = qrData.itemIdentifier.trim()
+      // Populate Location if an ID is provided and it exists in our list
+      if (qrData.locationId) {
+        const locationExists = this.locations.some(loc => loc.id == qrData.locationId);
+        if (locationExists) {
+          this.newJob.client_location_id = qrData.locationId.toString();
         } else {
-          // No structured item data - check if we have any location data
-          if (qrData.locationName && qrData.locationName.trim()) {
-            // We have location data but no item identifier - use location as item identifier
-            this.newJob.item_identifier = qrData.locationName.trim()
-            extractedFields.item = qrData.locationName.trim()
-            extractedFields.note = 'location_used_as_item'
-          } else {
-            // No structured data at all - check if qrData is available as string
-            // This handles cases where parsing completely failed
-            const rawQrString = arguments[0] // Get the original QR data string
-            if (rawQrString && typeof rawQrString === 'string' && rawQrString.trim()) {
-              this.newJob.item_identifier = rawQrString.trim()
-              extractedFields.item = rawQrString.trim()
-              extractedFields.note = 'raw_qr_used_as_item'
-              extractionMethod = 'fallback'
-            } else {
-              // Complete failure - shouldn't happen but handle gracefully
-              alert('Could not extract any usable data from QR code. Please enter the item identifier manually.')
-              return
-            }
-          }
-        }
-
-        // Handle location matching (if location data is available)
-        if (qrData.locationName && qrData.locationName.trim() && this.locations && this.locations.length > 0) {
-          const matchingLocation = this.locations.find(location =>
-            location.name.toLowerCase() === qrData.locationName.toLowerCase()
-          )
-          if (matchingLocation) {
-            this.newJob.client_location_id = matchingLocation.id
-            extractedFields.location = qrData.locationName.trim()
-          } else {
-            extractedFields.location_attempted = qrData.locationName.trim()
-            extractedFields.location_note = 'location_not_found'
-          }
-        }
-
-        // Generate user-friendly success message
-        let message = 'QR code scanned successfully!'
-
-        if (extractionMethod === 'structured') {
-          message += ` Item: "${extractedFields.item}"`
-          if (extractedFields.location) {
-            message += `, Location: "${extractedFields.location}"`
-          } else if (extractedFields.location_attempted) {
-            message += `. Location "${extractedFields.location_attempted}" not found in your locations`
-          }
-        } else {
-          if (extractedFields.note === 'location_used_as_item') {
-            message += ` Used location "${extractedFields.item}" as item identifier`
-          } else if (extractedFields.note === 'raw_qr_used_as_item') {
-            message += ` Used QR code content as item identifier: "${extractedFields.item}"`
-          }
-        }
-
-        alert(message)
-
-      } catch (error) {
-        console.error('Error processing QR data:', error)
-        // Fallback: try to use raw QR data
-        const rawData = arguments[0]
-        if (rawData && typeof rawData === 'string' && rawData.trim()) {
-          this.newJob.item_identifier = rawData.trim()
-          alert(`QR code scanned! Used raw content as item identifier: "${rawData.trim()}"`)
-        } else {
-          alert('Error reading QR code. Please try again or enter the item identifier manually.')
+          alert(`Location with ID ${qrData.locationId} from QR code was not found in your list of locations.`);
         }
       }
+
+      // Populate hidden assigned_provider_id from 'sp' parameter
+      if (qrData.serviceProviderId) {
+        this.newJob.assigned_provider_id = qrData.serviceProviderId;
+      }
+
+      // Populate hidden approver_id from 'mngr' parameter
+      if (qrData.managerId) {
+        this.newJob.approver_id = qrData.managerId;
+      }
+
+      // Provide a more informative alert message
+      let alertMessage = 'QR code scanned successfully! Form fields have been populated.';
+      if (qrData.serviceProviderId) {
+        alertMessage += ' A service provider has been suggested for this job.';
+      }
+      if (qrData.managerId) {
+        alertMessage += ' An approver has been suggested for this job.';
+      }
+      alert(alertMessage);
     },
 
     getClientId() {
