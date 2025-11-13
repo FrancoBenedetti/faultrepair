@@ -164,7 +164,7 @@
                   placeholder="Person to contact about this service request"
                   maxlength="100"
                 />
-                <p class="text-xs text-gray-500">Who should the technician contact?</p>
+                <p class="text-xs text-gray-500">Who should the technician contact for more information about this service request?</p>
               </div>
             </div>
           </div>
