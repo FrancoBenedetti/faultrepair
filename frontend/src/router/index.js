@@ -62,6 +62,12 @@ const routes = [
     meta: { requiresAuth: true, userType: 'client' }
   },
   {
+    path: '/client/asset-manager',
+    name: 'AssetManager',
+    component: () => import('../views/AssetManager.vue'),
+    meta: { requiresAuth: true, userType: 'client' }
+  },
+  {
     path: '/service-provider-registration',
     name: 'ServiceProviderRegistration',
     component: ServiceProviderRegistration,
