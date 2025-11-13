@@ -85,9 +85,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'description' => false,
         'location_id' => false,
         'manager_id' => false,
-        'sp_id' => false,
         'status' => false,
     ];
+
+    // For Client Admins, sp_id can be provided in the CSV
+    if ($role_id == 2) {
+        $expected_columns['sp_id'] = false;
+    }
 
     // Map CSV header to expected columns
     $column_map = [];
@@ -106,6 +110,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             fclose($handle);
             exit;
         }
+    }
+
+    $list_owner_id = $entity_id;
+    $client_id = null;
+
+    if ($role_id == 2) { // Client Administrator
+        $client_id = $entity_id;
+    } elseif ($role_id == 3) { // Service Provider Administrator
+        if (empty($_POST['client_id'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Client ID is required. Please select a client.']);
+            exit;
+        }
+        $client_id = (int)$_POST['client_id'];
+
+        // Verify provider is approved for this client
+        $stmt = $pdo->prepare("SELECT id FROM participant_approvals WHERE client_participant_id = ? AND provider_participant_id = ?");
+        $stmt->execute([$client_id, $list_owner_id]);
+        if (!$stmt->fetch()) {
+            http_response_code(403);
+            echo json_encode(['error' => "You are not an approved service provider for the selected client."]);
+            exit;
+        }
+    }
+
+    if (!$client_id) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Could not determine Client ID.']);
+        exit;
     }
 
     $success_count = 0;
@@ -129,36 +162,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if (empty($data['item'])) {
                 $error_messages[] = "Line {$line_num}: 'item' cannot be empty.";
-                continue;
-            }
-
-            $list_owner_id = $entity_id;
-            $client_id = null;
-
-            if ($role_id == 2) { // Client Administrator
-                $client_id = $entity_id;
-            } elseif ($role_id == 3) { // Service Provider Administrator
-                // For SPs, client_id must be provided in the CSV or determined otherwise.
-                // For now, we assume SPs upload for a client they manage, and client_id is part of the asset data.
-                // If not in CSV, this needs to be passed as a query param or similar.
-                // For simplicity, let's assume client_id is passed in the CSV for SPs.
-                if (!isset($data['client_id']) || empty($data['client_id'])) {
-                    $error_messages[] = "Line {$line_num}: 'client_id' is required in CSV for Service Providers.";
-                    continue;
-                }
-                $client_id = (int)$data['client_id'];
-
-                // Verify provider is approved for this client
-                $stmt = $pdo->prepare("SELECT id FROM participant_approvals WHERE client_participant_id = ? AND provider_participant_id = ?");
-                $stmt->execute([$client_id, $list_owner_id]);
-                if (!$stmt->fetch()) {
-                    $error_messages[] = "Line {$line_num}: You are not an approved service provider for client ID {$client_id}.";
-                    continue;
-                }
-            }
-
-            if (!$client_id) {
-                $error_messages[] = "Line {$line_num}: Could not determine client ID.";
                 continue;
             }
 

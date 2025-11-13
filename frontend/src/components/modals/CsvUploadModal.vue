@@ -7,8 +7,8 @@
       </div>
       <div class="modal-body py-4">
         <p class="text-sm text-gray-600 mb-4">
-          Upload a CSV file to add or update assets. The CSV must contain a header row with the following columns:
-          <code>asset_no</code> (required), <code>item</code> (required), <code>description</code>, <code>location_id</code> (numeric ID), <code>manager_id</code> (numeric ID), <code>sp_id</code> (numeric ID).
+          Upload a CSV file to add or update assets. The CSV must contain a header row with at least the following columns:
+          <code>asset_no</code>, <code>item</code>. Other optional columns are <code>description</code>, <code>location_id</code>, <code>manager_id</code>, and <code>status</code>.
         </p>
         <input type="file" ref="csvFile" @change="handleFileChange" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
         <p v-if="fileName" class="mt-2 text-sm text-gray-700">Selected file: {{ fileName }}</p>
@@ -30,6 +30,12 @@ import { apiFetch } from '@/utils/api.js';
 
 export default {
   name: 'CsvUploadModal',
+  props: {
+    clientId: {
+      type: Number,
+      default: null,
+    },
+  },
   data() {
     return {
       selectedFile: null,
@@ -55,6 +61,9 @@ export default {
 
       const formData = new FormData();
       formData.append('csv_file', this.selectedFile);
+      if (this.clientId) {
+        formData.append('client_id', this.clientId);
+      }
 
       try {
         const response = await apiFetch('/backend/api/upload-assets-csv.php', {
