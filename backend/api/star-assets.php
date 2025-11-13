@@ -67,7 +67,7 @@ if (!isset($data['star'])) {
 }
 
 $asset_ids = $data['asset_ids'];
-$star_status = (bool)$data['star'];
+$star_status = $data['star'] ? 1 : 0;
 $placeholders = implode(',', array_fill(0, count($asset_ids), '?'));
 
 // --- Database Update ---
