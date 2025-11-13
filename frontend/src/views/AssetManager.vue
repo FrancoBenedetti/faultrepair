@@ -14,6 +14,18 @@
             Asset Management
           </h2>
           <div class="section-header-actions flex items-center gap-4">
+            <button @click="starSelectedAssets(true)" class="btn-secondary flex items-center gap-2" :disabled="selectedAssets.length === 0">
+                <span class="material-icon-sm">star</span>
+                Star
+            </button>
+            <button @click="starSelectedAssets(false)" class="btn-secondary flex items-center gap-2" :disabled="selectedAssets.length === 0">
+                <span class="material-icon-sm">star_outline</span>
+                Unstar
+            </button>
+            <button @click="generateQrCodes" class="btn-secondary flex items-center gap-2" :disabled="selectedAssets.length === 0">
+                <span class="material-icon-sm">qr_code_2</span>
+                Generate QR
+            </button>
             <button @click="showCsvUploadModal = true" class="btn-outlined flex items-center gap-2">
               <span class="material-icon-sm">upload_file</span>
               Upload CSV
@@ -30,6 +42,10 @@
           <table class="min-w-full bg-white">
             <thead class="bg-gray-100">
               <tr>
+                <th class="py-3 px-4">
+                  <input type="checkbox" @change="toggleSelectAll" :checked="isAllSelected" />
+                </th>
+                <th class="py-3 px-4"></th>
                 <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Asset No</th>
                 <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Item</th>
                 <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Description</th>
@@ -42,12 +58,22 @@
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="8" class="text-center py-4">Loading assets...</td>
+                <td colspan="10" class="text-center py-4">Loading assets...</td>
               </tr>
               <tr v-else-if="assets.length === 0">
-                <td colspan="8" class="text-center py-4">No assets found.</td>
+                <td colspan="10" class="text-center py-4">No assets found.</td>
               </tr>
               <tr v-for="asset in assets" :key="asset.id" class="border-b">
+                <td class="py-3 px-4">
+                  <input type="checkbox" v-model="selectedAssets" :value="asset.id" />
+                </td>
+                <td class="py-3 px-4">
+                    <button @click="toggleStar(asset)">
+                        <span class="material-icon-sm" :class="asset.star ? 'text-yellow-500' : 'text-gray-400'">
+                            {{ asset.star ? 'star' : 'star_outline' }}
+                        </span>
+                    </button>
+                </td>
                 <td class="py-3 px-4">{{ asset.asset_no }}</td>
                 <td class="py-3 px-4">{{ asset.item }}</td>
                 <td class="py-3 px-4">{{ asset.description }}</td>
@@ -109,13 +135,82 @@ export default {
       showAssetModal: false,
       selectedAsset: null,
       showCsvUploadModal: false, // New data property
+      selectedAssets: [],
     };
+  },
+  computed: {
+    isAllSelected() {
+      return this.assets.length > 0 && this.selectedAssets.length === this.assets.length;
+    }
   },
   async mounted() {
     await this.fetchAssets();
     await this.fetchDropdownData();
   },
   methods: {
+    generateQrCodes() {
+      if (this.selectedAssets.length === 0) {
+        alert('Please select at least one asset to generate QR codes.');
+        return;
+      }
+      const ids = this.selectedAssets.join(',');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Authentication token not found. Please log in again.');
+        return;
+      }
+      const url = `/backend/api/qr-generator.php?ids=${ids}&token=${encodeURIComponent(token)}`;
+      window.open(url, '_blank');
+    },
+    async starSelectedAssets(star) {
+      if (this.selectedAssets.length === 0) return;
+      try {
+        const response = await apiFetch('/backend/api/star-assets.php', {
+          method: 'POST',
+          body: JSON.stringify({
+            asset_ids: this.selectedAssets,
+            star: star,
+          }),
+        });
+        if (response.ok) {
+          await this.fetchAssets(); // Refresh the list
+          this.selectedAssets = []; // Clear selection
+        } else {
+          const error = await response.json();
+          alert(`Failed to update assets: ${error.error}`);
+        }
+      } catch (error) {
+        console.error('Error starring assets:', error);
+        alert('An error occurred while updating assets.');
+      }
+    },
+    async toggleStar(asset) {
+        try {
+            const response = await apiFetch('/backend/api/star-assets.php', {
+                method: 'POST',
+                body: JSON.stringify({
+                    asset_ids: [asset.id],
+                    star: !asset.star,
+                }),
+            });
+            if (response.ok) {
+                await this.fetchAssets(); // Refresh
+            } else {
+                const error = await response.json();
+                alert(`Failed to update asset: ${error.error}`);
+            }
+        } catch (error) {
+            console.error('Error toggling star:', error);
+            alert('An error occurred while updating the asset.');
+        }
+    },
+    toggleSelectAll(event) {
+      if (event.target.checked) {
+        this.selectedAssets = this.assets.map(asset => asset.id);
+      } else {
+        this.selectedAssets = [];
+      }
+    },
     async fetchAssets() {
       this.loading = true;
       console.log('Fetching assets...'); // Add this line

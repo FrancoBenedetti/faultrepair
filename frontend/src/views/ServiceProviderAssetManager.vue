@@ -20,6 +20,10 @@
                 {{ client.client_name }}
               </option>
             </select>
+            <button @click="generateQrCodes" class="btn-secondary flex items-center gap-2" :disabled="selectedAssets.length === 0">
+              <span class="material-icon-sm">qr_code_2</span>
+              Generate QR
+            </button>
             <button @click="showCsvUploadModal = true" class="btn-outlined flex items-center gap-2" :disabled="!selectedClient">
               <span class="material-icon-sm">upload_file</span>
               Upload CSV
@@ -39,6 +43,9 @@
           <table class="min-w-full bg-white">
             <thead class="bg-gray-100">
               <tr>
+                <th class="py-3 px-4">
+                  <input type="checkbox" @change="toggleSelectAll" :checked="isAllSelected" />
+                </th>
                 <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Asset No</th>
                 <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Item</th>
                 <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Description</th>
@@ -50,12 +57,15 @@
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="7" class="text-center py-4">Loading assets...</td>
+                <td colspan="8" class="text-center py-4">Loading assets...</td>
               </tr>
               <tr v-else-if="assets.length === 0">
-                <td colspan="7" class="text-center py-4">No assets found for this client.</td>
+                <td colspan="8" class="text-center py-4">No assets found for this client.</td>
               </tr>
               <tr v-for="asset in assets" :key="asset.id" class="border-b">
+                <td class="py-3 px-4">
+                  <input type="checkbox" v-model="selectedAssets" :value="asset.id" />
+                </td>
                 <td class="py-3 px-4">{{ asset.asset_no }}</td>
                 <td class="py-3 px-4">{{ asset.item }}</td>
                 <td class="py-3 px-4">{{ asset.description }}</td>
@@ -119,12 +129,39 @@ export default {
       showAssetModal: false,
       selectedAsset: null,
       showCsvUploadModal: false,
+      selectedAssets: [],
     };
+  },
+  computed: {
+    isAllSelected() {
+      return this.assets.length > 0 && this.selectedAssets.length === this.assets.length;
+    }
   },
   async mounted() {
     await this.fetchApprovedClients();
   },
   methods: {
+    generateQrCodes() {
+      if (this.selectedAssets.length === 0) {
+        alert('Please select at least one asset to generate QR codes.');
+        return;
+      }
+      const ids = this.selectedAssets.join(',');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Authentication token not found. Please log in again.');
+        return;
+      }
+      const url = `/backend/api/qr-generator.php?ids=${ids}&token=${encodeURIComponent(token)}`;
+      window.open(url, '_blank');
+    },
+    toggleSelectAll(event) {
+      if (event.target.checked) {
+        this.selectedAssets = this.assets.map(asset => asset.id);
+      } else {
+        this.selectedAssets = [];
+      }
+    },
     async fetchApprovedClients() {
       try {
         const response = await apiFetch('/backend/api/service-provider-approved-clients.php');
@@ -283,6 +320,8 @@ export default {
   watch: {
     selectedClient(newVal, oldVal) {
       if (newVal !== oldVal) {
+        this.assets = [];
+        this.selectedAssets = [];
         this.fetchAssets();
         this.fetchDropdownData();
       }
