@@ -196,9 +196,9 @@ try {
         
         // Optional fields
         $description = $input['description'] ?? null;
-        $location_id = $input['location_id'] ?? null;
-        $manager_id = $input['manager_id'] ?? null;
-        $sp_id = $input['sp_id'] ?? null;
+        $location_id = empty($input['location_id']) ? null : $input['location_id'];
+        $manager_id = empty($input['manager_id']) ? null : $input['manager_id'];
+        $sp_id = empty($input['sp_id']) ? null : $input['sp_id'];
         $status = $input['status'] ?? 'active';
 
         // If the list owner is an SP, sp_id is their own ID
