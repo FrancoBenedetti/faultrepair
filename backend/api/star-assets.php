@@ -1,7 +1,9 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
+ini_set('log_errors', true);
+ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/debug.log');
 
 require_once '../config/database.php';
 require_once '../includes/JWT.php';
@@ -20,6 +22,9 @@ $auth_header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
 $token = '';
 if (preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
     $token = $matches[1];
+}
+if (!$token) {
+    $token = $_GET['token'] ?? '';
 }
 if (!$token) {
     http_response_code(401);
@@ -47,6 +52,7 @@ if ($entity_type !== 'client') {
 
 // --- Input Validation ---
 $data = json_decode(file_get_contents('php://input'), true);
+error_log("Star assets request data: " . print_r($data, true));
 
 if (!isset($data['asset_ids']) || !is_array($data['asset_ids']) || empty($data['asset_ids'])) {
     http_response_code(400);
@@ -69,11 +75,13 @@ try {
     $pdo->beginTransaction();
 
     $sql = "UPDATE assets SET star = ? WHERE id IN ($placeholders) AND list_owner_id = ?";
+    error_log("Star assets SQL: " . $sql);
     
     $stmt = $pdo->prepare($sql);
     
     // Parameters for binding
     $params = array_merge([$star_status], $asset_ids, [$entity_id]);
+    error_log("Star assets params: " . print_r($params, true));
     
     $stmt->execute($params);
     
