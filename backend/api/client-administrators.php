@@ -33,17 +33,17 @@ if (!$token) {
     exit;
 }
 
-try {
-    $payload = JWT::decode($token);
-    $user_id = $payload['user_id'];
-    $role_id = $payload['role_id'];
-    $entity_type = $payload['entity_type'];
-    $sp_entity_id = $payload['entity_id']; // Service Provider's participantId
-} catch (Exception $e) {
+$payload = JWT::decode($token);
+if ($payload === false) {
     http_response_code(401);
-    echo json_encode(['error' => 'Invalid token: ' . $e->getMessage()]);
+    echo json_encode(['error' => 'Invalid or expired token.']);
     exit;
 }
+
+$user_id = $payload['user_id'];
+$role_id = $payload['role_id'];
+$entity_type = $payload['entity_type'];
+$sp_entity_id = $payload['entity_id']; // Service Provider's participantId
 
 // This endpoint is for Service Providers (role 3) to get a client's admins.
 if ($role_id != 3) {

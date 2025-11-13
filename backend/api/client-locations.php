@@ -11,32 +11,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
 
-// JWT Authentication - Read from query parameter for live server compatibility
-$token = $_GET['token'] ?? '';
+// JWT Authentication
+$auth_header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+$token = '';
+if (preg_match('/Bearer\s(\S+)/', $auth_header, $matches)) {
+    $token = $matches[1];
+}
+if (!$token) {
+    // Fallback to query parameter for live server compatibility
+    $token = $_GET['token'] ?? '';
+}
 
 if (!$token) {
     http_response_code(401);
     echo json_encode(['error' => 'Authorization token missing']);
     exit;
 }
-try {
-    $payload = JWT::decode($token);
-    $user_id = $payload['user_id'];
-    $role_id = $payload['role_id'];
-    $entity_type = $payload['entity_type'];
-    $entity_id = $payload['entity_id'];
-} catch (Exception $e) {
+
+$payload = JWT::decode($token);
+if ($payload === false) {
     http_response_code(401);
-    echo json_encode(['error' => 'Invalid token']);
+    echo json_encode(['error' => 'Invalid or expired token.']);
     exit;
 }
 
-// Verify user is a client
-if ($entity_type !== 'client') {
-    http_response_code(403);
-    echo json_encode(['error' => 'Access denied. Client access required.']);
-    exit;
-}
+$user_id = $payload['user_id'];
+$role_id = $payload['role_id'];
+$entity_type = $payload['entity_type'];
+$entity_id = $payload['entity_id'];
 
 $method = $_SERVER['REQUEST_METHOD'];
 

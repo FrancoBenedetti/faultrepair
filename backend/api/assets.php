@@ -35,17 +35,17 @@ if (!$token) {
     exit;
 }
 
-try {
-    $payload = JWT::decode($token);
-    $user_id = $payload['user_id'];
-    $role_id = $payload['role_id'];
-    $entity_type = $payload['entity_type'];
-    $entity_id = $payload['entity_id']; // This is the participantId
-} catch (Exception $e) {
+$payload = JWT::decode($token);
+if ($payload === false) {
     http_response_code(401);
-    echo json_encode(['error' => 'Invalid token: ' . $e->getMessage()]);
+    echo json_encode(['error' => 'Invalid or expired token.']);
     exit;
 }
+
+$user_id = $payload['user_id'];
+$role_id = $payload['role_id'];
+$entity_type = $payload['entity_type'];
+$entity_id = $payload['entity_id']; // This is the participantId
 
 // Only client admins (role 2) and service provider admins (role 3) can access this endpoint.
 if ($role_id < 2) {

@@ -33,17 +33,17 @@ if (!$token) {
     exit;
 }
 
-try {
-    $payload = JWT::decode($token);
-    $user_id = $payload['user_id'];
-    $role_id = $payload['role_id'];
-    $entity_type = $payload['entity_type'];
-    $client_entity_id = $payload['entity_id'];
-} catch (Exception $e) {
+$payload = JWT::decode($token);
+if ($payload === false) {
     http_response_code(401);
-    echo json_encode(['error' => 'Invalid token: ' . $e->getMessage()]);
+    echo json_encode(['error' => 'Invalid or expired token.']);
     exit;
 }
+
+$user_id = $payload['user_id'];
+$role_id = $payload['role_id'];
+$entity_type = $payload['entity_type'];
+$client_entity_id = $payload['entity_id'];
 
 // This endpoint is for clients to get their list of approved providers.
 if ($entity_type !== 'client') {
