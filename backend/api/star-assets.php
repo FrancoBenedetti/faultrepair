@@ -52,7 +52,6 @@ if ($entity_type !== 'client') {
 
 // --- Input Validation ---
 $data = json_decode(file_get_contents('php://input'), true);
-error_log("Star assets request data: " . print_r($data, true));
 
 if (!isset($data['asset_ids']) || !is_array($data['asset_ids']) || empty($data['asset_ids'])) {
     http_response_code(400);
@@ -75,13 +74,11 @@ try {
     $pdo->beginTransaction();
 
     $sql = "UPDATE assets SET star = ? WHERE id IN ($placeholders) AND list_owner_id = ?";
-    error_log("Star assets SQL: " . $sql);
     
     $stmt = $pdo->prepare($sql);
     
     // Parameters for binding
     $params = array_merge([$star_status], $asset_ids, [$entity_id]);
-    error_log("Star assets params: " . print_r($params, true));
     
     $stmt->execute($params);
     
