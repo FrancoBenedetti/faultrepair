@@ -130,14 +130,7 @@ function getClientUsers($target_participant_id, $filter_role = null) {
 }
 
 function addClientUser($client_id) {
-    global $pdo, $is_admin;
-
-    // Check if user has admin permissions
-    if (!$is_admin) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Access denied. Admin permissions required to add users.']);
-        exit;
-    }
+    global $pdo;
 
     $data = json_decode(file_get_contents('php://input'), true);
 
@@ -269,14 +262,7 @@ function addClientUser($client_id) {
 }
 
 function updateClientUser($client_id) {
-    global $pdo, $is_admin;
-
-    // Check if user has admin permissions
-    if (!$is_admin) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Access denied. Admin permissions required to update users.']);
-        exit;
-    }
+    global $pdo;
 
     $data = json_decode(file_get_contents('php://input'), true);
 
@@ -492,14 +478,7 @@ function updateClientUser($client_id) {
 }
 
 function deleteClientUser($client_id) {
-    global $pdo, $is_admin;
-
-    // Check if user has admin permissions
-    if (!$is_admin) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Access denied. Admin permissions required to delete users.']);
-        exit;
-    }
+    global $pdo;
 
     $user_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : null;
 

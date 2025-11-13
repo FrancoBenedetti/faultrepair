@@ -30,6 +30,22 @@
             </button>
           </div>
         </div>
+        <!-- Job Origin Info (only if job status is 'Reported') -->
+        <div v-if="job && job.job_status === 'Reported'" class="reported py-3 border-t border-gray-200">
+            <div class="flex items-center text-sm text-gray-700">
+                <span class="material-icon text-gray-500 mr-2" style="font-size: 20px;">person</span>
+                <span>
+                    Reported by <strong class="font-semibold">{{ getReportedByFullName() }}</strong> on {{ formatDate(job.created_at) }}
+                </span>
+                <span class="mx-3 text-gray-300">|</span>
+                <div class="flex items-center">
+                  <span class="material-icon text-gray-500 mr-1" style="font-size: 20px;">label</span>
+                  <span>
+                      Status: <strong class="font-semibold text-blue-600">{{ job.job_status }}</strong>
+                  </span>
+                </div>
+            </div>
+        </div>
       </div>
     </div>
 
@@ -44,20 +60,7 @@
 
       <!-- Job Edit Form -->
       <form v-else-if="job" @submit.prevent="handleFormSubmit" class="space-y-8">
-        <!-- Job Origin Area (Read-Only for Reported Jobs) -->
-        <div v-if="job.job_status === 'Reported'" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div class="job-origin-area">
-            <div class="origin-header">
-              <span class="material-icon user-icon">person</span>
-              <div class="origin-info">
-                <div class="origin-text">
-                  Reported by {{ getReportedByFullName() }} on {{ formatDate(job.created_at) }}
-                </div>
-                <div class="origin-status">Status: {{ job.job_status }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
+
 
         <!-- Edit Sections Container -->
         <div class="edit-sections space-y-8">
