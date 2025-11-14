@@ -32,33 +32,55 @@ try {
     exit;
 }
 
-// Verify user is a client user
-if ($entity_type !== 'client') {
-    http_response_code(403);
-    echo json_encode(['error' => 'Access denied. Client access required.']);
-    exit;
-}
-
-// Check if user has admin permissions (Site Budget Controller role_id = 2)
-$is_admin = ($role_id === 2);
+// ... (JWT authentication and payload decoding) ...
 
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        getClientUsers($entity_id);
+        // For GET requests, allow both client and service_provider (Role 3)
+        if ($entity_type === 'client') {
+            // Client can only view their own users
+            $filter_role = isset($_GET['role']) ? (int)$_GET['role'] : null;
+            getClientUsers($entity_id, $filter_role);
+        } elseif ($entity_type === 'service_provider' && $role_id === 3) {
+            // Service Provider Admin can view users for an approved client
+            $target_client_id = isset($_GET['client_id']) ? (int)$_GET['client_id'] : null;
+            if (!$target_client_id) {
+                http_response_code(400);
+                echo json_encode(['error' => 'client_id is required for service provider requests.']);
+                exit;
+            }
+            // Verify if this service provider is approved by the target client
+            $stmt = $pdo->prepare("SELECT id FROM participant_approvals WHERE client_participant_id = ? AND provider_participant_id = ?");
+            $stmt->execute([$target_client_id, $entity_id]);
+            if (!$stmt->fetch()) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Access denied. Service provider not approved by this client.']);
+                exit;
+            }
+            $filter_role = isset($_GET['role']) ? (int)$_GET['role'] : null;
+            getClientUsers($target_client_id, $filter_role);
+        } else {
+            http_response_code(403);
+            echo json_encode(['error' => 'Access denied.']);
+            exit;
+        }
         break;
 
     case 'POST':
-        addClientUser($entity_id);
-        break;
-
     case 'PUT':
-        updateClientUser($entity_id);
-        break;
-
     case 'DELETE':
-        deleteClientUser($entity_id);
+        // For POST, PUT, DELETE, only client admins can manage their own users
+        if ($entity_type !== 'client' || $role_id !== 2) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Access denied. Client admin permissions required.']);
+            exit;
+        }
+        // Pass client's own entity_id for these operations
+        if ($method === 'POST') addClientUser($entity_id);
+        if ($method === 'PUT') updateClientUser($entity_id);
+        if ($method === 'DELETE') deleteClientUser($entity_id);
         break;
 
     default:
@@ -67,11 +89,11 @@ switch ($method) {
         break;
 }
 
-function getClientUsers($participant_id) {
+function getClientUsers($target_participant_id, $filter_role = null) {
     global $pdo;
 
     try {
-        $stmt = $pdo->prepare("
+        $sql = "
             SELECT
                 u.userId as id,
                 u.username,
@@ -85,10 +107,18 @@ function getClientUsers($participant_id) {
             FROM users u
             JOIN user_roles ur ON u.role_id = ur.roleId
             WHERE u.entity_id = ?
-            ORDER BY u.created_at DESC
-        ");
+        ";
+        $params = [$target_participant_id];
 
-        $stmt->execute([$participant_id]);
+        if ($filter_role !== null) {
+            $sql .= " AND ur.roleId = ?";
+            $params[] = (int)$filter_role;
+        }
+
+        $sql .= " ORDER BY u.created_at DESC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode(['users' => $users]);
@@ -100,14 +130,7 @@ function getClientUsers($participant_id) {
 }
 
 function addClientUser($client_id) {
-    global $pdo, $is_admin;
-
-    // Check if user has admin permissions
-    if (!$is_admin) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Access denied. Admin permissions required to add users.']);
-        exit;
-    }
+    global $pdo;
 
     $data = json_decode(file_get_contents('php://input'), true);
 
@@ -239,14 +262,7 @@ function addClientUser($client_id) {
 }
 
 function updateClientUser($client_id) {
-    global $pdo, $is_admin;
-
-    // Check if user has admin permissions
-    if (!$is_admin) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Access denied. Admin permissions required to update users.']);
-        exit;
-    }
+    global $pdo;
 
     $data = json_decode(file_get_contents('php://input'), true);
 
@@ -462,14 +478,7 @@ function updateClientUser($client_id) {
 }
 
 function deleteClientUser($client_id) {
-    global $pdo, $is_admin;
-
-    // Check if user has admin permissions
-    if (!$is_admin) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Access denied. Admin permissions required to delete users.']);
-        exit;
-    }
+    global $pdo;
 
     $user_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : null;
 

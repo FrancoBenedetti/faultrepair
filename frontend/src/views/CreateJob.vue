@@ -63,6 +63,21 @@
               Item Details
             </h2>
 
+            <!-- Starred Items Dropdown -->
+            <div v-if="starredAssets.length > 0" class="mb-6">
+              <label for="starred-asset" class="form-label flex items-center gap-2">
+                <span class="material-icon-sm text-yellow-500">star</span>
+                Select a Starred Item
+              </label>
+              <select id="starred-asset" @change="handleAssetSelected" class="form-input">
+                <option value="">-- Select a starred item --</option>
+                <option v-for="asset in starredAssets" :key="asset.id" :value="asset.id">
+                  {{ asset.asset_no }}-{{ asset.item }}
+                </option>
+              </select>
+              <p class="text-xs text-gray-500 mt-2">Quickly populate the form by selecting a pre-starred asset.</p>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <!-- Item Identifier -->
               <div class="space-y-2">
@@ -103,7 +118,7 @@
                     <span v-if="location.address" class="text-gray-500"> – {{ location.address }}</span>
                   </option>
                 </select>
-                <p class="text-xs text-gray-500">Can be auto-filled from QR code. If no custom locations defined, this service request will be associated with your client name.</p>
+                <p class="text-xs text-gray-500">Can be auto-filled from QR code or starred item. If no custom locations defined, this service request will be associated with your client name.</p>
               </div>
             </div>
           </div>
@@ -149,7 +164,7 @@
                   placeholder="Person to contact about this service request"
                   maxlength="100"
                 />
-                <p class="text-xs text-gray-500">Who should the technician contact?</p>
+                <p class="text-xs text-gray-500">Who should the technician contact for more information about this service request?</p>
               </div>
             </div>
           </div>
@@ -232,6 +247,7 @@ export default {
       loading: true,
       creatingJob: false,
       locations: [],
+      starredAssets: [],
       selectedImages: [],
       newJob: {
         item_identifier: '',
@@ -245,6 +261,7 @@ export default {
   },
   async mounted() {
     await this.loadLocations()
+    await this.loadStarredAssets()
 
     // Check for QR data from the route query on component mount
     const query = this.$route.query;
@@ -265,6 +282,27 @@ export default {
     }
   },
   methods: {
+    async loadStarredAssets() {
+      try {
+        const clientId = this.getClientId();
+        if (!clientId) {
+          console.error('Could not load starred assets: Client ID is not available.');
+          return;
+        }
+
+        const response = await apiFetch(`/backend/api/assets.php?client_id=${clientId}`);
+        if (response.ok) {
+          const data = await response.json();
+          this.starredAssets = data.asset_lists
+            .flatMap(list => list.assets)
+            .filter(asset => asset.star == 1);
+        } else {
+          console.error('Failed to load starred assets');
+        }
+      } catch (error) {
+        console.error('Error loading starred assets:', error);
+      }
+    },
     async loadLocations() {
       try {
         this.loading = true
@@ -305,7 +343,7 @@ export default {
 
       // Populate Location if an ID is provided and it exists in our list
       if (qrData.locationId) {
-        const locationExists = this.locations.some(loc => loc.id === qrData.locationId);
+        const locationExists = this.locations.some(loc => loc.id == qrData.locationId);
         if (locationExists) {
           this.newJob.client_location_id = qrData.locationId.toString();
         } else {
@@ -332,6 +370,32 @@ export default {
         alertMessage += ' An approver has been suggested for this job.';
       }
       alert(alertMessage);
+    },
+
+    handleAssetSelected(event) {
+      const assetId = event.target.value;
+      if (!assetId) return;
+
+      const selectedAsset = this.starredAssets.find(asset => asset.id.toString() === assetId);
+      if (!selectedAsset) return;
+
+      // Populate form fields from the selected asset
+      this.newJob.item_identifier = `${selectedAsset.asset_no}-${selectedAsset.item}` || '';
+
+      if (selectedAsset.location_id) {
+        const locationExists = this.locations.some(loc => loc.id.toString() === selectedAsset.location_id.toString());
+        if (locationExists) {
+          this.newJob.client_location_id = selectedAsset.location_id.toString();
+        } else {
+          alert(`Location "${selectedAsset.location_name}" from the selected asset was not found in your list of locations.`);
+        }
+      }
+
+      // Populate hidden fields
+      this.newJob.assigned_provider_id = selectedAsset.sp_id || null;
+      this.newJob.approver_id = selectedAsset.manager_id || null;
+
+      alert(`Selected "${selectedAsset.item}". The form has been populated.`);
     },
 
     handleImagesChanged(images) {

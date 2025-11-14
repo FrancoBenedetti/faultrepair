@@ -82,7 +82,7 @@
           <p class="job-description text-body-medium text-on-surface-variant mb-2 line-clamp-2">{{ job.fault_description }}</p>
           <p class="job-location text-body-small text-on-surface-variant mb-4">
             <span class="material-icon-sm mr-1">location_on</span>
-            {{ job.location_name }}
+            {{ getLocationName(job) }}
           </p>
 
           <div class="job-meta grid grid-cols-2 gap-3 text-sm">
@@ -197,6 +197,16 @@ export default {
     }
   },
   methods: {
+    getLocationName(job) {
+      if (job.location_name) {
+        return job.location_name;
+      }
+      if (job.client_location_id && this.locations) {
+        const location = this.locations.find(loc => loc.id == job.client_location_id);
+        return location ? location.name : 'Default Location';
+      }
+      return 'Default Location';
+    },
     isXSProviderJob(job) {
       // Check if this job is assigned to an external service provider (XS)
       return job && job.assigned_provider_type === 'XS';

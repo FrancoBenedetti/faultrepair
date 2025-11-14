@@ -282,7 +282,7 @@
                   <div class="flex items-center gap-3">
                     <div class="w-12 h-12 rounded-full flex items-center justify-center" :class="technician.role_id === 3 ? 'bg-blue-600' : 'bg-purple-600'">
                       <span class="material-icon text-white">{{
-                        technician && technician.full_name ?
+                        technician && technician.full_name && technician.full_name.length > 0 ?
                           technician.full_name.charAt(0).toUpperCase() :
                           technician && technician.username ?
                           technician.username.charAt(0).toUpperCase() :
@@ -351,6 +351,23 @@
             </div>
           </div>
         </div>
+
+        <!-- Asset Management Sub-Section -->
+        <div class="subsection-container">
+          <div
+            class="subsection-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 pb-2 border-b border-gray-300"
+            @click="$router.push('/service-provider-dashboard/asset-manager')"
+            style="cursor: pointer;"
+          >
+            <div class="subsection-title flex items-center gap-3">
+              <h4 class="text-title-medium text-on-surface mb-0 flex items-center gap-3">
+                <span class="material-icon text-blue-600">inventory_2</span>
+                Asset Management
+              </h4>
+            </div>
+            <span class="material-icon-sm text-gray-400">arrow_forward</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -376,11 +393,11 @@
         <div v-show="sectionsExpanded.jobs" class="section-content transition-all duration-300 ease-in-out">
           <JobManagementSectionSP
             :jobs="jobs"
-            :job-filters="jobFilters"
+            :jobFilters="jobFilters"
             :approved-clients="approvedClients"
             :technicians="technicians"
-            :user-role="userRole"
-            @update-job-filters="jobFilters = $event; loadJobs()"
+            :userRole="userRole"
+            @update-job-filters="jobFilters = { ...$event }; loadJobs()"
             @refresh-jobs="loadJobs"
             @view-job-details="selectedJob = $event; showJobDetailsModal = true"
             @job-card-click="handleJobCardClick"
@@ -531,17 +548,17 @@
 
         <div v-show="sectionsExpanded.clients" class="section-content transition-all duration-300 ease-in-out">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div v-for="client in approvedClients" :key="client.id" @click="viewClientDetails(client)" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+            <div v-for="client in approvedClients" :key="client.client_id" @click="viewClientDetails(client)" class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
               <div class="flex items-start justify-between mb-4">
                 <div class="flex items-center gap-3">
                   <div class="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center">
-                    <span class="material-icon text-white">{{ client.name.charAt(0) }}</span>
+                    <span class="material-icon text-white">{{ client.client_name.charAt(0) }}</span>
                   </div>
                   <div>
-                    <h3 class="font-semibold text-gray-900">{{ client.name }}</h3>
+                    <h3 class="font-semibold text-gray-900">{{ client.client_name }}</h3>
                     <p class="text-sm text-gray-600 flex items-center gap-1">
                       <span class="material-icon-sm">location_on</span>
-                      {{ client.address }}
+                      {{ client.client_address }}
                     </p>
                   </div>
                 </div>
@@ -564,7 +581,7 @@
               </div>
 
               <div class="flex gap-2">
-                <button @click.stop="viewClientJobs(client.id)" class="btn-filled btn-small flex items-center gap-1 flex-1">
+                <button @click.stop="viewClientJobs(client.client_id)" class="btn-filled btn-small flex items-center gap-1 flex-1">
                   <span class="material-icon-sm">work</span>
                   View Jobs
                 </button>
@@ -704,7 +721,7 @@
                   Website
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   id="business-website"
                   v-model="editForm.website"
                   class="form-input"
@@ -2080,9 +2097,9 @@ export default {
 
         if (response.ok) {
           const data = await response.json()
-          this.profile = data.profile
-          this.services = data.services
-          this.regions = data.regions
+          this.profile = data.profile || {}
+          this.services = data.services || []
+          this.regions = data.regions || []
           this.profileCompleteness = data.profile_completeness
 
           // Initialize form data
@@ -2144,9 +2161,17 @@ export default {
     async updateProfile() {
       this.loading = true
       try {
+        // Create a mutable copy of the form data to modify
+        const profileToSend = { ...this.editForm };
+
+        // Prepend https:// to website if it's missing
+        if (profileToSend.website && !/^https?:\/\//i.test(profileToSend.website)) {
+          profileToSend.website = 'https://' + profileToSend.website;
+        }
+
         const response = await apiFetch('/backend/api/service-provider-profile.php', {
           method: 'PUT',
-          body: JSON.stringify(this.editForm)
+          body: JSON.stringify(profileToSend)
         })
 
         if (response.ok) {
@@ -2314,7 +2339,7 @@ getCurrentUserName() {
 
         if (response.ok) {
           const data = await response.json()
-          this.approvedClients = data.clients
+          this.approvedClients = data.approved_clients || []
         } else {
           console.error('Failed to load approved clients')
         }
@@ -2394,7 +2419,7 @@ getCurrentUserName() {
 
         if (response.ok) {
           const data = await response.json()
-          this.technicians = data.technicians
+          this.technicians = data.technicians || []
         } else {
           console.error('Failed to load technicians')
         }

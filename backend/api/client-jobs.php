@@ -474,7 +474,7 @@ try {
             // Role 2 (Client Admin) has expanded permissions for regular jobs
             elseif ($role_id === 2 && !$isXSProvider) {
                 // Can edit in 'Reported', 'Declined', 'Quote Requested', or 'Completed' states
-                if (in_array($job['job_status'], ['Reported', 'Declined', 'Quote Requested', 'Completed'])) {
+                if (in_array($job['job_status'], ['Reported', 'Declined', 'Quote Requested', 'Completed', 'Cannot repair'])) {
                     $canEdit = true;
                 }
             }
@@ -585,6 +585,12 @@ try {
                 $updates[] = "contact_person = ?";
                 $params[] = $input['contact_person'];
             }
+        }
+
+        // Allow location changes for roles 1 and 2 in 'Reported' state
+        if (isset($input['client_location_id'])) {
+            $updates[] = "client_location_id = ?";
+            $params[] = ($input['client_location_id'] === '0' || $input['client_location_id'] === 0) ? null : $input['client_location_id'];
         }
 
         // Handle archiving by client budget controllers (applies to ALL job types, S and XS)

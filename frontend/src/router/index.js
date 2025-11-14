@@ -62,6 +62,12 @@ const routes = [
     meta: { requiresAuth: true, userType: 'client' }
   },
   {
+    path: '/client/asset-manager',
+    name: 'AssetManager',
+    component: () => import('../views/AssetManager.vue'),
+    meta: { requiresAuth: true, userType: 'client' }
+  },
+  {
     path: '/service-provider-registration',
     name: 'ServiceProviderRegistration',
     component: ServiceProviderRegistration,
@@ -71,6 +77,12 @@ const routes = [
     path: '/service-provider-dashboard',
     name: 'ServiceProviderDashboard',
     component: ServiceProviderDashboard,
+    meta: { requiresAuth: true, userType: 'service_provider' }
+  },
+  {
+    path: '/service-provider-dashboard/asset-manager',
+    name: 'ServiceProviderAssetManager',
+    component: () => import('../views/ServiceProviderAssetManager.vue'),
     meta: { requiresAuth: true, userType: 'service_provider' }
   },
   {

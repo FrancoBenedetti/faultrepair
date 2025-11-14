@@ -30,6 +30,22 @@
             </button>
           </div>
         </div>
+        <!-- Job Origin Info (only if job status is 'Reported') -->
+        <div v-if="job && job.job_status === 'Reported'" class="reported py-3 border-t border-gray-200">
+            <div class="flex items-center text-sm text-gray-700">
+                <span class="material-icon text-gray-500 mr-2" style="font-size: 20px;">person</span>
+                <span>
+                    Reported by <strong class="font-semibold">{{ getReportedByFullName() }}</strong> on {{ formatDate(job.created_at) }}
+                </span>
+                <span class="mx-3 text-gray-300">|</span>
+                <div class="flex items-center">
+                  <span class="material-icon text-gray-500 mr-1" style="font-size: 20px;">label</span>
+                  <span>
+                      Status: <strong class="font-semibold text-blue-600">{{ job.job_status }}</strong>
+                  </span>
+                </div>
+            </div>
+        </div>
       </div>
     </div>
 
@@ -44,20 +60,7 @@
 
       <!-- Job Edit Form -->
       <form v-else-if="job" @submit.prevent="handleFormSubmit" class="space-y-8">
-        <!-- Job Origin Area (Read-Only for Reported Jobs) -->
-        <div v-if="job.job_status === 'Reported'" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div class="job-origin-area">
-            <div class="origin-header">
-              <span class="material-icon user-icon">person</span>
-              <div class="origin-info">
-                <div class="origin-text">
-                  Reported by {{ getReportedByFullName() }} on {{ formatDate(job.created_at) }}
-                </div>
-                <div class="origin-status">Status: {{ job.job_status }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
+
 
         <!-- Edit Sections Container -->
         <div class="edit-sections space-y-8">
@@ -89,7 +92,7 @@
                   />
                 </div>
 
-                <div v-if="userRole === 2" class="form-group">
+                <div v-if="userRole === 1 || userRole === 2" class="form-group">
                   <label for="location-select" class="form-label flex items-center gap-2 mb-2">
                     <span class="material-icon field-icon text-gray-500">location_on</span>
                     Location <span class="text-red-500">*</span>
@@ -100,7 +103,7 @@
                     class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     :disabled="loadingLocations"
                   >
-                    <option value="">{{ loadingLocations ? 'Loading...' : '-- Select Location --' }}</option>
+                    <option value="0">{{ loadingLocations ? 'Loading...' : 'Default Location (Client Premises)' }}</option>
                     <option v-for="location in availableLocations" :key="location.id" :value="location.id">
                       {{ location.name }}
                       <span v-if="location.address" class="location-address"> – {{ location.address }}</span>
@@ -327,12 +330,12 @@
                 <h4 class="text-lg font-semibold text-gray-900 mb-4">Step 1: Select Service Provider</h4>
                 <div class="form-group">
                   <select
-                    v-model="selectedProviderForAssignment"
+                    v-model.number="selectedProviderForAssignment"
                     class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     :disabled="saving"
                   >
-                    <option value="">-- Choose a service provider --</option>
-                    <option v-for="provider in availableProviders" :key="provider.service_provider_id" :value="provider.service_provider_id">
+                    <option :value="null">-- Choose a service provider --</option>
+                    <option v-for="provider in availableProviders" :key="provider.id" :value="provider.id">
                       {{ provider.name }}
                       <span v-if="provider.provider_type === 'XS'" class="text-orange-600 ml-2">(External)</span>
                       <span v-if="provider.address" class="text-gray-500 ml-2">- {{ provider.address }}</span>
@@ -343,7 +346,7 @@
                       <button
                         type="button"
                         @click="saveProviderAssignment"
-                        :disabled="saving || !selectedProviderForAssignment || job.assigned_provider_participant_id?.toString() === selectedProviderForAssignment"
+                        :disabled="saving || !selectedProviderForAssignment || job.assigned_provider_participant_id === selectedProviderForAssignment"
                         class="btn-outlined border-gray-400 text-gray-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Save Provider
@@ -366,7 +369,6 @@
                     class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     rows="3"
                     placeholder="A note is required to document the state change for this external provider job..."
-                    required
                   ></textarea>
                   <p class="text-sm text-gray-600 mt-1">For XS provider jobs, a note is always required to document the reason for the status change.</p>
                 </div>
@@ -835,22 +837,19 @@
                   </label>
                   <select
                     id="reassign-provider-select"
-                    v-model="selectedReassignProviderId"
+                    v-model.number="selectedReassignProviderId"
                     class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">-- Choose a different provider --</option>
+                    <option :value="null">-- Choose a different provider --</option>
                     <option
-                      v-for="provider in availableProviders"
-                      :key="provider.service_provider_id"
-                      :value="provider.service_provider_id"
-                      :disabled="provider.service_provider_id == job.assigned_provider_participant_id"
+                      v-for="provider in availableProvidersForReassignment"
+                      :key="provider.id"
+                      :value="provider.id"
                     >
                       {{ provider.name }}
                       <span v-if="provider.provider_type === 'XS'" class="text-orange-600 ml-2">(External)</span>
-                      <span v-if="provider.service_provider_id == job.assigned_provider_participant_id" class="text-gray-400 ml-2">(Current)</span>
                     </option>
                   </select>
-                  <p class="text-sm text-gray-600 mt-1">Only showing providers different from the current one. The current provider is marked as "(Current)" and disabled.</p>
                 </div>
 
                 <!-- Reassignment Reason -->
@@ -951,7 +950,7 @@ export default {
 
       // Service Provider Workflow Data
       availableProviders: [],
-      selectedProviderForAssignment: '',
+      selectedProviderForAssignment: null,
       showTechnicianAssignment: false,
       pendingSPTransition: null,
       selectedTechnicianId: '',
@@ -966,7 +965,7 @@ export default {
       // XS Provider Transition Data
       selectedTransition: null,
       transitionNotes: '',
-      selectedReassignProviderId: '',
+      selectedReassignProviderId: null,
       reassignmentNotes: '',
       showReassignmentForm: false
     }
@@ -976,7 +975,7 @@ export default {
     isXSProviderJob() {
       return this.job?.assigned_provider_participant_id &&
              this.userRole === 2 &&
-             this.availableProviders?.some(p => p.service_provider_id === this.job.assigned_provider_participant_id && p.provider_type === 'XS')
+             this.availableProviders?.some(p => p.id === this.job.assigned_provider_participant_id && p.provider_type === 'XS')
     },
 
     // Check if we're in XS provider mode (XS job + role 2)
@@ -986,8 +985,14 @@ export default {
 
     isAssigningToXSProvider() {
       if (!this.selectedProviderForAssignment || !this.availableProviders) return false;
-      const provider = this.availableProviders.find(p => p.service_provider_id == this.selectedProviderForAssignment);
+      const provider = this.availableProviders.find(p => p.id == this.selectedProviderForAssignment);
       return provider?.provider_type === 'XS';
+    },
+
+    // Filter providers for reassignment to exclude the current one
+    availableProvidersForReassignment() {
+      if (!this.availableProviders || !this.job) return [];
+      return this.availableProviders.filter(p => p.id !== this.job.assigned_provider_participant_id);
     }
   },
   async mounted() {
@@ -1024,20 +1029,17 @@ export default {
           // Initialize editable data
           this.editableJob = { ...this.job }
 
-          // If a provider is already assigned (e.g. from QR code), pre-select them.
-          if (this.job.assigned_provider_participant_id) {
-            this.selectedProviderForAssignment = this.job.assigned_provider_participant_id.toString();
-          }
-
-          // Load images if in Reported status
-          if (this.job.job_status === 'Reported') {
-            await this.loadExistingImages()
-            await this.loadLocations()
-          }
-        } else {
-          throw new Error('Failed to load job')
-        }
-      } catch (error) {
+                  // Load images and locations
+                  await this.loadExistingImages()
+                  await this.loadLocations()
+          
+                  // If a provider is already assigned (e.g. from QR code), pre-select them.
+                  if (this.job.assigned_provider_participant_id) {
+                    this.selectedProviderForAssignment = this.job.assigned_provider_participant_id.toString();
+                  }
+                } else {
+                  throw new Error('Failed to load job')
+                }      } catch (error) {
         this.error = error.message
       } finally {
         this.loading = false
@@ -1057,21 +1059,22 @@ export default {
     },
 
     async loadLocations() {
-      if (this.userRole !== 2) return
+      if (this.userRole !== 1 && this.userRole !== 2) return
 
       this.loadingLocations = true
       try {
         const response = await apiFetch('/backend/api/client-locations.php')
 
         if (response.ok) {
-          const data = await response.json()
-          this.availableLocations = data.locations || []
-
-          // Set current location if job has one
-          if (this.job.client_location_id) {
-            this.selectedLocationId = this.job.client_location_id.toString()
-          }
-        }
+                const data = await response.json()
+                this.availableLocations = data.locations || []
+                console.log('Available locations:', this.availableLocations);
+                console.log('Job client_location_id:', this.job.client_location_id);
+          
+                // Set current location if job has one
+                if (this.job.client_location_id) {
+                  this.selectedLocationId = this.job.client_location_id.toString()
+                }        }
       } catch (error) {
         console.error('Error loading locations:', error)
       } finally {
@@ -1239,7 +1242,6 @@ export default {
           const data = await response.json()
           // The endpoint returns 'approved_providers' array
           this.availableProviders = data.approved_providers || []
-          console.log(`Loaded ${this.availableProviders.length} approved providers`)
         } else {
           console.error('Failed to load approved providers:', response.status)
           this.availableProviders = []
@@ -1642,7 +1644,7 @@ export default {
         return
       }
 
-      if (this.isAssigningToXSProvider && (!this.transitionNotes || !this.transitionNotes.trim())) {
+      if (this.isXSProviderMode && (!this.transitionNotes || !this.transitionNotes.trim())) {
         alert('Please provide transition notes for assigning a job to an external provider.');
         return;
       }
@@ -1694,7 +1696,7 @@ export default {
         return
       }
 
-      if (this.isAssigningToXSProvider && (!this.transitionNotes || !this.transitionNotes.trim())) {
+      if (this.isXSProviderMode && (!this.transitionNotes || !this.transitionNotes.trim())) {
         alert('Please provide transition notes for requesting a quote from an external provider.');
         return;
       }
@@ -1809,8 +1811,8 @@ export default {
           job_id: this.job.id,
           action: 'reassign_provider',
           assigned_provider_id: parseInt(this.selectedReassignProviderId),
-          transition_notes: this.reassignmentNotes.trim(),
-          note: `Job reassigned. Reason: ${this.reassignmentNotes.trim()}`
+          notes: this.reassignmentNotes.trim(), // Satisfies the 'reassign_provider' action validation
+          transition_notes: this.reassignmentNotes.trim() // Satisfies XS provider transition validation
         }
 
         // Make the API call using the client-jobs endpoint
@@ -1827,10 +1829,10 @@ export default {
         const result = await response.json()
 
         // Success message with reassignment details
-        const newProvider = this.availableProviders.find(p => p.service_provider_id == this.selectedReassignProviderId)
+        const newProvider = this.availableProviders.find(p => p.id == this.selectedReassignProviderId);
         const providerName = newProvider ? newProvider.name : 'Unknown Provider'
 
-        alert(`Job reassigned successfully!\n\nThis job has been reassigned from "${this.job.provider_name}" to "${providerName}" and is now in "Assigned" status. All provider-specific data has been reset for the new provider.`)
+        alert(`Job reassigned successfully!\n\nThis job has been reassigned from "${this.job.assigned_provider_name}" to "${providerName}" and is now in "Assigned" status. All provider-specific data has been reset for the new provider.`)
 
         // Emit the job update event to refresh the parent component
         this.$emit('job-updated', result)

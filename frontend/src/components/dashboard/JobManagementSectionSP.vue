@@ -33,8 +33,8 @@
           <label for="client-filter" class="form-label mb-1">Client:</label>
           <select id="client-filter" v-model="jobFilters.client_id" @change="$emit('update-job-filters', jobFilters)" class="form-input">
             <option value="">All Clients</option>
-            <option v-for="client in approvedClients" :key="client.id" :value="client.id">
-              {{ client.name }}
+            <option v-for="client in approvedClients" :key="client.client_id" :value="client.client_id">
+              {{ client.client_name }}
             </option>
           </select>
         </div>
@@ -45,7 +45,7 @@
           <select id="technician-filter" v-model="jobFilters.technician_id" @change="$emit('update-job-filters', jobFilters)" class="form-input">
             <option value="">All Technicians</option>
             <option v-for="technician in technicians" :key="technician.id" :value="technician.id">
-              {{ technician.full_name }}
+              {{ technician.first_name }} {{ technician.last_name }}
             </option>
           </select>
         </div>
@@ -191,6 +191,7 @@ export default {
   },
   methods: {
     formatDate(dateString) {
+      if (!dateString) return 'N/A';
       const date = new Date(dateString)
       return date.toLocaleDateString()
     },

@@ -3,7 +3,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 ini_set('log_errors', true);
-ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/client-approved-providers.log');
+ini_set('error_log', $_SERVER['DOCUMENT_ROOT'].'/all-logs/client-administrators.log');
 
 require_once '../config/database.php';
 require_once '../includes/JWT.php';
@@ -43,12 +43,12 @@ if ($payload === false) {
 $user_id = $payload['user_id'];
 $role_id = $payload['role_id'];
 $entity_type = $payload['entity_type'];
-$client_entity_id = $payload['entity_id'];
+$sp_entity_id = $payload['entity_id']; // Service Provider's participantId
 
-// This endpoint is for clients to get their list of approved providers.
-if ($entity_type !== 'client') {
+// This endpoint is for Service Providers (role 3) to get a client's admins.
+if ($role_id != 3) {
     http_response_code(403);
-    echo json_encode(['error' => 'Access denied. Client access required.']);
+    echo json_encode(['error' => 'Access denied. Service provider access required.']);
     exit;
 }
 
@@ -60,34 +60,46 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 // --- Main Logic ---
 try {
-    // A client_id can be passed to allow an admin to check a client's approved list.
-    // For now, we will restrict to the user's own client entity.
-    $client_id_filter = $client_entity_id;
-    
-    // --- Fetch Data: Get all approved providers for the client ---
+    if (!isset($_GET['client_id']) || empty($_GET['client_id'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'client_id is a required query parameter.']);
+        exit;
+    }
+    $client_id_filter = (int)$_GET['client_id'];
+
+    // --- Authorization: Verify the SP is approved for this client ---
+    $stmt = $pdo->prepare("SELECT id FROM participant_approvals WHERE client_participant_id = ? AND provider_participant_id = ?");
+    $stmt->execute([$client_id_filter, $sp_entity_id]);
+    if (!$stmt->fetch()) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Access denied. You are not an approved service provider for this client.']);
+        exit;
+    }
+
+    // --- Fetch Data: Get all users for the client with role_id = 2 ---
     $sql = "
         SELECT
-            p.participantId as id,
-            p.name
+            u.userId as id,
+            u.first_name,
+            u.last_name,
+            u.email
         FROM
-            participants p
-        JOIN
-            participant_approvals pa ON p.participantId = pa.provider_participant_id
+            users u
         WHERE
-            pa.client_participant_id = ?
+            u.entity_id = ? AND u.role_id = 2
         ORDER BY
-            p.name
+            u.last_name, u.first_name
     ";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$client_id_filter]);
-    $approved_providers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $client_admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    echo json_encode(['approved_providers' => $approved_providers]);
+    echo json_encode(['client_administrators' => $client_admins]);
 
 } catch (Exception $e) {
     http_response_code(500);
-    error_log('Client Approved Providers API Error: ' . $e->getMessage());
+    error_log('Client Administrators API Error: ' . $e->getMessage());
     echo json_encode(['error' => 'An internal server error occurred.']);
 }
 ?>
