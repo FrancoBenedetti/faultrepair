@@ -587,6 +587,12 @@ try {
             }
         }
 
+        // Allow location changes for roles 1 and 2 in 'Reported' state
+        if (isset($input['client_location_id'])) {
+            $updates[] = "client_location_id = ?";
+            $params[] = ($input['client_location_id'] === '0' || $input['client_location_id'] === 0) ? null : $input['client_location_id'];
+        }
+
         // Handle archiving by client budget controllers (applies to ALL job types, S and XS)
         if ($role_id === 2 && isset($input['archived_by_client'])) {
             $updates[] = "archived_by_client = ?";

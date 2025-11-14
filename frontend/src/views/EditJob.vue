@@ -92,7 +92,7 @@
                   />
                 </div>
 
-                <div v-if="userRole === 2" class="form-group">
+                <div v-if="userRole === 1 || userRole === 2" class="form-group">
                   <label for="location-select" class="form-label flex items-center gap-2 mb-2">
                     <span class="material-icon field-icon text-gray-500">location_on</span>
                     Location <span class="text-red-500">*</span>
@@ -103,7 +103,7 @@
                     class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     :disabled="loadingLocations"
                   >
-                    <option value="">{{ loadingLocations ? 'Loading...' : '-- Select Location --' }}</option>
+                    <option value="0">{{ loadingLocations ? 'Loading...' : 'Default Location (Client Premises)' }}</option>
                     <option v-for="location in availableLocations" :key="location.id" :value="location.id">
                       {{ location.name }}
                       <span v-if="location.address" class="location-address"> – {{ location.address }}</span>
@@ -1059,7 +1059,7 @@ export default {
     },
 
     async loadLocations() {
-      if (this.userRole !== 2) return
+      if (this.userRole !== 1 && this.userRole !== 2) return
 
       this.loadingLocations = true
       try {
