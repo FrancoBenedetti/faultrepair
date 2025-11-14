@@ -393,11 +393,11 @@
         <div v-show="sectionsExpanded.jobs" class="section-content transition-all duration-300 ease-in-out">
           <JobManagementSectionSP
             :jobs="jobs"
-            :job-filters="jobFilters"
+            :jobFilters="jobFilters"
             :approved-clients="approvedClients"
             :technicians="technicians"
-            :user-role="userRole"
-            @update-job-filters="jobFilters = $event; loadJobs()"
+            :userRole="userRole"
+            @update-job-filters="jobFilters = { ...$event }; loadJobs()"
             @refresh-jobs="loadJobs"
             @view-job-details="selectedJob = $event; showJobDetailsModal = true"
             @job-card-click="handleJobCardClick"

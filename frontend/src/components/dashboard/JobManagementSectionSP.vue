@@ -45,7 +45,7 @@
           <select id="technician-filter" v-model="jobFilters.technician_id" @change="$emit('update-job-filters', jobFilters)" class="form-input">
             <option value="">All Technicians</option>
             <option v-for="technician in technicians" :key="technician.id" :value="technician.id">
-              {{ technician.full_name }}
+              {{ technician.first_name }} {{ technician.last_name }}
             </option>
           </select>
         </div>
