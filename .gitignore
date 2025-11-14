@@ -9,3 +9,5 @@ uploads/.htaccessx
 uploads/job_images/
 uploads/quotes/.htaccess
 
+uploads/quotes/*.*
+uploads/job_images/*.*
