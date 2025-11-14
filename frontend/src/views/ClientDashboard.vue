@@ -1650,9 +1650,19 @@ Are you sure you want to proceed?`;
     async updateClientProfile() {
       this.updatingProfile = true
       try {
+        // The user's change was already applied here.
+        // The issue is likely in the modal's input field (`type="url"`).
+        // To be safe, we ensure the logic remains.
+        const profileToSend = { ...this.editingProfile }
+
+        // Prepend https:// to website if it's missing
+        if (profileToSend.website && !/^https?:\/\//i.test(profileToSend.website)) {
+          profileToSend.website = 'https://' + profileToSend.website
+        }
+
         const response = await apiFetch('/backend/api/client-profile.php', {
           method: 'PUT',
-          body: JSON.stringify(this.editingProfile)
+          body: JSON.stringify(profileToSend)
         })
 
         if (response.ok) {

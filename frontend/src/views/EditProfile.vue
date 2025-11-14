@@ -95,7 +95,7 @@
                   Website
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   id="business-website"
                   v-model="localProfile.website"
                   class="form-input"
@@ -355,12 +355,20 @@ export default {
       this.updatingProfile = true
 
       try {
+        // Create a mutable copy to avoid directly mutating the component's state before the API call
+        const profileToSend = { ...this.localProfile };
+
+        // Prepend https:// to website if it's missing
+        if (profileToSend.website && !/^https?:\/\//i.test(profileToSend.website)) {
+          profileToSend.website = 'https://' + profileToSend.website;
+        }
+
         // Determine API endpoint based on user type
         const apiEndpoint = this.userType === 'service-provider' ? '/service-provider-profile.php' : '/client-profile.php'
 
         const response = await apiFetch(`/backend/api${apiEndpoint}`, {
           method: 'PUT',
-          body: JSON.stringify(this.localProfile)
+          body: JSON.stringify(profileToSend)
         })
 
         if (response.ok) {

@@ -721,7 +721,7 @@
                   Website
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   id="business-website"
                   v-model="editForm.website"
                   class="form-input"
@@ -2161,9 +2161,17 @@ export default {
     async updateProfile() {
       this.loading = true
       try {
+        // Create a mutable copy of the form data to modify
+        const profileToSend = { ...this.editForm };
+
+        // Prepend https:// to website if it's missing
+        if (profileToSend.website && !/^https?:\/\//i.test(profileToSend.website)) {
+          profileToSend.website = 'https://' + profileToSend.website;
+        }
+
         const response = await apiFetch('/backend/api/service-provider-profile.php', {
           method: 'PUT',
-          body: JSON.stringify(this.editForm)
+          body: JSON.stringify(profileToSend)
         })
 
         if (response.ok) {
