@@ -837,22 +837,19 @@
                   </label>
                   <select
                     id="reassign-provider-select"
-                    v-model="selectedReassignProviderId"
+                    v-model.number="selectedReassignProviderId"
                     class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">-- Choose a different provider --</option>
+                    <option :value="null">-- Choose a different provider --</option>
                     <option
-                      v-for="provider in availableProviders"
+                      v-for="provider in availableProvidersForReassignment"
                       :key="provider.id"
                       :value="provider.id"
-                      :disabled="provider.id == job.assigned_provider_participant_id"
                     >
                       {{ provider.name }}
                       <span v-if="provider.provider_type === 'XS'" class="text-orange-600 ml-2">(External)</span>
-                      <span v-if="provider.id == job.assigned_provider_participant_id" class="text-gray-400 ml-2">(Current)</span>
                     </option>
                   </select>
-                  <p class="text-sm text-gray-600 mt-1">Only showing providers different from the current one. The current provider is marked as "(Current)" and disabled.</p>
                 </div>
 
                 <!-- Reassignment Reason -->
@@ -968,7 +965,7 @@ export default {
       // XS Provider Transition Data
       selectedTransition: null,
       transitionNotes: '',
-      selectedReassignProviderId: '',
+      selectedReassignProviderId: null,
       reassignmentNotes: '',
       showReassignmentForm: false
     }
@@ -978,7 +975,7 @@ export default {
     isXSProviderJob() {
       return this.job?.assigned_provider_participant_id &&
              this.userRole === 2 &&
-             this.availableProviders?.some(p => p.service_provider_id === this.job.assigned_provider_participant_id && p.provider_type === 'XS')
+             this.availableProviders?.some(p => p.id === this.job.assigned_provider_participant_id && p.provider_type === 'XS')
     },
 
     // Check if we're in XS provider mode (XS job + role 2)
@@ -988,8 +985,14 @@ export default {
 
     isAssigningToXSProvider() {
       if (!this.selectedProviderForAssignment || !this.availableProviders) return false;
-      const provider = this.availableProviders.find(p => p.service_provider_id == this.selectedProviderForAssignment);
+      const provider = this.availableProviders.find(p => p.id == this.selectedProviderForAssignment);
       return provider?.provider_type === 'XS';
+    },
+
+    // Filter providers for reassignment to exclude the current one
+    availableProvidersForReassignment() {
+      if (!this.availableProviders || !this.job) return [];
+      return this.availableProviders.filter(p => p.id !== this.job.assigned_provider_participant_id);
     }
   },
   async mounted() {
@@ -1807,10 +1810,9 @@ export default {
         const payload = {
           job_id: this.job.id,
           action: 'reassign_provider',
-          job_status: 'Assigned',
           assigned_provider_id: parseInt(this.selectedReassignProviderId),
-          reassignment_notes: this.reassignmentNotes.trim(),
-          note: `Job reassigned. Reason: ${this.reassignmentNotes.trim()}`
+          notes: this.reassignmentNotes.trim(), // Satisfies the 'reassign_provider' action validation
+          transition_notes: this.reassignmentNotes.trim() // Satisfies XS provider transition validation
         }
 
         // Make the API call using the client-jobs endpoint
@@ -1827,10 +1829,10 @@ export default {
         const result = await response.json()
 
         // Success message with reassignment details
-        const newProvider = this.availableProviders.find(p => p.service_provider_id == this.selectedReassignProviderId)
+        const newProvider = this.availableProviders.find(p => p.id == this.selectedReassignProviderId);
         const providerName = newProvider ? newProvider.name : 'Unknown Provider'
 
-        alert(`Job reassigned successfully!\n\nThis job has been reassigned from "${this.job.provider_name}" to "${providerName}" and is now in "Assigned" status. All provider-specific data has been reset for the new provider.`)
+        alert(`Job reassigned successfully!\n\nThis job has been reassigned from "${this.job.assigned_provider_name}" to "${providerName}" and is now in "Assigned" status. All provider-specific data has been reset for the new provider.`)
 
         // Emit the job update event to refresh the parent component
         this.$emit('job-updated', result)

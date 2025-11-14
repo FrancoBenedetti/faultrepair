@@ -474,7 +474,7 @@ try {
             // Role 2 (Client Admin) has expanded permissions for regular jobs
             elseif ($role_id === 2 && !$isXSProvider) {
                 // Can edit in 'Reported', 'Declined', 'Quote Requested', or 'Completed' states
-                if (in_array($job['job_status'], ['Reported', 'Declined', 'Quote Requested', 'Completed'])) {
+                if (in_array($job['job_status'], ['Reported', 'Declined', 'Quote Requested', 'Completed', 'Cannot repair'])) {
                     $canEdit = true;
                 }
             }
